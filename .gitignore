@@ -1,0 +1,42 @@
+# Node modules
+node_modules/
+
+# Production build output (Vite default)
+dist/
+
+# Optional build artifacts
+*.local
+*.log
+*.tsbuildinfo
+
+.dumps
+
+# Env files
+.env
+.env.*.local
+
+# Vite cache
+.vite/
+
+# IDE and editor folders
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+
+
+# VSCode settings if shared via workspace
+*.code-workspace
+
+# Optional: testing output
+coverage/
+*.lcov
+
+# Optional: local dev server cache
+.cache/
+
+EnvEdit*.txt
