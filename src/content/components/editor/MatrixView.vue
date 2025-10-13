@@ -125,10 +125,11 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { useAssetsStore } from '@/core/stores/assets'
+import { useAssetsStore, useUiStore } from '@/core/stores'
 import MatrixCell from './MatrixCell.vue'
-import type { Asset } from '@/core/types'
+import type { Asset, AssetTreeNode, UnmergedAsset } from '@/core/types'
 import { ASSET_TYPES } from '@/content/config/constants'
+import { ASSET_TREE_NODE_TYPES } from '@/core/config/constants'
 
 // Props
 interface Props {
@@ -141,6 +142,7 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const assetsStore = useAssetsStore()
+const uiStore = useUiStore()
 
 // Reactive state
 const packageFilter = ref<string>('')
@@ -203,12 +205,15 @@ const toggleAssignment = (packageId: string, nodeId: string): void => {
   console.log('Toggling assignment:', packageId, nodeId)
 }
 
-const selectPackage = async (packageId: string): Promise<void> => {
-  try {
-    await assetsStore.loadAssetDetails(packageId)
-    assetsStore.openInspector(packageId)
-  } catch (error) {
-    console.error('Failed to select package:', error)
+const selectPackage = (packageId: string): void => {
+  const asset = assetsStore.unmergedAssets.find(a => a.id === packageId);
+  if (asset) {
+    uiStore.selectNode({
+      id: asset.id,
+      type: ASSET_TREE_NODE_TYPES.ASSET,
+      name: asset.id,
+      path: asset.fqn
+    });
   }
 }
 

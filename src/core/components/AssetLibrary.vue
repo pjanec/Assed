@@ -216,26 +216,10 @@ const getNamespaceContext = (asset: Asset): string => {
   return parentPath
 }
 
-// Actions
-// REPLACE this entire method
-const selectAsset = async (node: AssetTreeNodeType) => {
-  try {
-    await assetsStore.loadAssetDetails(node.id);
-    uiStore.selectNode(node); // <--- CHANGE HERE
-
-    const { openInspectors } = storeToRefs(assetsStore);
-    const { activePaneId } = storeToRefs(uiStore);
-    if (openInspectors.value.length === 0) {
-      assetsStore.openInspector(node.id); // Creates and sets active
-    } else {
-      const activePane = openInspectors.value.find((p: InspectorPaneInfo) => p.paneId === activePaneId.value);
-      const targetPaneId = activePane ? activePane.paneId : openInspectors.value[0].paneId;
-
-      assetsStore.updateInspectorContent(targetPaneId, node.id);
-    }
-  } catch (error) {
-    console.error('Failed to select asset:', error);
-  }
+const selectAsset = (node: AssetTreeNodeType) => {
+  // The function's only job now is to update the global state.
+  // The watcher in EditorWorkbench.vue will handle the rest.
+  uiStore.selectNode(node);
 };
 
 // This method handles the right-click "Open in New Inspector" action

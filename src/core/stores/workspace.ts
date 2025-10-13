@@ -12,6 +12,7 @@ import type { CloneMap } from '@/core/types';
 import type { 
   Asset, 
   UnmergedAsset, 
+  AssetTreeNode,
   PendingChanges, 
   NewAssetDialogState, 
   DeleteConfirmationDialogState,
@@ -24,6 +25,7 @@ import type {
 import type { DragPayload, DropTarget } from '@/core/types/drag-drop';
 import { getValidationRulesForType } from '@/core/registries/validationRegistry';
 import type { ValidationIssue } from '@/core/types/validation';
+import { createTreeNodeFromAssetId } from '@/core/utils/assetTreeUtils';
 
 interface Command {
   execute(workspace: any, assetsStore?: any): void;
@@ -189,7 +191,6 @@ export const useWorkspaceStore = defineStore('workspace', {
   },
 
   actions: {
-
     
     // REMOVE THE FOLLOWING ACTIONS:
     // setActivePane(paneId: string | null) { ... }
@@ -304,9 +305,10 @@ export const useWorkspaceStore = defineStore('workspace', {
         
         const assetsStore = useAssetsStore();
         
-        const reloadPromises = savedChangeSet.upserted.map(asset =>
-          assetsStore.loadAssetDetails(asset.id, { force: true })
-        );
+        const reloadPromises = savedChangeSet.upserted.map(asset => {
+          const treeNode = createTreeNodeFromAssetId(asset.id);
+          return treeNode ? assetsStore.loadAssetDetails(treeNode, { force: true }) : Promise.resolve();
+        }).filter(promise => promise !== Promise.resolve());
         savedChangeSet.deleted.forEach(assetId => assetsStore.assetDetails.delete(assetId));
         
         await Promise.all(reloadPromises);
@@ -490,7 +492,10 @@ export const useWorkspaceStore = defineStore('workspace', {
     async renameAsset(assetId: string, newAssetKey: string) {
       const assetsStore = useAssetsStore();
       // Ensure the full asset details are loaded before proceeding
-      await assetsStore.loadAssetDetails(assetId);
+      const treeNode = createTreeNodeFromAssetId(assetId);
+      if (treeNode) {
+        await assetsStore.loadAssetDetails(treeNode);
+      }
         
       const assetToRename = assetsStore.unmergedAssets.find(a => a.id === assetId);
       if (!assetToRename) {
@@ -575,7 +580,10 @@ export const useWorkspaceStore = defineStore('workspace', {
      */
     async moveAsset(draggedAssetId: string, newParentFqn: string | null) {
       const assetsStore = useAssetsStore();
-      await assetsStore.loadAssetDetails(draggedAssetId);
+      const treeNode = createTreeNodeFromAssetId(draggedAssetId);
+      if (treeNode) {
+        await assetsStore.loadAssetDetails(treeNode);
+      }
         
       const draggedAsset = assetsStore.unmergedAssets.find(a => a.id === draggedAssetId);
       if (!draggedAsset) {
@@ -778,14 +786,8 @@ export const useWorkspaceStore = defineStore('workspace', {
         uiStore.setNodeToExpand(uiStore.newAssetDialog.parentAsset.id);
       }
 
-      // 3. Ensure full asset details are loaded
-      await assetsStore.loadAssetDetails(createdAsset.id);
-
-      // 4. Select the new asset in the UI
+      // 3. Select the new asset in the UI (this will automatically load details and open inspector via EditorWorkbench watcher)
       uiStore.selectNode({ id: createdAsset.id, type: 'asset', name: createdAsset.assetKey, path: createdAsset.fqn });
-
-      // 5. Open the inspector for the newly created asset
-      assetsStore.openInspector(createdAsset.id);
     }
   }
 })

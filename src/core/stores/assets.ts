@@ -11,6 +11,8 @@ import type {
   LoadingStates,
   UnmergedAsset
 } from '@/core/types'
+import { virtualFolderDefinitions } from '@/content/logic/virtual-folders/definitions';
+import { ASSET_TREE_NODE_TYPES } from '@/core/config/constants';
 
 export interface ProjectStat {
   count: number;
@@ -61,7 +63,7 @@ export const useAssetsStore = defineStore('assets', {
     loading: {
       assets: false,
       assetDetails: new Set()
-    }
+    },
   }),
 
     // File: EnvEdit/src/stores/assets.ts
@@ -72,12 +74,50 @@ export const useAssetsStore = defineStore('assets', {
     /**
      * NEW GETTER: Creates a live, unmerged view of the asset list by
      * combining the committed state with pending changes from the workspace.
+     * This strips overrides for tree display purposes only.
      */
     unmergedAssets(): UnmergedAsset[] { // <-- CORRECTED TYPE
       const workspaceStore = useWorkspaceStore();
       // The logic correctly creates UnmergedAssets, so we just need to update the signature.
       const assetsMap = new Map(this.assets.map(a => [a.id, { ...a, overrides: {} }]));
       
+      workspaceStore.pendingChanges.upserted.forEach((asset, assetId) => {
+        assetsMap.set(assetId, asset);
+      });
+      
+      workspaceStore.pendingChanges.deleted.forEach((asset, assetId) => {
+        assetsMap.delete(assetId);
+      });
+
+      return Array.from(assetsMap.values());
+    },
+
+    /**
+     * Creates a complete assets list with full overrides for virtual folder resolution.
+     * This preserves all overrides unlike unmergedAssets which strips them for tree display.
+     * Uses cached assetDetails when available, otherwise falls back to basic structure.
+     */
+    assetsWithOverrides(): UnmergedAsset[] {
+      const workspaceStore = useWorkspaceStore();
+      const assetsMap = new Map<string, UnmergedAsset>();
+      
+      // Start with committed assets - use cached details if available
+      this.assets.forEach(asset => {
+        const cachedDetails = this.assetDetails.get(asset.id);
+        if (cachedDetails) {
+          // Use the cached unmerged data which has the full overrides
+          assetsMap.set(asset.id, cachedDetails.unmerged);
+        } else {
+          // Fallback to basic structure - overrides will be empty but that's better than nothing
+          const unmergedAsset: UnmergedAsset = {
+            ...asset,
+            overrides: {}
+          };
+          assetsMap.set(asset.id, unmergedAsset);
+        }
+      });
+      
+      // Apply pending changes (these already have their overrides)
       workspaceStore.pendingChanges.upserted.forEach((asset, assetId) => {
         assetsMap.set(assetId, asset);
       });
@@ -154,13 +194,14 @@ export const useAssetsStore = defineStore('assets', {
         if (assetsToDisplay.length === 0) return [];
         
         const nodeMap = new Map<string, AssetTreeNode>();
+        const coreConfig = useCoreConfigStore();
 
         assetsToDisplay.forEach(asset => { // Use the live data
         nodeMap.set(asset.fqn, {
             ...asset,
             path: asset.fqn,
             name: asset.assetKey,
-            type: 'asset',
+            type: ASSET_TREE_NODE_TYPES.ASSET,
             children: [],
         });
         });
@@ -171,12 +212,11 @@ export const useAssetsStore = defineStore('assets', {
             const parentFqn = parts.slice(0, -1).join('::');
             
             if (!nodeMap.has(parentFqn)) {
-                const coreConfig = useCoreConfigStore();
                 nodeMap.set(parentFqn, {
                     id: parentFqn,
                     path: parentFqn,
                     name: parts[parts.length - 2],
-                    type: 'namespace',
+                    type: ASSET_TREE_NODE_TYPES.NAMESPACE,
                     children: [],
                     assetType: coreConfig.structuralAssetType as any,
                 });
@@ -187,6 +227,43 @@ export const useAssetsStore = defineStore('assets', {
             parentNode.children.push(node);
             }
         }
+        });
+
+        // --- Second Pass: Inject Virtual Folders (No Caching) ---
+        // Use assets with full overrides for virtual folder resolution
+        const assetsWithFullOverrides = this.assetsWithOverrides;
+        
+        nodeMap.forEach(realNode => {
+          if (realNode.assetType) {
+            const definition = coreConfig.getAssetDefinition(realNode.assetType);
+            if (definition?.virtualFolderProviders) {
+              for (const providerKind of definition.virtualFolderProviders) {
+                const provider = virtualFolderDefinitions[providerKind];
+                if (!provider) continue;
+
+                // Find the corresponding UnmergedAsset with full overrides
+                const unmergedAsset = assetsWithFullOverrides.find(a => a.id === realNode.id);
+                if (!unmergedAsset) continue;
+
+                // Always execute the resolver with complete asset data; no cache check.
+                const result = provider.resolveChildren(unmergedAsset, assetsWithFullOverrides);
+                const virtualChildren = result.nodes;
+
+                if (virtualChildren.length > 0) {
+                  const virtualFolder: AssetTreeNode = {
+                    id: `${realNode.id}-${providerKind}`,
+                    path: `${realNode.path}::${provider.name}`,
+                    name: provider.name,
+                    type: ASSET_TREE_NODE_TYPES.FOLDER,
+                    children: virtualChildren,
+                    virtualContext: { kind: providerKind, sourceAssetId: realNode.id }
+                  };
+
+                  realNode.children.unshift(virtualFolder);
+                }
+              }
+            }
+          }
         });
         
         const rootNodes: AssetTreeNode[] = [];
@@ -311,20 +388,19 @@ export const useAssetsStore = defineStore('assets', {
     activeInspectorComponent(): (() => Promise<any>) | null {
       const coreConfig = useCoreConfigStore();
       const uiStore = useUiStore();
-      const selectedNode = uiStore.selectedNode;
+      const { selectedNode } = uiStore;
       
       if (!selectedNode) {
         return null;
       }
       
-      let assetType: string | undefined;
+      let assetType: Asset['assetType'] | undefined = selectedNode.assetType;
       
-      if (selectedNode.type === 'asset') {
-        assetType = this.getAsset(selectedNode.id)?.assetType;
-      } else if (selectedNode.type === 'namespace') {
-        assetType = coreConfig.structuralAssetType;
+      if (!assetType && (selectedNode.type === ASSET_TREE_NODE_TYPES.NAMESPACE || selectedNode.type === ASSET_TREE_NODE_TYPES.FOLDER)) {
+        // This type assertion correctly informs TypeScript that the string is a valid AssetType.
+        assetType = coreConfig.structuralAssetType as Asset['assetType'];
       }
-      
+
       if (!assetType) {
         return null;
       }
@@ -332,7 +408,6 @@ export const useAssetsStore = defineStore('assets', {
       const registration = coreConfig.getAssetDefinition(assetType);
       return registration ? registration.inspectorComponent : null;
     }
-
 
   },
 
@@ -345,6 +420,19 @@ export const useAssetsStore = defineStore('assets', {
         
         this.assets = await coreConfig.persistenceAdapter.loadAllAssets();
         
+        // Pre-load asset details for all assets to ensure virtual folder resolution has access to full overrides
+        // This is necessary because virtual folders may reference any asset in the system
+        const detailPromises = this.assets.map(async (asset) => {
+          try {
+            const details = await coreConfig.persistenceAdapter!.loadAssetDetails(asset.id);
+            this.assetDetails.set(asset.id, details);
+          } catch (error) {
+            console.warn(`Failed to pre-load asset details for ${asset.id}:`, error);
+          }
+        });
+        
+        await Promise.all(detailPromises);
+        
         useWorkspaceStore().normalizeAssetStructure();
       } catch (error) {
         console.error('Failed to load assets:', error);
@@ -353,27 +441,51 @@ export const useAssetsStore = defineStore('assets', {
       }
     },
     
-    async loadAssetDetails(assetId: string, { force = false } = {}): Promise<AssetDetails> {
+    async loadAssetDetails(node: AssetTreeNode, { force = false } = {}): Promise<AssetDetails> {
+      const assetId = node.id;
+
+      // 1. VIRTUAL ASSET LOGIC
+      if (node.virtualContext) {
+        // First, ensure the real source asset's details are loaded.
+        const sourceDetails = await this.loadAssetDetails({ id: node.virtualContext.sourceAssetId, type: ASSET_TREE_NODE_TYPES.ASSET } as AssetTreeNode);
+        
+        // ** THE FIX IS HERE **
+        // Create a deep copy of the REAL source asset's unmerged data to use as a base.
+        const syntheticUnmerged = cloneDeep(sourceDetails.unmerged);
+
+        // Now, make targeted modifications to create the read-only view.
+        syntheticUnmerged.overrides = node.virtualContext.payload || {}; // Replace overrides with the merged data.
+        syntheticUnmerged.templateFqn = null; // A merged view has no template.
+        
+        const details: AssetDetails = {
+          unmerged: syntheticUnmerged,
+          merged: { properties: node.virtualContext.payload || {} }, // The merged view is just the payload.
+          isReadOnly: true,
+        };
+        
+        // Store these synthetic details in the cache under the VIRTUAL asset's ID.
+        this.assetDetails.set(assetId, details);
+        return details;
+      }
+
+      // 2. REAL ASSET LOGIC (remains unchanged)
       const workspaceStore = useWorkspaceStore();
 
-      // If it's in the cache and we're not forcing a reload, return it immediately.
       if (this.assetDetails.has(assetId) && !force) {
         return this.assetDetails.get(assetId)!;
       }
       
-      // CHECK 1: Is this a NEW asset that only exists in pending changes?
       const isNewAsset = !this.assets.some(a => a.id === assetId);
       if (isNewAsset && workspaceStore.pendingChanges.upserted.has(assetId)) {
         const unmergedAsset = workspaceStore.pendingChanges.upserted.get(assetId)!;
         const details: AssetDetails = {
           unmerged: unmergedAsset,
-          merged: null, // New assets don't have a merged state yet
+          merged: null,
         };
         this.assetDetails.set(assetId, details);
         return details;
       }
 
-      // CHECK 2 (Fallback): It's an existing asset, so fetch it from the API.
       this.loading.assetDetails.add(assetId);
       try {
         const coreConfig = useCoreConfigStore();
@@ -388,8 +500,6 @@ export const useAssetsStore = defineStore('assets', {
         this.loading.assetDetails.delete(assetId);
       }
     },
-    
-    // REMOVE the selectNode action. It is now in ui.ts.
 
     // REVERT ACTIONS TO BE SYNCHRONOUS
     openInspector(assetId: string): void {

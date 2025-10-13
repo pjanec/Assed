@@ -59,7 +59,7 @@
 
       <!-- DYNAMIC INSPECTOR COMPONENT -->
       <div v-else class="h-100">
-        <component :is="asyncComponent" :asset="selectedNodeDetails" v-if="activeInspectorComponent" />
+        <component :is="asyncComponent" :asset="selectedNodeDetails" :is-read-only="selectedNodeDetails.isReadOnly" v-if="activeInspectorComponent" />
       </div>
     </div>
   </div>

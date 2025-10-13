@@ -1,7 +1,10 @@
 <template>
   <div>
     <v-list-item
-      :class="[itemClass, { 'drag-over-active': isDraggingOver }]"
+      :class="[itemClass, { 
+        'drag-over-active': isDraggingOver,
+        'node--read-only': isSelfReadOnly 
+      }]"
       :ripple="false"
       @click="handleClick"
       @contextmenu.prevent="handleContextMenu"
@@ -9,7 +12,7 @@
         assetId: node.id,
         sourceContext: CORE_DRAG_CONTEXTS.ASSET_TREE_NODE,
         instanceId: instanceId,
-        disabled: !isAsset 
+        disabled: !isDraggable 
       }"
       @dragover.prevent="handleDragOver"
       @dragleave="handleDragLeave"
@@ -40,7 +43,7 @@
         {{ node.name }}
       </v-list-item-title>
 
-      <template #append v-if="isAsset">
+      <template #append v-if="isAsset && !isSelfReadOnly">
         <v-chip
           :color="node.assetType ? coreConfig.getAssetTypeColor(node.assetType) : 'grey'"
           size="x-small"
@@ -71,7 +74,7 @@ import { computed, ref, watch, getCurrentInstance } from 'vue';
 import { useUiStore } from '@/core/stores/index';
 import { useCoreConfigStore } from '@/core/stores/config';
 import { useDroppable } from '@/core/composables/useDroppable';
-import { DROP_TARGET_TYPES , CORE_DRAG_CONTEXTS } from '@/core/config/constants';
+import { DROP_TARGET_TYPES, CORE_DRAG_CONTEXTS, CONTEXT_MENU_KINDS, ASSET_TREE_NODE_TYPES } from '@/core/config/constants';
 
 
 import type { AssetTreeNode } from '@/core/types';
@@ -104,9 +107,17 @@ const emit = defineEmits<{
   // (e: 'add-sub-folder', parentFqn: string): void;
 }>();
 
+// Compute virtual context and read-only state
+const isSelfReadOnly = computed(() => !!props.node.virtualContext);
+const isAsset = computed(() => props.node.type === ASSET_TREE_NODE_TYPES.ASSET);
+
+// An item cannot be dragged if it's not a real asset OR if it's a virtual folder itself.
+const isDraggable = computed(() => isAsset.value && !isSelfReadOnly.value);
+
 const { isDraggingOver, handleDragOver, handleDragLeave, handleDrop } = useDroppable({
   type: DROP_TARGET_TYPES.ASSET,
   id: props.node.id,
+  virtualContext: props.node.virtualContext,
 });
 
 
@@ -122,7 +133,6 @@ watch(() => uiStore.nodeToExpand, (nodeId) => {
 
 // Actions are now handled by the unified GlobalContextMenu system
 const isContainer = computed(() => props.node.children && props.node.children.length > 0);
-const isAsset = computed(() => !!props.node.assetType);
 
 // Removed validChildTypes - this functionality should be handled by the content layer
 
@@ -147,17 +157,14 @@ const handleClick = () => {
 
 const handleContextMenu = (event: MouseEvent) => {
   event.preventDefault();
-  // Simplified check - allow context menu for assets and folders
-  if (isAsset.value || props.node.type === 'folder' || props.node.type === 'namespace') {
-    uiStore.showContextMenu({
-      x: event.clientX,
-      y: event.clientY,
-      ctx: {
-        kind: 'node-actions',
-        node: props.node
-      }
-    });
-  }
+  uiStore.showContextMenu({
+    x: event.clientX,
+    y: event.clientY,
+    ctx: {
+      kind: CONTEXT_MENU_KINDS.NODE_ACTIONS,
+      node: props.node
+    }
+  });
 };
 
 
@@ -173,6 +180,11 @@ const titleClass = computed(() => !isAsset.value && isContainer.value ? 'font-we
 const iconColor = computed(() => isAsset.value && props.node.assetType ? coreConfig.getAssetTypeColor(props.node.assetType) : 'primary');
 
 const nodeIcon = computed(() => {
+  // If the node has a virtual context, it might have its own icon
+  if (props.node.virtualContext && (props.node as any).icon) {
+    return (props.node as any).icon;
+  }
+
   if (isAsset.value) {
     return coreConfig.getAssetIcon(props.node.assetType as any);
   }
@@ -197,6 +209,14 @@ const nodeIcon = computed(() => {
   outline: 2px dashed rgb(var(--v-theme-primary));
   outline-offset: -2px;
   background-color: rgba(var(--v-theme-primary), 0.1) !important;
+}
+
+.node--read-only {
+  opacity: 0.7;
+}
+
+.node--read-only:hover {
+  background-color: transparent !important; /* Prevent hover effect */
 }
 
 

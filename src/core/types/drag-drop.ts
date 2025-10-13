@@ -1,4 +1,5 @@
 import type { DROP_TARGET_TYPES } from "../config/constants";
+import type { VirtualNodeContext } from '../types';
 
 /**
  * The payload attached to a draggable element. It contains all information
@@ -27,4 +28,5 @@ export interface DropTarget {
   id: string;
   // A semantic type for the target (e.g., 'asset', 'root').
   type: DropTargetType;
+  virtualContext?: VirtualNodeContext;
 }

@@ -24,6 +24,7 @@
         class="mb-4"
         hint="File-system friendly name used during builds."
         persistent-hint
+        :readonly="isReadOnly"
       ></v-text-field>
 
       <v-text-field
@@ -48,6 +49,7 @@
         item-value="fqn"
         label="Template"
         variant="outlined"
+        :readonly="isReadOnly"
         density="compact"
         clearable
         class="mb-4"
@@ -69,6 +71,7 @@ import { cloneDeep } from 'lodash-es';
 
 const props = defineProps({
   asset: { type: Object, required: true },
+  isReadOnly: { type: Boolean, default: false },
 });
 
 const assetsStore = useAssetsStore();

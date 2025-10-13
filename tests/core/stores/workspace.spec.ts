@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createTestEnvironment } from '../../test-utils';
 import { MOCK_ASSET_TYPES } from '../../mock-content/mockAssetRegistry';
-import { ApplyRefactoringCommand } from '@/core/stores/workspace';
-import type { UnmergedAsset } from '@/core/types';
+import { ApplyRefactoringCommand } from '../../../src/core/stores/workspace';
+import type { UnmergedAsset, AssetTreeNode } from '../../../src/core/types';
+import { createTreeNodeFromAsset } from '../../../src/core/utils/assetTreeUtils';
 
 const initialData: UnmergedAsset[] = [
   { id: 'widget-1', fqn: 'MyWidget', assetType: MOCK_ASSET_TYPES.WIDGET, assetKey: 'MyWidget', overrides: {} },
@@ -21,11 +22,15 @@ describe('Core Workspace Operations - Move Asset', () => {
   it('should correctly update an asset\'s FQN when moved', async () => {
     // 1. ARRANGE: Load initial state
     await assetsStore.loadAssets();
-    await assetsStore.loadAssetDetails('widget-1'); // Pre-populate the details cache
-
+    
     const widget = assetsStore.unmergedAssets.find((a: UnmergedAsset) => a.id === 'widget-1');
     const container = assetsStore.unmergedAssets.find((a: UnmergedAsset) => a.id === 'container-1');
     expect(widget.fqn).toBe('MyWidget');
+    
+    // Create AssetTreeNode for loadAssetDetails using shared utility
+    const widgetTreeNode = createTreeNodeFromAsset(widget);
+    
+    await assetsStore.loadAssetDetails(widgetTreeNode); // Pre-populate the details cache
 
     // 2. ACT: Perform the core operation by calling the store action
     // Let's test a move that doesn't create ripple effects - moving to root level

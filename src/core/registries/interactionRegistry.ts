@@ -5,6 +5,7 @@ import { useWorkspaceStore } from '@/core/stores/workspace';
 import { MoveAssetCommand, CloneAssetCommand, DeriveAssetCommand } from '@/core/stores/workspace';
 import type { UnmergedAsset } from '@/core/types';
 import { DROP_TARGET_TYPES } from '../config/constants';
+import { virtualFolderDefinitions } from '@/content/logic/virtual-folders/definitions';
 
 // The type definitions for actions and rules are updated to expect the full payload.
 export interface DropAction {
@@ -71,8 +72,27 @@ export const getAvailableActions = (draggedAssetId: string, dropTarget: DropTarg
   const draggedAsset = assetsStore.unmergedAssets.find(a => a.id === dragPayload.assetId);
   if (!draggedAsset) return [];
 
+  let effectiveDropTarget = dropTarget;
+
+  // Handle virtual context: check for override hooks or proxy to real asset
+  if (dropTarget.virtualContext) {
+    const providerKind = dropTarget.virtualContext.kind;
+    const provider = virtualFolderDefinitions[providerKind];
+
+    // If the virtual folder has custom drop actions, use them instead
+    if (provider?.getDropActions) {
+      return provider.getDropActions(dragPayload, dropTarget);
+    }
+
+    // Otherwise, proxy to the real source asset
+    const realSourceAsset = assetsStore.unmergedAssets.find(a => a.id === dropTarget.virtualContext!.sourceAssetId);
+    if (realSourceAsset) {
+      effectiveDropTarget = { id: realSourceAsset.id, type: DROP_TARGET_TYPES.ASSET };
+    }
+  }
+
   const draggedType = draggedAsset.assetType;
-  const targetType = getTargetType(dropTarget);
+  const targetType = getTargetType(effectiveDropTarget);
 
   const specificKey = getKey(draggedType, targetType);
   const genericKey = getKey('Asset', targetType);
@@ -84,18 +104,18 @@ export const getAvailableActions = (draggedAssetId: string, dropTarget: DropTarg
   }
   
   // Pass the full payload to the rule's validation
-  if (rule.validate && !rule.validate(dragPayload, dropTarget)) {
+  if (rule.validate && !rule.validate(dragPayload, effectiveDropTarget)) {
     return [];
   }
 
   // Pass the full payload to get the actions
   const actions = typeof rule.actions === 'function' 
-    ? rule.actions(dragPayload, dropTarget)
+    ? rule.actions(dragPayload, effectiveDropTarget)
     : rule.actions;
 
   return actions.filter(action => {
     // Pass the full payload for individual enabling checks
-    return !action.isEnabled || action.isEnabled(dragPayload, dropTarget);
+    return !action.isEnabled || action.isEnabled(dragPayload, effectiveDropTarget);
   });
 };
 

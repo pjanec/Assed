@@ -1,8 +1,23 @@
 // Import asset types from content layer
 import type { ASSET_TYPES } from '@/content/config/constants';
+import { ASSET_TREE_NODE_TYPES } from '@/core/config/constants';
 
 // Create a reusable type from the constant
 type AssetType = typeof ASSET_TYPES[keyof typeof ASSET_TYPES];
+
+// Define the strict type for tree node types
+export type AssetTreeNodeType = typeof ASSET_TREE_NODE_TYPES[keyof typeof ASSET_TREE_NODE_TYPES];
+
+// Virtual Node types - using string to avoid circular dependency issues
+export type VirtualNodeKind = string;
+
+// Represents the metadata attached to a virtual node
+export interface VirtualNodeContext {
+  kind: VirtualNodeKind;
+  sourceAssetId: string;
+  isReadOnly?: boolean;
+  payload?: any;
+}
 
 /**
  * Represents the lightweight asset information used in the explorer list.
@@ -30,8 +45,9 @@ export interface AssetTreeNode extends Partial<Asset> {
   id: string;
   path: string;
   name: string;
-  type: 'asset' | 'folder' | 'file-group' | 'namespace';
+  type: AssetTreeNodeType;
   children: AssetTreeNode[];
+  virtualContext?: VirtualNodeContext;
 }
 
 /**
@@ -48,6 +64,7 @@ export interface InspectorPaneInfo {
 export interface AssetDetails {
   unmerged: UnmergedAsset;
   merged: any | null;
+  isReadOnly?: boolean;
 }
 
 /**
@@ -55,9 +72,11 @@ export interface AssetDetails {
  */
 export interface SelectedNode {
   id: string;
-  type: 'asset' | 'folder' | 'file-group' | 'namespace';
+  type: AssetTreeNodeType;
   name: string;
   path: string;
+  virtualContext?: VirtualNodeContext;
+  assetType?: Asset['assetType'];
 }
 
 /**
@@ -219,6 +238,7 @@ export interface AssetDefinition {
     originalSourceAsset: UnmergedAsset,
     cloneMap: CloneMap
   ) => UnmergedAsset;
+  virtualFolderProviders?: VirtualNodeKind[];
 }
 
 

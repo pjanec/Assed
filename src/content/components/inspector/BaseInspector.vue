@@ -47,6 +47,7 @@
           @update:modelValue="$emit('update:overrides', $event)"
           :schema="schema"
           mode="tree"
+          :options="{ readOnly: props.isReadOnly }"
         />
       </v-window-item>
 
@@ -58,6 +59,7 @@
             :value="sourceOverridesCode"
             language="json"
             @change="handleSourceChange"
+            :readOnly="props.isReadOnly"
           />
         </div>
         <div class="source-status-bar" style="position: absolute; bottom: 0; width: 100%; z-index: 1;">
@@ -145,6 +147,7 @@ interface ValidationError {
 interface Props {
   asset: AssetDetails;
   schema?: object;
+  isReadOnly?: boolean;
 }
 
 interface Emits {
@@ -152,7 +155,8 @@ interface Emits {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  schema: () => ({})
+  schema: () => ({}),
+  isReadOnly: false,
 });
 
 const emit = defineEmits<Emits>();

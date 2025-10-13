@@ -9,6 +9,8 @@ import type { AssetTreeNode, Asset } from '@/core/types';
 import { getValidChildrenForFolder, getValidChildTypes, assetRegistry } from '@/content/config/assetRegistry';
 import { ASSET_TYPES } from '@/content/config/constants';
 import { ROOT_ID } from '@/core/config/constants';
+import { createTreeNodeFromAssetId } from '@/core/utils/assetTreeUtils';
+import { virtualFolderDefinitions } from '@/content/logic/virtual-folders/definitions';
 
 export function useContextMenuActionsRegistration() {
   const registry = inject(ContextMenuRegistryKey);
@@ -47,18 +49,39 @@ export function useContextMenuActionsRegistration() {
 
   // Helper function to get menu actions for a node
   function getNodeMenuActions(node: AssetTreeNode): ContextMenuAction[] {
+    // Check for virtual context override
+    if (node.virtualContext) {
+      const providerKind = node.virtualContext.kind;
+      const provider = virtualFolderDefinitions[providerKind];
+
+      // If the virtual folder has custom context menu actions, use them instead
+      if (provider?.getContextMenuActions) {
+        return provider.getContextMenuActions(node);
+      }
+    }
+
     const actions: ContextMenuAction[] = [];
 
-    // Add base actions for asset nodes
-    if (node.id !== ROOT_ID) {
+    // Virtual nodes cannot have self-modification actions (rename, delete)
+    const isVirtual = !!node.virtualContext;
+
+    // Add base actions for asset nodes (but not for virtual nodes)
+    if (node.id !== ROOT_ID && !isVirtual) {
       actions.push({
         id: 'openInNew',
         label: 'Open in New Inspector',
         icon: 'mdi-open-in-new',
         execute: () => {
-          assetsStore.loadAssetDetails(node.id).then(() => {
-            assetsStore.addInspector(node.id);
+          // Select the node first (this loads asset details via EditorWorkbench watcher)
+          uiStore.selectNode({
+            id: node.id,
+            type: node.type || 'asset',
+            name: node.name,
+            path: node.path,
+            virtualContext: node.virtualContext
           });
+          // Then add a new inspector pane
+          assetsStore.addInspector(node.id);
           uiStore.hideContextMenu();
         }
       });
@@ -94,8 +117,15 @@ export function useContextMenuActionsRegistration() {
       }
     }
 
+    // For virtual nodes, proxy child creation to the real source asset
+    const effectiveNodeForChildren = isVirtual
+      ? assetsStore.unmergedAssets.find(a => a.id === node.virtualContext!.sourceAssetId)
+      : node;
+
+    if (!effectiveNodeForChildren) return [];
+
     // Add "Add New..." submenu if this node can have children
-    const validChildren = getValidChildrenForNode(node);
+    const validChildren = getValidChildrenForNode(effectiveNodeForChildren as AssetTreeNode);
     if (validChildren.length > 0) {
       const submenuItems: ContextMenuAction[] = [];
 
@@ -111,11 +141,11 @@ export function useContextMenuActionsRegistration() {
             icon: definition.icon,
             execute: () => {
               if (childType === ASSET_TYPES.NAMESPACE_FOLDER) {
-                const parentFqn = (node.id === ROOT_ID) ? null : node.path;
+                const parentFqn = (effectiveNodeForChildren.id === ROOT_ID) ? null : (effectiveNodeForChildren as AssetTreeNode).path;
                 workspaceStore.openNewFolderDialog(parentFqn);
               } else {
-                const parentAsset = (node.id !== ROOT_ID) ? (node as Asset) : null;
-                const namespace = (assetRegistry[node.assetType!]?.isFolder || node.id === ROOT_ID) ? node.path : null;
+                const parentAsset = (effectiveNodeForChildren.id !== ROOT_ID) ? (effectiveNodeForChildren as Asset) : null;
+                const namespace = (assetRegistry[effectiveNodeForChildren.assetType!]?.isFolder || effectiveNodeForChildren.id === ROOT_ID) ? (effectiveNodeForChildren as AssetTreeNode).path : null;
                 workspaceStore.openNewAssetDialog({ parentAsset, childType, namespace });
               }
               uiStore.hideContextMenu();
@@ -130,8 +160,8 @@ export function useContextMenuActionsRegistration() {
             label: `${definition.label} from Template...`,
             icon: definition.icon,
             execute: () => {
-              const parentAsset = (node.id !== ROOT_ID) ? (node as Asset) : null;
-              const namespace = (assetRegistry[node.assetType!]?.isFolder || node.id === ROOT_ID) ? node.path : null;
+              const parentAsset = (effectiveNodeForChildren.id !== ROOT_ID) ? (effectiveNodeForChildren as Asset) : null;
+              const namespace = (assetRegistry[effectiveNodeForChildren.assetType!]?.isFolder || effectiveNodeForChildren.id === ROOT_ID) ? (effectiveNodeForChildren as AssetTreeNode).path : null;
               workspaceStore.openNewAssetDialog({ parentAsset, childType, namespace });
               uiStore.hideContextMenu();
             }

@@ -123,6 +123,8 @@ export const useUiStore = defineStore('ui', {
         type: nodeData.type,
         name: nodeData.name,
         path: nodeData.path,
+        virtualContext: nodeData.virtualContext,
+        assetType: nodeData.assetType, // <-- ADD THIS LINE
       };
     },
     setActiveContextMenu(menuId: string | null) {

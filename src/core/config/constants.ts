@@ -24,3 +24,10 @@ export const CONTEXT_MENU_KINDS = {
   NODE_ACTIONS: 'node-actions',
   DROP_ACTIONS: 'drop-actions',
 } as const;
+
+export const ASSET_TREE_NODE_TYPES = {
+  ASSET: 'asset',
+  FOLDER: 'folder',
+  FILE_GROUP: 'file-group',
+  NAMESPACE: 'namespace',
+} as const;

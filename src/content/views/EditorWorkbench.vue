@@ -225,9 +225,11 @@ import RefactorConfirmationDialog from '@/core/components/dialogs/RefactorConfir
 import ConfirmDeleteDialog from '@/core/components/dialogs/ConfirmDeleteDialog.vue'
 import DeletionBlockedDialog from '@/core/components/dialogs/DeletionBlockedDialog.vue'
 
-import type { Asset, UnmergedAsset } from '@/core/types';
+import type { Asset, UnmergedAsset, AssetTreeNode } from '@/core/types';
 import type { ValidationIssue } from '@/core/types/validation';
 import type { DragPayload, DropTarget } from '@/core/types/drag-drop';
+import { ASSET_TREE_NODE_TYPES } from '@/core/config/constants';
+import { createTreeNodeFromSelectedNode } from '@/core/utils/assetTreeUtils';
 
 const router = useRouter()
 const assetsStore = useAssetsStore()
@@ -274,22 +276,26 @@ const { selectedNode } = storeToRefs(uiStore);
 // --- Open/Update inspector when selection changes (assets or folders) ---
 watch(selectedNode, async (newNode) => {
   if (!newNode) return;
-  const { id, type } = newNode;
 
-  // Only load details for actual assets
-  if (type === 'asset') {
-    await assetsStore.loadAssetDetails(id);
+  // The node type check is still valid.
+  if (newNode.type === ASSET_TREE_NODE_TYPES.ASSET) {
+    // Pass the ENTIRE newNode object, not just its ID.
+    // This provides `loadAssetDetails` with the necessary virtualContext.
+    const treeNode = createTreeNodeFromSelectedNode(newNode);
+    if (treeNode) {
+      await assetsStore.loadAssetDetails(treeNode);
+    }
   }
 
   // Open a new inspector if none, otherwise update the active one
   const { activePaneId } = storeToRefs(uiStore);
 
   if (openInspectors.value.length === 0) {
-    assetsStore.openInspector(id);
+    assetsStore.openInspector(newNode.id);
   } else {
     const activePane = openInspectors.value.find((p: any) => p.paneId === activePaneId.value);
     const targetPaneId = activePane ? activePane.paneId : openInspectors.value[0].paneId;
-    assetsStore.updateInspectorContent(targetPaneId, id);
+    assetsStore.updateInspectorContent(targetPaneId, newNode.id);
   }
 }, { deep: true });
 
@@ -348,13 +354,16 @@ const goHome = () => {
   router.push('/')
 }
 
-const navigateToIssue = async (issue: ValidationIssue) => {
-  try {
-    await assetsStore.loadAssetDetails(issue.assetId)
-    assetsStore.openInspector(issue.assetId)
+const navigateToIssue = (issue: ValidationIssue) => {
+  const asset = assetsStore.unmergedAssets.find(a => a.id === issue.assetId);
+  if (asset) {
+    uiStore.selectNode({
+      id: asset.id,
+      type: ASSET_TREE_NODE_TYPES.ASSET,
+      name: asset.id,
+      path: asset.fqn
+    });
     showValidationDialog.value = false
-  } catch (error) {
-    console.error('Failed to navigate to issue asset:', error)
   }
 }
 
@@ -380,14 +389,17 @@ const handleSave = async ({ message }: { message: string }) => {
   }
 };
 
-const handleNavigateToAsset = async (assetId: string) => {
+const handleNavigateToAsset = (assetId: string) => {
   if (!assetId) return;
-  try {
-    showCommitDialog.value = false;
-    await assetsStore.loadAssetDetails(assetId, { force: true });
-    assetsStore.openInspector(assetId);
-  } catch (error) {
-    console.error('Failed to navigate to asset:', error);
+  showCommitDialog.value = false;
+  const asset = assetsStore.unmergedAssets.find(a => a.id === assetId);
+  if (asset) {
+    uiStore.selectNode({
+      id: asset.id,
+      type: ASSET_TREE_NODE_TYPES.ASSET,
+      name: asset.id,
+      path: asset.fqn
+    });
   }
 };
 

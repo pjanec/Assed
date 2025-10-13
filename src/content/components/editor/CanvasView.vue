@@ -100,10 +100,11 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAssetsStore } from '@/core/stores/assets'
+import { useAssetsStore, useUiStore } from '@/core/stores'
 import NodeCard from './NodeCard.vue'
-import type { Asset, UnmergedAsset } from '@/core/types'
+import type { Asset, UnmergedAsset, AssetTreeNode } from '@/core/types'
 import { ASSET_TYPES } from '@/content/config/constants'
+import { ASSET_TREE_NODE_TYPES } from '@/core/config/constants'
 
 // Props
 interface Props {
@@ -117,6 +118,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const router = useRouter()
 const assetsStore = useAssetsStore()
+const uiStore = useUiStore()
 
 // State
 const loading = ref<boolean>(false)
@@ -151,21 +153,29 @@ const goHome = (): void => {
   router.push('/')
 }
 
-const selectNode = async (nodeId: string): Promise<void> => {
-  try {
-    await assetsStore.loadAssetDetails(nodeId)
-    assetsStore.openInspector(nodeId)
-  } catch (error) {
-    console.error('Failed to select node:', error)
+
+
+const selectNode = (nodeId: string): void => {
+  const asset = assetsStore.unmergedAssets.find(a => a.id === nodeId);
+  if (asset) {
+    uiStore.selectNode({
+      id: asset.id,
+      type: ASSET_TREE_NODE_TYPES.ASSET,
+      name: asset.id,
+      path: asset.fqn
+    });
   }
 }
 
-const selectPackage = async (packageId: string): Promise<void> => {
-  try {
-    await assetsStore.loadAssetDetails(packageId)
-    assetsStore.openInspector(packageId)
-  } catch (error) {
-    console.error('Failed to select package:', error)
+const selectPackage = (packageId: string): void => {
+  const asset = assetsStore.unmergedAssets.find(a => a.id === packageId);
+  if (asset) {
+    uiStore.selectNode({
+      id: asset.id,
+      type: ASSET_TREE_NODE_TYPES.ASSET,
+      name: asset.id,
+      path: asset.fqn
+    });
   }
 }
 
