@@ -13,6 +13,7 @@
               size="x-small"
               variant="text"
               @click.stop="removeResource(id)"
+              :disabled="isReadOnly"
             />
           </div>
         </v-expansion-panel-title>
@@ -24,6 +25,7 @@
             density="compact"
             variant="outlined"
             class="mb-4"
+            :readonly="isReadOnly"
           />
           <v-select
             :model-value="resource.Fetcher"
@@ -33,6 +35,7 @@
             density="compact"
             variant="outlined"
             class="mb-4"
+            :readonly="isReadOnly"
           />
           <div v-if="resource.Fetcher">
             <h5 class="text-caption mb-2">Fetcher Parameters</h5>
@@ -41,6 +44,7 @@
               @update:modelValue="updateResource(id, 'Params', $event)"
               :schema="getFetcherSchema(resource.Fetcher)"
               mode="tree"
+              :options="{ readOnly: isReadOnly }"
             />
           </div>
         </v-expansion-panel-text>
@@ -52,6 +56,7 @@
       size="small"
       @click="showAddDialog = true"
       class="mt-4"
+      :disabled="isReadOnly"
     >
       Add Resource
     </v-btn>
@@ -84,6 +89,7 @@ import JSONEditor from './JSONEditor.vue';
 
 const props = defineProps({
   modelValue: { type: Object, default: () => ({}) },
+  isReadOnly: { type: Boolean, default: false },
 });
 const emit = defineEmits(['update:modelValue']);
 
@@ -94,6 +100,7 @@ const newResourceId = ref('');
 const fetcherTypes = computed(() => Object.keys(schemas.value?.fetchers || {}));
 
 const updateResource = (id, field, value) => {
+  if (props.isReadOnly) return;
   const newResources = cloneDeep(resources.value);
   if (!newResources[id]) newResources[id] = {};
   newResources[id][field] = value;
@@ -107,6 +114,7 @@ const updateResource = (id, field, value) => {
 };
 
 const addResource = () => {
+  if (props.isReadOnly) return;
   if (!newResourceId.value || resources.value[newResourceId.value]) return;
   const newResources = cloneDeep(resources.value);
   newResources[newResourceId.value] = { To: '', Fetcher: '', Params: {} };
@@ -115,6 +123,7 @@ const addResource = () => {
 };
 
 const removeResource = (id) => {
+  if (props.isReadOnly) return;
   const newResources = cloneDeep(resources.value);
   delete newResources[id];
   emit('update:modelValue', newResources);

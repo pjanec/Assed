@@ -8,7 +8,7 @@
             General Properties
           </v-expansion-panel-title>
           <v-expansion-panel-text>
-            <GeneralPropertiesEditor :asset="asset" />
+            <GeneralPropertiesEditor :asset="asset" :is-read-only="asset.isReadOnly" />
           </v-expansion-panel-text>
         </v-expansion-panel>
 
@@ -21,6 +21,7 @@
             <PayloadEditor
               :model-value="asset.unmerged.overrides.Payload"
               @update:model-value="handleSubObjectChange('Payload', $event)"
+              :is-read-only="asset.isReadOnly"
             />
           </v-expansion-panel-text>
         </v-expansion-panel>
@@ -34,6 +35,7 @@
             <FileDistribEditor
               :model-value="asset.unmerged.overrides.FileDistrib"
               @update:model-value="handleSubObjectChange('FileDistrib', $event)"
+              :is-read-only="asset.isReadOnly"
             />
           </v-expansion-panel-text>
         </v-expansion-panel>
@@ -47,6 +49,7 @@
             <ResourcesEditor
               :model-value="asset.unmerged.overrides.Resources"
               @update:model-value="handleSubObjectChange('Resources', $event)"
+              :is-read-only="asset.isReadOnly"
             />
           </v-expansion-panel-text>
         </v-expansion-panel>
@@ -60,6 +63,7 @@
             <ScriptsEditor
               :model-value="asset.unmerged.overrides.Scripts"
               @update:modelValue="handleSubObjectChange('Scripts', $event)"
+              :is-read-only="asset.isReadOnly"
             />
           </v-expansion-panel-text>
         </v-expansion-panel>
@@ -73,6 +77,7 @@
             <SkeletonFilesEditor
               :files="asset.unmerged.overrides.Files || {}"
               @update:files="handleSubObjectChange('Files', $event)"
+              :is-read-only="asset.isReadOnly"
             />
           </v-expansion-panel-text>
         </v-expansion-panel>
@@ -112,6 +117,11 @@ const expandedPanels = ref<string[]>(['general', 'files']);
 const packageSchema = computed(() => schemas.value?.package || {});
 
 const handleOverridesChange = (newOverrides: Record<string, any>): void => {
+  // Prevent editing read-only assets (e.g., virtual assets)
+  if (props.asset.isReadOnly) {
+    return;
+  }
+  
   const oldData = props.asset.unmerged;
   const newData = deepClone(oldData);
   newData.overrides = newOverrides;
@@ -120,6 +130,11 @@ const handleOverridesChange = (newOverrides: Record<string, any>): void => {
 };
 
 const handleSubObjectChange = (key: string, value: any): void => {
+  // Prevent editing read-only assets (e.g., virtual assets)
+  if (props.asset.isReadOnly) {
+    return;
+  }
+  
   const oldData = props.asset.unmerged;
   const newData = deepClone(oldData);
   if (!newData.overrides) newData.overrides = {};

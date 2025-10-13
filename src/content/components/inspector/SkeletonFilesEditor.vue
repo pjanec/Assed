@@ -10,6 +10,7 @@
           prepend-icon="mdi-plus"
           variant="tonal"
           @click="showAddDialog = true"
+          :disabled="isReadOnly"
         >
           Add File
         </v-btn>
@@ -33,6 +34,7 @@
               variant="text"
               class="delete-btn"
               @click.stop="promptRemoveFile(index)"
+              :disabled="isReadOnly"
             />
           </template>
         </v-list-item>
@@ -65,6 +67,7 @@
           :value="selectedFile.content"
           :language="fileLanguage"
           @change="onFileContentChange"
+          :readOnly="isReadOnly"
         />
         <div v-else class="d-flex align-center justify-center h-100 text-medium-emphasis text-caption">
           Select a file to view its content
@@ -120,6 +123,7 @@
             :value="selectedFile.content"
             :language="fileLanguage"
             @change="onFileContentChange"
+            :readOnly="isReadOnly"
           />
         </div>
       </v-card>
@@ -147,6 +151,7 @@ interface FileToRemove extends FileItem {
 
 interface Props {
   files?: Record<string, FileContent>;
+  isReadOnly?: boolean;
 }
 
 interface Emits {
@@ -155,6 +160,7 @@ interface Emits {
 
 const props = withDefaults(defineProps<Props>(), {
   files: () => ({}),
+  isReadOnly: false,
 });
 const emit = defineEmits<Emits>();
 
@@ -212,6 +218,7 @@ const selectFile = (index: number): void => {
 };
 
 const onFileContentChange = (newContent: string): void => {
+  if (props.isReadOnly) return;
   if (selectedFile.value && selectedFile.value.content !== newContent) {
     const updatedFiles = { ...props.files };
     updatedFiles[selectedFile.value.fileName] = { content: newContent };

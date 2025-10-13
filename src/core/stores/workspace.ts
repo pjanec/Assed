@@ -894,6 +894,14 @@ export class UpdateAssetCommand implements Command {
   }
 
   execute(workspace: any): void {
+    // Prevent updating read-only assets (e.g., virtual assets)
+    const assetsStore = useAssetsStore();
+    const assetDetails = assetsStore.getAssetDetails(this.newData.id);
+    if (assetDetails?.isReadOnly) {
+      console.warn(`Attempted to update read-only asset ${this.newData.id}. Operation blocked.`);
+      return;
+    }
+    
     workspace.updateAsset(this.newData)
   }
   

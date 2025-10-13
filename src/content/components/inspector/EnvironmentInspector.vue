@@ -8,7 +8,7 @@
             General Properties
           </v-expansion-panel-title>
           <v-expansion-panel-text>
-            <GeneralPropertiesEditor :asset="asset" />
+            <GeneralPropertiesEditor :asset="asset" :is-read-only="asset.isReadOnly" />
           </v-expansion-panel-text>
         </v-expansion-panel>
         <v-expansion-panel value="canvas">

@@ -112,6 +112,11 @@ watch(() => props.asset.unmerged.id, () => {
 
 
 const emitChange = (field, newValue, isOverride = false) => {
+  // Prevent editing read-only assets (e.g., virtual assets)
+  if (props.isReadOnly) {
+    return;
+  }
+  
   const oldData = props.asset.unmerged;
   const newData = cloneDeep(oldData);
   

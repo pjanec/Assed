@@ -7,6 +7,7 @@
       variant="outlined"
       density="compact"
       class="mb-4"
+      :readonly="isReadOnly"
     ></v-select>
 
     <v-divider></v-divider>
@@ -23,6 +24,7 @@
                 size="x-small"
                 variant="text"
                 @click.stop="removeScript(index)"
+                :disabled="isReadOnly"
               />
             </div>
           </v-expansion-panel-title>
@@ -35,6 +37,7 @@
               density="compact"
               variant="outlined"
               class="mb-2"
+              :readonly="isReadOnly"
             />
              <v-text-field
               :model-value="script.File"
@@ -44,6 +47,7 @@
               variant="outlined"
               class="mb-2"
               messages="Path relative to payload folder."
+              :readonly="isReadOnly"
             />
             <div class="editor-container" v-if="!script.File">
               <h5 class="text-caption mb-1">Script Lines (if no file is specified)</h5>
@@ -51,6 +55,7 @@
                 :value="(script.Lines || []).join('\n')"
                 @change="updateScript(index, 'Lines', $event.split('\n'))"
                 language="powershell"
+                :readOnly="isReadOnly"
                 :options="{ lineNumbers: 'off', glyphMargin: false, folding: false }"
               />
             </div>
@@ -58,7 +63,7 @@
         </v-expansion-panel>
       </v-expansion-panels>
 
-       <v-btn block variant="tonal" size="small" @click="addScript" class="mt-4">
+       <v-btn block variant="tonal" size="small" @click="addScript" class="mt-4" :disabled="isReadOnly">
         Add Script to '{{ selectedOperation }}'
       </v-btn>
     </div>
@@ -72,6 +77,7 @@ import MonacoEditor from './MonacoEditor.vue';
 
 const props = defineProps({
   modelValue: { type: Object, default: () => ({}) },
+  isReadOnly: { type: Boolean, default: false },
 });
 const emit = defineEmits(['update:modelValue']);
 
@@ -90,12 +96,14 @@ const scriptsForOperation = computed(() => {
 });
 
 const updateScript = (index, field, value) => {
+  if (props.isReadOnly) return;
   const newData = cloneDeep(scripts.value);
   newData.Operations[selectedOperation.value][index][field] = value;
   emit('update:modelValue', newData);
 };
 
 const addScript = () => {
+  if (props.isReadOnly) return;
   const newData = cloneDeep(scripts.value);
   if (!newData.Operations) newData.Operations = {};
   if (!newData.Operations[selectedOperation.value]) newData.Operations[selectedOperation.value] = [];
@@ -104,6 +112,7 @@ const addScript = () => {
 };
 
 const removeScript = (index) => {
+  if (props.isReadOnly) return;
   const newData = cloneDeep(scripts.value);
   newData.Operations[selectedOperation.value].splice(index, 1);
   emit('update:modelValue', newData);
