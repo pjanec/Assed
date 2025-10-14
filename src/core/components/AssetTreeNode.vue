@@ -43,15 +43,7 @@
         {{ node.name }}
       </v-list-item-title>
 
-      <template #append v-if="isAsset && !isSelfReadOnly">
-        <v-chip
-          :color="node.assetType ? coreConfig.getAssetTypeColor(node.assetType) : 'grey'"
-          size="x-small"
-          variant="flat"
-        >
-          {{ node.assetType }}
-        </v-chip>
-      </template>
+      
     </v-list-item>
 
     <!-- Context menu is now handled by GlobalContextMenu component in App.vue -->
