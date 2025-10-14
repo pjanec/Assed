@@ -479,11 +479,16 @@ export const useAssetsStore = defineStore('assets', {
       const assetId = typeof target === 'string' ? target : target.id;
       const viewHint = opts.viewHint ?? (typeof target !== 'string' ? target.virtualContext?.viewHint : undefined) ?? (undefined as any);
 
-      // Preload details for smoother UI; synthetic handled in loadAssetDetails
-      try {
-        await this.loadAssetDetails({ id: assetId, type: ASSET_TREE_NODE_TYPES.ASSET } as AssetTreeNode, { force: false });
-      } catch (e) {
-        // Ignore preload errors here; UI can still open and show error states
+      // Resolve if target is folder to avoid loading details for virtual folders
+      const liveNode = this.getTreeNodeById(assetId);
+      const isFolder = !!liveNode && liveNode.type === ASSET_TREE_NODE_TYPES.FOLDER;
+      if (!isFolder) {
+        // Preload details for smoother UI; synthetic handled in loadAssetDetails
+        try {
+          await this.loadAssetDetails({ id: assetId, type: ASSET_TREE_NODE_TYPES.ASSET } as AssetTreeNode, { force: false });
+        } catch (e) {
+          // Ignore preload errors here; UI can still open and show error states
+        }
       }
 
       if (opts.reuse && this.openInspectors.length > 0) {

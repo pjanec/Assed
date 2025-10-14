@@ -1,4 +1,5 @@
 import type { UnmergedAsset, AssetTreeNode, VirtualNodeKind, ViewHint } from '@/core/types';
+import type { Component } from 'vue';
 import type { DragPayload, DropTarget } from '@/core/types/drag-drop';
 import type { DropAction } from '@/core/registries/interactionRegistry';
 import type { ContextMenuAction } from '@/core/types/ui';
@@ -19,6 +20,7 @@ export interface VirtualFolderDefinition {
   getDropActions?: (dragPayload: DragPayload, dropTarget: DropTarget) => DropAction[];
   getContextMenuActions?: (virtualNode: AssetTreeNode) => ContextMenuAction[];
   defaultViewHint?: ViewHint;
+  inspectorComponent?: () => Promise<Component>;
 }
 
 // 3. Create the registry of definitions

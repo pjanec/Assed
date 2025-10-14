@@ -3,7 +3,7 @@
     <!-- Inspector Header -->
     <div class="inspector-header pa-3 border-b">
       <div class="d-flex align-center justify-between">
-        <div v-if="viewModel" class="d-flex align-center flex-1-1 min-width-0">
+        <div v-if="!isFolder && viewModel" class="d-flex align-center flex-1-1 min-width-0">
           <v-icon
             :color="coreConfig.getAssetTypeColor(viewModel.unmerged.assetType)"
             class="me-3 flex-shrink-0"
@@ -13,13 +13,13 @@
           <div class="flex-1-1 min-width-0">
             <!-- Main title row with compact secondary info -->
             <div class="d-flex align-center ga-4">
-              <v-tooltip location="bottom">
+              <v-tooltip v-if="viewModel" location="bottom">
                 <template #activator="{ props }">
                   <span class="text-h6 font-weight-medium text-truncate" v-bind="props">
                     {{ viewModel.unmerged.assetKey }}
                   </span>
                 </template>
-                <div class="d-flex flex-column">
+                <div v-if="viewModel" class="d-flex flex-column">
                   <span class="text-h6 font-weight-medium">{{ viewModel.unmerged.assetKey }}</span>
                   <span class="text-body-2" >{{ viewModel.unmerged.fqn }}</span>
                 </div>
@@ -65,7 +65,7 @@
 
     <!-- Inspector Content -->
     <div class="inspector-content flex-1-1 overflow-y-auto">
-      <div v-if="!viewModel" class="d-flex flex-column justify-center align-center h-100">
+      <div v-if="!isFolder && !viewModel" class="d-flex flex-column justify-center align-center h-100">
         <v-icon size="64" color="grey-lighten-2" class="mb-4">
           mdi-information-outline
         </v-icon>
@@ -80,7 +80,18 @@
 
       <!-- DYNAMIC INSPECTOR COMPONENT -->
       <div v-else class="h-100">
-        <component :is="asyncComponent" :asset="viewModel" :is-read-only="viewModel.isReadOnly" v-if="asyncComponent" />
+        <!-- When virtual folder, pass folder node instead of asset details -->
+        <component
+          v-if="isFolder"
+          :is="asyncComponent"
+          :folder="liveFolderNode"
+        />
+        <component
+          v-else
+          :is="asyncComponent"
+          :asset="viewModel!"
+          :is-read-only="viewModel!.isReadOnly"
+        />
       </div>
     </div>
   </div>
@@ -139,12 +150,31 @@ const viewModel = computed((): AssetDetails | null => {
 });
 
 const isActive = computed(() => uiStore.activePaneId === props.paneId);
+const liveFolderNode = computed(() => assetsStore.getTreeNodeById(props.assetId));
+const isFolder = computed(() => !!liveFolderNode.value && liveFolderNode.value.type === 'folder');
 
 const canGoBack = computed(() => assetsStore.canHistoryBack(props.paneId));
 const canGoForward = computed(() => assetsStore.canHistoryForward(props.paneId));
 
 // Use defineAsyncComponent to handle loading/error states gracefully
 const asyncComponent = computed(() => {
+  const live = assetsStore.getTreeNodeById(props.assetId);
+  // Virtual Folder inspector path
+  if (live && live.type === 'folder') {
+    const kind = live.virtualContext?.kind as any;
+    const loader = async () => {
+      const mod = await import('@/content/logic/virtual-folders/definitions');
+      const provider = kind ? (mod as any).virtualFolderDefinitions[kind] : undefined;
+      if (provider?.inspectorComponent) {
+        const comp = await provider.inspectorComponent();
+        return comp;
+      }
+      const generic = await import('@/core/components/VirtualFolderInspector.vue');
+      return generic.default;
+    };
+    return defineAsyncComponent({ loader, delay: 200 });
+  }
+
   if (!viewModel.value) return null as any;
   const assetType = viewModel.value.unmerged.assetType as any;
   if (!assetType) return null as any;
