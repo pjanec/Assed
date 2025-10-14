@@ -1,6 +1,6 @@
 // Import asset types from content layer
 import type { ASSET_TYPES } from '@/content/config/constants';
-import { ASSET_TREE_NODE_TYPES } from '@/core/config/constants';
+import { ASSET_TREE_NODE_TYPES, VIEW_HINTS } from '@/core/config/constants';
 
 // Create a reusable type from the constant
 type AssetType = typeof ASSET_TYPES[keyof typeof ASSET_TYPES];
@@ -11,12 +11,15 @@ export type AssetTreeNodeType = typeof ASSET_TREE_NODE_TYPES[keyof typeof ASSET_
 // Virtual Node types - using string to avoid circular dependency issues
 export type VirtualNodeKind = string;
 
+export type ViewHint = typeof VIEW_HINTS[keyof typeof VIEW_HINTS];
+
 // Represents the metadata attached to a virtual node
 export interface VirtualNodeContext {
   kind: VirtualNodeKind;
   sourceAssetId: string;
   isReadOnly?: boolean;
   payload?: any;
+  viewHint?: ViewHint;
 }
 
 /**
@@ -239,6 +242,7 @@ export interface AssetDefinition {
     cloneMap: CloneMap
   ) => UnmergedAsset;
   virtualFolderProviders?: VirtualNodeKind[];
+  isSynthetic?: boolean;
 }
 
 

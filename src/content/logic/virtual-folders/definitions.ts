@@ -1,8 +1,9 @@
-import type { UnmergedAsset, AssetTreeNode, VirtualNodeKind } from '@/core/types';
+import type { UnmergedAsset, AssetTreeNode, VirtualNodeKind, ViewHint } from '@/core/types';
 import type { DragPayload, DropTarget } from '@/core/types/drag-drop';
 import type { DropAction } from '@/core/registries/interactionRegistry';
 import type { ContextMenuAction } from '@/core/types/ui';
 import { resolveMergedRequirements } from './resolvers';
+import { VIEW_HINTS } from '@/core/config/constants';
 
 // 1. Define the kinds as a constant object for type safety
 export const VIRTUAL_NODE_KINDS = {
@@ -17,6 +18,7 @@ export interface VirtualFolderDefinition {
   resolveChildren: (sourceAsset: UnmergedAsset, allAssets: UnmergedAsset[]) => { nodes: AssetTreeNode[], dependencies: { direct: Set<string>, structural: Set<string> } };
   getDropActions?: (dragPayload: DragPayload, dropTarget: DropTarget) => DropAction[];
   getContextMenuActions?: (virtualNode: AssetTreeNode) => ContextMenuAction[];
+  defaultViewHint?: ViewHint;
 }
 
 // 3. Create the registry of definitions
@@ -25,6 +27,7 @@ export const virtualFolderDefinitions: Record<VirtualNodeKind, VirtualFolderDefi
     name: 'Merged Requirements',
     icon: 'mdi-playlist-check',
     resolveChildren: resolveMergedRequirements,
+    defaultViewHint: VIEW_HINTS.MERGED,
     // No override hooks means this folder will use the default "proxy" behavior
   },
 

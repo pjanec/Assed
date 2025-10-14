@@ -74,7 +74,7 @@ import { computed, ref, watch, getCurrentInstance } from 'vue';
 import { useUiStore } from '@/core/stores/index';
 import { useCoreConfigStore } from '@/core/stores/config';
 import { useDroppable } from '@/core/composables/useDroppable';
-import { DROP_TARGET_TYPES, CORE_DRAG_CONTEXTS, CONTEXT_MENU_KINDS, ASSET_TREE_NODE_TYPES } from '@/core/config/constants';
+import { DROP_TARGET_TYPES, CORE_DRAG_CONTEXTS, CONTEXT_MENU_KINDS, ASSET_TREE_NODE_TYPES, VIEW_HINTS } from '@/core/config/constants';
 
 
 import type { AssetTreeNode } from '@/core/types';
@@ -149,7 +149,8 @@ const itemClass = computed(() => {
 
 
 const handleClick = () => {
-  uiStore.selectNode(props.node);
+  const viewHint = (props.node.virtualContext && (props.node as any).virtualContext.viewHint) || VIEW_HINTS.DEFAULT;
+  uiStore.selectNode(props.node, viewHint);
   if (isContainer.value) {
     toggleExpanded();
   }

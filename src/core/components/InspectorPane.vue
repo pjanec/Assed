@@ -3,23 +3,23 @@
     <!-- Inspector Header -->
     <div class="inspector-header pa-3 border-b">
       <div class="d-flex align-center justify-between">
-        <div v-if="selectedNodeDetails" class="d-flex align-center flex-1-1 min-width-0">
+        <div v-if="viewModel" class="d-flex align-center flex-1-1 min-width-0">
           <v-icon
-            :color="coreConfig.getAssetTypeColor(selectedNodeDetails.unmerged.assetType)"
+            :color="coreConfig.getAssetTypeColor(viewModel.unmerged.assetType)"
             class="me-3 flex-shrink-0"
           >
-            {{ coreConfig.getAssetIcon(selectedNodeDetails.unmerged.assetType) }}
+            {{ coreConfig.getAssetIcon(viewModel.unmerged.assetType) }}
           </v-icon>
           <div class="flex-1-1 min-width-0">
             <!-- Main title row with compact secondary info -->
             <div class="d-flex align-center ga-4">
               <span class="text-h6 font-weight-medium text-truncate">
-                {{ selectedNodeDetails.unmerged.assetKey }}
+                {{ viewModel.unmerged.assetKey }}
               </span>
               <!-- FQN on a single line -->
               <div class="asset-secondary-info flex-shrink-1 min-width-0">
                 <div class="text-body-2 text-medium-emphasis text-truncate">
-                  {{ selectedNodeDetails.unmerged.fqn }}
+                  {{ viewModel.unmerged.fqn }}
                 </div>
               </div>
             </div>
@@ -44,7 +44,7 @@
 
     <!-- Inspector Content -->
     <div class="inspector-content flex-1-1 overflow-y-auto">
-      <div v-if="!selectedNodeDetails" class="d-flex flex-column justify-center align-center h-100">
+      <div v-if="!viewModel" class="d-flex flex-column justify-center align-center h-100">
         <v-icon size="64" color="grey-lighten-2" class="mb-4">
           mdi-information-outline
         </v-icon>
@@ -59,7 +59,7 @@
 
       <!-- DYNAMIC INSPECTOR COMPONENT -->
       <div v-else class="h-100">
-        <component :is="asyncComponent" :asset="selectedNodeDetails" :is-read-only="selectedNodeDetails.isReadOnly" v-if="activeInspectorComponent" />
+        <component :is="asyncComponent" :asset="viewModel" :is-read-only="viewModel.isReadOnly" v-if="activeInspectorComponent" />
       </div>
     </div>
   </div>
@@ -71,6 +71,8 @@ import { useAssetsStore, useUiStore } from '@/core/stores/index';
 import { useCoreConfigStore } from '@/core/stores/config';
 import { storeToRefs } from 'pinia';
 import type { AssetDetails, InspectorPaneInfo } from '@/core/types';
+import { VIEW_HINTS } from '@/core/config/constants';
+import { cloneDeep } from 'lodash-es';
 
 interface Props {
   assetId: string;
@@ -84,15 +86,10 @@ const uiStore = useUiStore();
 const coreConfig = useCoreConfigStore();
 const { activeInspectorComponent } = storeToRefs(assetsStore);
 
-const selectedNodeDetails = computed((): AssetDetails | null => {
-  if (!props.paneId) return null;
-      
-  const pane = assetsStore.openInspectors.find((p: InspectorPaneInfo) => p.paneId === props.paneId);
-  if (!pane || !pane.assetId) return null;
-
-  // This handles virtual nodes like namespaces for display purposes.
+const viewModel = computed((): AssetDetails | null => {
+  // Namespaces: provide display-only details
   const node = uiStore.selectedNode;
-  if (node && node.id === pane.assetId && node.type === 'namespace') {
+  if (node && node.id === props.assetId && node.type === 'namespace') {
     const assetDetails = assetsStore.getAssetDetails(node.id);
     if (!assetDetails) {
       return {
@@ -103,13 +100,41 @@ const selectedNodeDetails = computed((): AssetDetails | null => {
           fqn: node.path,
           overrides: {},
         } as any,
-        merged: null
+        merged: null,
       };
     }
   }
 
-  // The main logic is now beautifully simple: just ask the assetsStore for the data.
-  return assetsStore.getUnmergedDetails(pane.assetId);
+  // Case 1: Synthetic assets from live tree (reactive)
+  const liveTreeNode = assetsStore.getTreeNodeById(props.assetId);
+  const definition = liveTreeNode?.assetType ? coreConfig.getAssetDefinition(liveTreeNode.assetType as any) : null;
+  if (definition?.isSynthetic && liveTreeNode?.virtualContext) {
+    return {
+      unmerged: {
+        id: liveTreeNode.id,
+        assetKey: liveTreeNode.name,
+        assetType: liveTreeNode.assetType as any,
+        fqn: liveTreeNode.path,
+        overrides: liveTreeNode.virtualContext.payload || {},
+      } as any,
+      merged: null,
+      isReadOnly: true,
+    };
+  }
+
+  // Case 2: Alias merged view via presenter pattern
+  const realDetails = assetsStore.getUnmergedDetails(props.assetId);
+  if (!realDetails) return null;
+  if (uiStore.selectedNodeViewHint === VIEW_HINTS.MERGED && realDetails.merged) {
+    const mergedViewModel = cloneDeep(realDetails);
+    mergedViewModel.unmerged.overrides = realDetails.merged.properties || {};
+    mergedViewModel.unmerged.templateFqn = null as any;
+    mergedViewModel.isReadOnly = true;
+    return mergedViewModel;
+  }
+
+  // Case 3: Default editable real asset
+  return realDetails;
 });
 
 const isActive = computed(() => uiStore.activePaneId === props.paneId);

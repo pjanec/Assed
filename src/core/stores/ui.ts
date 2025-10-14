@@ -9,7 +9,8 @@ import type {
   Asset
 } from '@/core/types';
 import type { MenuState, ContextMenuKind } from '@/core/types/ui';
-import { DIALOG_MODES, DROP_TARGET_TYPES } from '@/core/config/constants';
+import { DIALOG_MODES, DROP_TARGET_TYPES, VIEW_HINTS } from '@/core/config/constants';
+import type { ViewHint } from '@/core/types';
 import type { DragPayload, DropTarget } from '@/core/types/drag-drop';
 
 export type ExposedComponentAPI = Record<string, any>;
@@ -69,6 +70,8 @@ interface UiState {
   deleteConfirmationDialog: DeleteConfirmationDialogState;
   deleteBlockedDialog: DeleteBlockedDialogState;
   refactorConfirmationState: RefactorConfirmationState | null; // Can be null
+  // View-model hint for selected node
+  selectedNodeViewHint: ViewHint | null;
 }
 
 export const useUiStore = defineStore('ui', {
@@ -101,6 +104,7 @@ export const useUiStore = defineStore('ui', {
     deleteConfirmationDialog: { show: false, asset: null, impact: { deletableChildren: [] } },
     deleteBlockedDialog: { show: false, asset: null, impact: { blockingDependencies: [] } },
     refactorConfirmationState: null,
+    selectedNodeViewHint: null,
     
     // Initialize the new FSM context menu
     contextMenu: { state: 'closed' },
@@ -113,9 +117,10 @@ export const useUiStore = defineStore('ui', {
     setActivePane(paneId: string | null) {
       this.activePaneId = paneId;
     },
-    selectNode(nodeData?: SelectedNode | null) {
+    selectNode(nodeData?: SelectedNode | null, viewHint: ViewHint = VIEW_HINTS.DEFAULT) {
       if (!nodeData) {
         this.selectedNode = null;
+        this.selectedNodeViewHint = null;
         return;
       }
       this.selectedNode = {
@@ -126,6 +131,7 @@ export const useUiStore = defineStore('ui', {
         virtualContext: nodeData.virtualContext,
         assetType: nodeData.assetType, // <-- ADD THIS LINE
       };
+      this.selectedNodeViewHint = viewHint;
     },
     setActiveContextMenu(menuId: string | null) {
       this.activeContextMenuId = menuId;

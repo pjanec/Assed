@@ -31,3 +31,14 @@ export const ASSET_TREE_NODE_TYPES = {
   FILE_GROUP: 'file-group',
   NAMESPACE: 'namespace',
 } as const;
+
+// Generic UI view hints used by presenter logic
+export const VIEW_HINTS = {
+  DEFAULT: 'default',
+  MERGED: 'merged',
+} as const;
+
+// Core-level virtual node kinds (mechanisms, not business kinds)
+export const VIRTUAL_NODE_KINDS = {
+  SYNTHETIC_ASSET: 'SYNTHETIC_ASSET',
+} as const;

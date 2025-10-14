@@ -1,7 +1,7 @@
 import type { UnmergedAsset, AssetTreeNode } from '@/core/types';
 import { ASSET_TYPES } from '@/content/config/constants';
 import { ASSET_TREE_NODE_TYPES } from '@/core/config/constants';
-import { VIRTUAL_NODE_KINDS } from './definitions';
+import { VIRTUAL_NODE_KINDS, virtualFolderDefinitions } from './definitions';
 import { calculateMergedAsset } from '@/content/utils/mergeUtils';
 
 /**
@@ -30,6 +30,8 @@ export function resolveMergedRequirements(
   );
 
   // 3. Process each child package.
+  const provider = virtualFolderDefinitions[VIRTUAL_NODE_KINDS.MERGED_REQUIREMENTS];
+
   for (const pkg of childPackages) {
     // 3a. Reuse the existing central utility to perform the merge calculation.
     const mergedResult = calculateMergedAsset(pkg.id, allAssetsMap);
@@ -46,7 +48,7 @@ export function resolveMergedRequirements(
 
     // 3c. Create the virtual node that will be displayed in the UI.
     const virtualNode: AssetTreeNode = {
-      id: `${node.id}-merged-${pkg.id}`, // Unique ID for the UI
+      id: pkg.id, // Use REAL asset ID (alias pattern)
       name: pkg.assetKey, // Use the real package name for display consistency
       path: `${node.fqn}::Merged Requirements::${pkg.assetKey}`,
       type: ASSET_TREE_NODE_TYPES.ASSET,
@@ -54,9 +56,10 @@ export function resolveMergedRequirements(
       children: [],
       virtualContext: {
         kind: VIRTUAL_NODE_KINDS.MERGED_REQUIREMENTS,
-        sourceAssetId: pkg.id,
+        sourceAssetId: node.id,
         isReadOnly: true,
         payload: ('properties' in mergedResult) ? mergedResult.properties : { error: mergedResult.error },
+        viewHint: provider?.defaultViewHint,
       },
     };
 

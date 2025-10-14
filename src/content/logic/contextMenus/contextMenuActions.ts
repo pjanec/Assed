@@ -49,24 +49,19 @@ export function useContextMenuActionsRegistration() {
 
   // Helper function to get menu actions for a node
   function getNodeMenuActions(node: AssetTreeNode): ContextMenuAction[] {
-    // Check for virtual context override
+    // If a virtual folder defines custom menu actions, honor them
     if (node.virtualContext) {
-      const providerKind = node.virtualContext.kind;
-      const provider = virtualFolderDefinitions[providerKind];
-
-      // If the virtual folder has custom context menu actions, use them instead
-      if (provider?.getContextMenuActions) {
-        return provider.getContextMenuActions(node);
-      }
+      const provider = virtualFolderDefinitions[node.virtualContext.kind];
+      if (provider?.getContextMenuActions) return provider.getContextMenuActions(node);
     }
 
     const actions: ContextMenuAction[] = [];
 
-    // Virtual nodes cannot have self-modification actions (rename, delete)
+    // Treat alias nodes as real (ID is real); only block self-actions for folders/synthetics
     const isVirtual = !!node.virtualContext;
 
     // Add base actions for asset nodes (but not for virtual nodes)
-    if (node.id !== ROOT_ID && !isVirtual) {
+    if (node.id !== ROOT_ID && (!isVirtual || node.type !== 'asset')) {
       actions.push({
         id: 'openInNew',
         label: 'Open in New Inspector',
@@ -118,8 +113,8 @@ export function useContextMenuActionsRegistration() {
       }
     }
 
-    // For virtual nodes, proxy child creation to the real source asset
-    const effectiveNodeForChildren = isVirtual
+    // For virtual folders (not alias assets), compute effective node; alias uses real id directly
+    const effectiveNodeForChildren = isVirtual && node.type !== 'asset'
       ? assetsStore.unmergedAssets.find(a => a.id === node.virtualContext!.sourceAssetId)
       : node;
 

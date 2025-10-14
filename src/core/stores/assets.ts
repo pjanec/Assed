@@ -292,6 +292,24 @@ export const useAssetsStore = defineStore('assets', {
         });
     },
     
+    // Reactive getter to find the latest tree node by id from the live tree
+    getTreeNodeById(): (id: string) => AssetTreeNode | null {
+      return (id: string): AssetTreeNode | null => {
+        const rootNodes = this.getAssetsByNamespace as unknown as AssetTreeNode[];
+        const search = (nodes: AssetTreeNode[]): AssetTreeNode | null => {
+          for (const node of nodes) {
+            if (node.id === id) return node;
+            if (node.children && node.children.length) {
+              const found = search(node.children);
+              if (found) return found;
+            }
+          }
+          return null;
+        };
+        return search(rootNodes);
+      };
+    },
+    
     // REPLACE selectedAsset getter
     selectedNodeDetails: (state): AssetDetails | null => {
       // GETS DATA FROM THE UI STORE
@@ -443,29 +461,30 @@ export const useAssetsStore = defineStore('assets', {
     
     async loadAssetDetails(node: AssetTreeNode, { force = false } = {}): Promise<AssetDetails> {
       const assetId = node.id;
+      const coreConfig = useCoreConfigStore();
 
-      // 1. VIRTUAL ASSET LOGIC
+      // 1. VIRTUAL ASSET LOGIC (synthetic only; alias uses real details)
       if (node.virtualContext) {
-        // First, ensure the real source asset's details are loaded.
-        const sourceDetails = await this.loadAssetDetails({ id: node.virtualContext.sourceAssetId, type: ASSET_TREE_NODE_TYPES.ASSET } as AssetTreeNode);
-        
-        // ** THE FIX IS HERE **
-        // Create a deep copy of the REAL source asset's unmerged data to use as a base.
-        const syntheticUnmerged = cloneDeep(sourceDetails.unmerged);
-
-        // Now, make targeted modifications to create the read-only view.
-        syntheticUnmerged.overrides = node.virtualContext.payload || {}; // Replace overrides with the merged data.
-        syntheticUnmerged.templateFqn = null; // A merged view has no template.
-        
-        const details: AssetDetails = {
-          unmerged: syntheticUnmerged,
-          merged: { properties: node.virtualContext.payload || {} }, // The merged view is just the payload.
-          isReadOnly: true,
-        };
-        
-        // Store these synthetic details in the cache under the VIRTUAL asset's ID.
-        this.assetDetails.set(assetId, details);
-        return details;
+        // If assetType is present, check registry for synthetic flag
+        if (node.assetType) {
+          const def = coreConfig.getAssetDefinition(node.assetType);
+          if (def?.isSynthetic) {
+            const details: AssetDetails = {
+              unmerged: {
+                id: node.id,
+                assetKey: node.name,
+                assetType: node.assetType,
+                fqn: node.path,
+                overrides: node.virtualContext.payload || {},
+              } as any,
+              merged: null,
+              isReadOnly: true,
+            };
+            this.assetDetails.set(assetId, details);
+            return details;
+          }
+        }
+        // Non-synthetic virtual nodes (alias views) should fall through to real asset loading using node.id
       }
 
       // 2. REAL ASSET LOGIC (remains unchanged)
