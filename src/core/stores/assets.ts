@@ -250,8 +250,7 @@ export const useAssetsStore = defineStore('assets', {
                 if (!unmergedAsset) continue;
 
                 // Always execute the resolver with complete asset data; no cache check.
-                const result = provider.resolveChildren(unmergedAsset, assetsWithFullOverrides);
-                const virtualChildren = result.nodes;
+                const virtualChildren = provider.resolveChildren(unmergedAsset, assetsWithFullOverrides);
 
                 if (virtualChildren.length > 0) {
                   const virtualFolder: AssetTreeNode = {

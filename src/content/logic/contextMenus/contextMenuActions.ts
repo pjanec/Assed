@@ -131,7 +131,7 @@ export function useContextMenuActionsRegistration() {
                 workspaceStore.openNewFolderDialog(parentFqn);
               } else {
                 const parentAsset = (effectiveNodeForChildren.id !== ROOT_ID) ? (effectiveNodeForChildren as Asset) : null;
-                const namespace = (assetRegistry[effectiveNodeForChildren.assetType!]?.isFolder || effectiveNodeForChildren.id === ROOT_ID) ? (effectiveNodeForChildren as AssetTreeNode).path : null;
+                const namespace = (assetRegistry[effectiveNodeForChildren.assetType!]?.isStructuralFolder || effectiveNodeForChildren.id === ROOT_ID) ? (effectiveNodeForChildren as AssetTreeNode).path : null;
                 workspaceStore.openNewAssetDialog({ parentAsset, childType, namespace });
               }
               uiStore.hideContextMenu();
@@ -147,7 +147,7 @@ export function useContextMenuActionsRegistration() {
             icon: definition.icon,
             execute: () => {
               const parentAsset = (effectiveNodeForChildren.id !== ROOT_ID) ? (effectiveNodeForChildren as Asset) : null;
-              const namespace = (assetRegistry[effectiveNodeForChildren.assetType!]?.isFolder || effectiveNodeForChildren.id === ROOT_ID) ? (effectiveNodeForChildren as AssetTreeNode).path : null;
+              const namespace = (assetRegistry[effectiveNodeForChildren.assetType!]?.isStructuralFolder || effectiveNodeForChildren.id === ROOT_ID) ? (effectiveNodeForChildren as AssetTreeNode).path : null;
               workspaceStore.openNewAssetDialog({ parentAsset, childType, namespace });
               uiStore.hideContextMenu();
             }
@@ -186,7 +186,7 @@ export function useContextMenuActionsRegistration() {
     if (!assetType) return [];
     
     const definition = assetRegistry[assetType];
-    if (definition?.isFolder) {
+    if (definition?.isStructuralFolder) {
       return getValidChildrenForFolder(node as Asset);
     }
     return getValidChildTypes(assetType);

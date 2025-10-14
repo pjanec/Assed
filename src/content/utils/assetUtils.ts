@@ -39,7 +39,7 @@ export function findNearestFunctionalParent(asset: Asset): Asset | null {
     }
 
     const parent = assetsMap.get(parentFqn);
-    if (parent && !assetRegistry[parent.assetType]?.isFolder) {
+    if (parent && !assetRegistry[parent.assetType]?.isStructuralFolder) {
       return parent;
     }
     current = parent || null;

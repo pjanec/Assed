@@ -100,7 +100,7 @@ const FOLDER_LIKE_INTERACTION_RULE: InteractionRule = {
 
     // Check 2: Use assetRegistry to check for valid parent-child relationship
     const definition = assetRegistry[targetAsset.assetType!];
-    const validChildren = definition?.isFolder
+    const validChildren = definition?.isStructuralFolder
       ? getValidChildrenForFolder(targetAsset)
       : getValidChildTypes(targetAsset.assetType);
 
@@ -120,7 +120,7 @@ const FOLDER_LIKE_INTERACTION_RULE: InteractionRule = {
 
 // Dynamically generate the list of container asset types from the registry
 const containerAssetTypes = Object.entries(assetRegistry)
-  .filter(([, def]) => def.isFolder || def.validChildren.length > 0)
+  .filter(([, def]) => def.isStructuralFolder || def.validChildren.length > 0)
   .map(([type]) => type);
 
 // Register the same rule for all container types

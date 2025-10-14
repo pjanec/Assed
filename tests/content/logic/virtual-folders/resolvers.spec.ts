@@ -66,9 +66,9 @@ describe('Virtual Folder Resolvers - Merged Requirements', () => {
     const result = resolveMergedRequirements(nodeAsset, assetsWithOverrides);
 
     // 3. ASSERT: Verify the virtual asset has the correct merged properties
-    expect(result.nodes).toHaveLength(1);
+    expect(result).toHaveLength(1);
     
-    const virtualNode = result.nodes[0];
+    const virtualNode = result[0];
     expect(virtualNode.virtualContext?.payload).toBeDefined();
     
     const virtualMergedProperties = virtualNode.virtualContext?.payload;
@@ -100,9 +100,9 @@ describe('Virtual Folder Resolvers - Merged Requirements', () => {
     const result = resolveMergedRequirements(nodeAsset, assetsWithoutOverrides);
 
     // 3. ASSERT: Verify the virtual asset has incomplete merged properties
-    expect(result.nodes).toHaveLength(1);
+    expect(result).toHaveLength(1);
     
-    const virtualNode = result.nodes[0];
+    const virtualNode = result[0];
     const virtualMergedProperties = virtualNode.virtualContext?.payload;
     
     // The bug: when assets have empty overrides, the template lookup fails
@@ -148,9 +148,9 @@ describe('Virtual Folder Resolvers - Merged Requirements', () => {
     const result = resolveMergedRequirements(nodeAsset, assetsWithOverrides);
 
     // 3. ASSERT: Should have 2 virtual nodes now (Nginx + Standalone)
-    expect(result.nodes).toHaveLength(2);
+    expect(result).toHaveLength(2);
     
-    const standaloneVirtualNode = result.nodes.find(n => n.name === 'Standalone');
+    const standaloneVirtualNode = result.find(n => n.name === 'Standalone');
     expect(standaloneVirtualNode).toBeDefined();
     
     const standaloneMergedProperties = standaloneVirtualNode?.virtualContext?.payload;

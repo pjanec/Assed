@@ -232,7 +232,7 @@ export interface AssetDefinition {
   creationModes: ('simple' | 'full')[];
   isRenameable?: boolean;
   isDeletable?: boolean;
-  isFolder?: boolean;
+  isStructuralFolder?: boolean;
   sortOrder: number;
   isShownInStats?: boolean;
   initialOverrides?: Record<string, any>;

@@ -13,20 +13,16 @@ import { calculateMergedAsset } from '@/content/utils/mergeUtils';
 export function resolveMergedRequirements(
   node: UnmergedAsset,
   allAssets: UnmergedAsset[]
-): { nodes: AssetTreeNode[], dependencies: { direct: Set<string>, structural: Set<string> } } {
+): AssetTreeNode[] {
 
-  // 1. Initialize dependency sets for the cache.
-  const directDependencies = new Set<string>([node.id]);
-  const structuralDependencies = new Set<string>([node.fqn]);
   const virtualNodes: AssetTreeNode[] = [];
   const allAssetsMap = new Map(allAssets.map(a => [a.id, a]));
   const fqnMap = new Map(allAssets.map(a => [a.fqn, a]));
 
-  // 2. Find all direct child packages of the node.
+  // 2. Find ALL descendant packages of the node (any depth).
   const childPackages = allAssets.filter(a =>
     a.assetType === ASSET_TYPES.PACKAGE &&
-    a.fqn.startsWith(node.fqn + '::') &&
-    a.fqn.split('::').length === node.fqn.split('::').length + 1
+    a.fqn.startsWith(node.fqn + '::')
   );
 
   // 3. Process each child package.
@@ -36,15 +32,7 @@ export function resolveMergedRequirements(
     // 3a. Reuse the existing central utility to perform the merge calculation.
     const mergedResult = calculateMergedAsset(pkg.id, allAssetsMap);
 
-    // 3b. Manually trace the inheritance chain to collect all direct dependencies.
-    directDependencies.add(pkg.id);
-    let current: UnmergedAsset | undefined = pkg;
-    while (current?.templateFqn) {
-      const template = fqnMap.get(current.templateFqn);
-      if (!template) break;
-      directDependencies.add(template.id);
-      current = template;
-    }
+  // 3b. (Dependency tracking removed)
 
     // 3c. Create the virtual node that will be displayed in the UI.
     const virtualNode: AssetTreeNode = {
@@ -66,9 +54,6 @@ export function resolveMergedRequirements(
     virtualNodes.push(virtualNode);
   }
 
-  // 4. Return the generated nodes and all discovered dependencies.
-  return {
-    nodes: virtualNodes,
-    dependencies: { direct: directDependencies, structural: structuralDependencies },
-  };
+  // 4. Return the generated nodes.
+  return virtualNodes;
 }

@@ -5,7 +5,7 @@ import { MOCK_ASSET_TYPES } from './mockAssetRegistry';
 export function resolveAggregatedView(
   sourceAsset: UnmergedAsset,
   allAssets: UnmergedAsset[]
-): { nodes: AssetTreeNode[]; dependencies: { direct: Set<string>; structural: Set<string> } } {
+): AssetTreeNode[] {
   const descendants = allAssets.filter(a => a.fqn.startsWith(sourceAsset.fqn + '::'));
   const containedFqns = descendants.map(d => d.fqn);
   const syntheticId = `${sourceAsset.fqn}::(synthetic:aggregated)`;
@@ -25,7 +25,7 @@ export function resolveAggregatedView(
     },
   };
 
-  return { nodes: [syntheticNode], dependencies: { direct: new Set(), structural: new Set() } };
+  return [syntheticNode];
 }
 
 

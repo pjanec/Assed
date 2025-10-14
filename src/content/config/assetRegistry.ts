@@ -52,7 +52,7 @@ export const assetRegistry: Record<string, AssetDefinition> = {
     creationModes: [],
     isRenameable: false,
     isDeletable: false,
-    isFolder: true,
+    isStructuralFolder: true,
     sortOrder: 0,
   },
   [ASSET_TYPES.ENVIRONMENT]: {
@@ -65,7 +65,7 @@ export const assetRegistry: Record<string, AssetDefinition> = {
     creationModes: ['simple', 'full'],
     isRenameable: true,
     isDeletable: true,
-    isFolder: false,
+    isStructuralFolder: false,
     postCloneFixup: fixTemplateFqn,
     sortOrder: 10,
     isShownInStats: true,
@@ -80,9 +80,8 @@ export const assetRegistry: Record<string, AssetDefinition> = {
     creationModes: ['simple', 'full'],
     isRenameable: true,
     isDeletable: true,
-    // CRITICAL: A node must be treated as a folder to contain virtual children.
-    // This is a necessary change from the original AE_8 file.
-    isFolder: true,
+    // Node is not a structural folder. Virtual folders are UI-level only.
+    isStructuralFolder: false,
     postCloneFixup: fixTemplateFqn,
     virtualFolderProviders: [VIRTUAL_NODE_KINDS.MERGED_REQUIREMENTS],
     sortOrder: 20,
@@ -98,7 +97,7 @@ export const assetRegistry: Record<string, AssetDefinition> = {
     creationModes: ['simple'],
     isRenameable: true,
     isDeletable: true,
-    isFolder: false,
+    isStructuralFolder: false,
     initialOverrides: { Files: {} },
     postCloneFixup: fixTemplateFqn,
     sortOrder: 40,
@@ -114,7 +113,7 @@ export const assetRegistry: Record<string, AssetDefinition> = {
     creationModes: ['simple'],
     isRenameable: true,
     isDeletable: true,
-    isFolder: false,
+    isStructuralFolder: false,
     postCloneFixup: fixTemplateFqn,
     sortOrder: 30,
     isShownInStats: true,
@@ -129,7 +128,7 @@ export const assetRegistry: Record<string, AssetDefinition> = {
     creationModes: ['simple'],
     isRenameable: true,
     isDeletable: true,
-    isFolder: true,
+    isStructuralFolder: true,
     sortOrder: 99,
   },
 };
@@ -161,8 +160,10 @@ export function getValidChildTypes(assetType: string | null | undefined): string
  * @returns An array of strings representing valid child types.
  */
 export function getValidChildrenForFolder(folderAsset: Asset): string[] {
-    const functionalParent = findNearestFunctionalParent(folderAsset);
-    const parentType = functionalParent ? functionalParent.assetType : ASSET_TYPES.ROOT;
+    const isStructural = assetRegistry[folderAsset.assetType!]?.isStructuralFolder === true;
+    const parentType = isStructural
+      ? (findNearestFunctionalParent(folderAsset)?.assetType || ASSET_TYPES.ROOT)
+      : folderAsset.assetType;
     const children = getValidChildTypes(parentType);
     
     // A folder can always contain another sub-folder.

@@ -715,7 +715,7 @@ export const useWorkspaceStore = defineStore('workspace', {
       // Calculate all assets that would be deleted
       const assetsToDelete = [asset];
       const definition = coreConfig.getAssetDefinition(asset.assetType);
-      const isContainer = definition?.isFolder || (definition && definition.validChildren.length > 0);
+      const isContainer = definition?.isStructuralFolder || (definition && definition.validChildren.length > 0);
 
       if (isContainer) {
         const descendants: UnmergedAsset[] = assetsStore.unmergedAssets.filter(a =>
@@ -1048,7 +1048,7 @@ export class DeleteAssetCommand implements Command {
     // Perform backfilling for functional assets (non-folders)
     this.assetsToDelete.forEach(asset => {
       const coreConfig = useCoreConfigStore();
-      if (!coreConfig.getAssetDefinition(asset.assetType)?.isFolder) {
+      if (!coreConfig.getAssetDefinition(asset.assetType)?.isStructuralFolder) {
         this.backfillFolders(workspace, asset.fqn);
       }
     });
@@ -1073,7 +1073,7 @@ export class DeleteAssetCommand implements Command {
     
     this.assetsToDelete.forEach(asset => {
       const coreConfig = useCoreConfigStore();
-      if (coreConfig.getAssetDefinition(asset.assetType)?.isFolder) {
+      if (coreConfig.getAssetDefinition(asset.assetType)?.isStructuralFolder) {
         // Find all assets whose FQN starts with this folder's FQN
         const descendants = assetsStore.assets.filter(a => 
           a.fqn.startsWith(asset.fqn + '::') && !allAssets.some(existing => existing.id === a.id)

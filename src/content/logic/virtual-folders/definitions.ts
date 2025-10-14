@@ -16,7 +16,7 @@ export const VIRTUAL_NODE_KINDS = {
 export interface VirtualFolderDefinition {
   name: string;
   icon: string;
-  resolveChildren: (sourceAsset: UnmergedAsset, allAssets: UnmergedAsset[]) => { nodes: AssetTreeNode[], dependencies: { direct: Set<string>, structural: Set<string> } };
+  resolveChildren: (sourceAsset: UnmergedAsset, allAssets: UnmergedAsset[]) => AssetTreeNode[];
   getDropActions?: (dragPayload: DragPayload, dropTarget: DropTarget) => DropAction[];
   getContextMenuActions?: (virtualNode: AssetTreeNode) => ContextMenuAction[];
   defaultViewHint?: ViewHint;
@@ -36,10 +36,9 @@ export const virtualFolderDefinitions: Record<VirtualNodeKind, VirtualFolderDefi
   [VIRTUAL_NODE_KINDS.LOCKED_INFO]: {
     name: 'Locked Info (Read-Only)',
     icon: 'mdi-information-off-outline',
-    resolveChildren: () => ({ // A simple resolver for the example
-      nodes: [{ id: 'locked-child-1', name: 'This is a read-only item.', path: '', type: 'asset', children: [] }],
-      dependencies: { direct: new Set(), structural: new Set() }
-    }),
+    resolveChildren: () => ([ // A simple resolver for the example
+      { id: 'locked-child-1', name: 'This is a read-only item.', path: '', type: 'asset', children: [] }
+    ]),
     // Override hooks to disable all interactions
     getDropActions: () => [],
     getContextMenuActions: () => [],
