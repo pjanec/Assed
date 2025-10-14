@@ -133,7 +133,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
+import { useUiStore } from '@/core/stores/ui';
 import MonacoEditor from './MonacoEditor.vue';
 import JSONEditor from './JSONEditor.vue';
 import Ajv from 'ajv';
@@ -161,6 +162,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<Emits>();
 
+const uiStore = useUiStore();
 const activeTab = ref<string>('settings');
 const treeEditor = ref<any>(null);
 const showValidationDialog = ref<boolean>(false);
@@ -237,6 +239,21 @@ watch([activeTab, treeEditor], ([newTab, editorInstance]) => {
     }
     errorToFocus.value = null;
   }
+});
+
+// Persist/restore active tab per pane
+onMounted(() => {
+  // Try restore
+  const paneId = (window as any)?.CURRENT_INSPECTOR_PANE_ID as string | undefined;
+  if (paneId) {
+    const saved = uiStore.getInspectorTab(paneId);
+    if (saved) activeTab.value = saved;
+  }
+});
+
+watch(activeTab, (tab) => {
+  const paneId = (window as any)?.CURRENT_INSPECTOR_PANE_ID as string | undefined;
+  if (paneId) uiStore.setInspectorTab(paneId, tab);
 });
 </script>
 

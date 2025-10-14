@@ -59,17 +59,16 @@
 
       <!-- DYNAMIC INSPECTOR COMPONENT -->
       <div v-else class="h-100">
-        <component :is="asyncComponent" :asset="viewModel" :is-read-only="viewModel.isReadOnly" v-if="activeInspectorComponent" />
+        <component :is="asyncComponent" :asset="viewModel" :is-read-only="viewModel.isReadOnly" v-if="asyncComponent" />
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent } from 'vue';
+import { computed, defineAsyncComponent, onMounted, onBeforeUnmount, watch } from 'vue';
 import { useAssetsStore, useUiStore } from '@/core/stores/index';
 import { useCoreConfigStore } from '@/core/stores/config';
-import { storeToRefs } from 'pinia';
 import type { AssetDetails, InspectorPaneInfo } from '@/core/types';
 import { VIEW_HINTS } from '@/core/config/constants';
 import { cloneDeep } from 'lodash-es';
@@ -84,28 +83,9 @@ const props = defineProps<Props>();
 const assetsStore = useAssetsStore();
 const uiStore = useUiStore();
 const coreConfig = useCoreConfigStore();
-const { activeInspectorComponent } = storeToRefs(assetsStore);
 
 const viewModel = computed((): AssetDetails | null => {
-  // Namespaces: provide display-only details
-  const node = uiStore.selectedNode;
-  if (node && node.id === props.assetId && node.type === 'namespace') {
-    const assetDetails = assetsStore.getAssetDetails(node.id);
-    if (!assetDetails) {
-      return {
-        unmerged: {
-          id: node.id,
-          assetKey: node.name,
-          assetType: coreConfig.structuralAssetType as any,
-          fqn: node.path,
-          overrides: {},
-        } as any,
-        merged: null,
-      };
-    }
-  }
-
-  // Case 1: Synthetic assets from live tree (reactive)
+  // 1. Identify synthetic assets from the live tree
   const liveTreeNode = assetsStore.getTreeNodeById(props.assetId);
   const definition = liveTreeNode?.assetType ? coreConfig.getAssetDefinition(liveTreeNode.assetType as any) : null;
   if (definition?.isSynthetic && liveTreeNode?.virtualContext) {
@@ -122,10 +102,10 @@ const viewModel = computed((): AssetDetails | null => {
     };
   }
 
-  // Case 2: Alias merged view via presenter pattern
+  // 2. Alias presenter logic
   const realDetails = assetsStore.getUnmergedDetails(props.assetId);
   if (!realDetails) return null;
-  if (uiStore.selectedNodeViewHint === VIEW_HINTS.MERGED && realDetails.merged) {
+  if (uiStore.selectedNodeViewHint === VIEW_HINTS.MERGED && uiStore.selectedNode?.id === props.assetId && realDetails.merged) {
     const mergedViewModel = cloneDeep(realDetails);
     mergedViewModel.unmerged.overrides = realDetails.merged.properties || {};
     mergedViewModel.unmerged.templateFqn = null as any;
@@ -133,7 +113,7 @@ const viewModel = computed((): AssetDetails | null => {
     return mergedViewModel;
   }
 
-  // Case 3: Default editable real asset
+  // 3. Default editable
   return realDetails;
 });
 
@@ -141,13 +121,13 @@ const isActive = computed(() => uiStore.activePaneId === props.paneId);
 
 // Use defineAsyncComponent to handle loading/error states gracefully
 const asyncComponent = computed(() => {
-  if (!activeInspectorComponent.value) {
-    return null;
-  }
-  return defineAsyncComponent({
-    loader: activeInspectorComponent.value,
-    delay: 200,
-  });
+  if (!viewModel.value) return null as any;
+  const assetType = viewModel.value.unmerged.assetType as any;
+  if (!assetType) return null as any;
+  const registration = coreConfig.getAssetDefinition(assetType);
+  const loader = registration ? registration.inspectorComponent : null;
+  if (!loader) return null as any;
+  return defineAsyncComponent({ loader, delay: 200 });
 });
 
 const closeInspector = () => {
@@ -157,6 +137,21 @@ const closeInspector = () => {
 const toggleActive = () => {
   uiStore.setActivePane(props.paneId);
 };
+
+// Expose current pane id to BaseInspector for tab persistence
+onMounted(() => {
+  (window as any).CURRENT_INSPECTOR_PANE_ID = props.paneId;
+});
+
+watch(() => props.paneId, (newId) => {
+  (window as any).CURRENT_INSPECTOR_PANE_ID = newId;
+});
+
+onBeforeUnmount(() => {
+  if ((window as any).CURRENT_INSPECTOR_PANE_ID === props.paneId) {
+    delete (window as any).CURRENT_INSPECTOR_PANE_ID;
+  }
+});
 </script>
 
 <style scoped>

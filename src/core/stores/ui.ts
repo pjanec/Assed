@@ -72,6 +72,8 @@ interface UiState {
   refactorConfirmationState: RefactorConfirmationState | null; // Can be null
   // View-model hint for selected node
   selectedNodeViewHint: ViewHint | null;
+  // Persist active tab per inspector pane
+  inspectorActiveTab: Map<string, string>;
 }
 
 export const useUiStore = defineStore('ui', {
@@ -105,6 +107,7 @@ export const useUiStore = defineStore('ui', {
     deleteBlockedDialog: { show: false, asset: null, impact: { blockingDependencies: [] } },
     refactorConfirmationState: null,
     selectedNodeViewHint: null,
+    inspectorActiveTab: new Map(),
     
     // Initialize the new FSM context menu
     contextMenu: { state: 'closed' },
@@ -132,6 +135,12 @@ export const useUiStore = defineStore('ui', {
         assetType: nodeData.assetType, // <-- ADD THIS LINE
       };
       this.selectedNodeViewHint = viewHint;
+    },
+    setInspectorTab(paneId: string, tabId: string) {
+      this.inspectorActiveTab.set(paneId, tabId);
+    },
+    getInspectorTab(paneId: string): string | null {
+      return this.inspectorActiveTab.get(paneId) || null;
     },
     setActiveContextMenu(menuId: string | null) {
       this.activeContextMenuId = menuId;
