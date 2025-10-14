@@ -1,4 +1,4 @@
-import { ASSET_TREE_NODE_TYPES, VIRTUAL_NODE_KINDS } from '@/core/config/constants';
+import { ASSET_TREE_NODE_TYPES } from '@/core/config/constants';
 import type { UnmergedAsset, AssetTreeNode } from '@/core/types';
 import { MOCK_ASSET_TYPES } from './mockAssetRegistry';
 
@@ -18,7 +18,7 @@ export function resolveAggregatedView(
     assetType: MOCK_ASSET_TYPES.AGGREGATOR as any,
     children: [],
     virtualContext: {
-      kind: VIRTUAL_NODE_KINDS.SYNTHETIC_ASSET,
+      kind: 'GENERIC_MERGED_VIEW' as any,
       sourceAssetId: sourceAsset.id,
       isReadOnly: true,
       payload: { containedAssets: containedFqns },

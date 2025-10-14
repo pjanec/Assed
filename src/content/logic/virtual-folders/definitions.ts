@@ -3,12 +3,12 @@ import type { Component } from 'vue';
 import type { DragPayload, DropTarget } from '@/core/types/drag-drop';
 import type { DropAction } from '@/core/registries/interactionRegistry';
 import type { ContextMenuAction } from '@/core/types/ui';
-import { resolveMergedRequirements } from './resolvers';
+import { resolveGenericMergedView } from './resolvers';
 import { VIEW_HINTS } from '@/core/config/constants';
 
 // 1. Define the kinds as a constant object for type safety
 export const VIRTUAL_NODE_KINDS = {
-  MERGED_REQUIREMENTS: 'MERGED_REQUIREMENTS',
+  GENERIC_MERGED_VIEW: 'GENERIC_MERGED_VIEW',
   LOCKED_INFO: 'LOCKED_INFO',
 } as const;
 
@@ -25,12 +25,11 @@ export interface VirtualFolderDefinition {
 
 // 3. Create the registry of definitions
 export const virtualFolderDefinitions: Record<VirtualNodeKind, VirtualFolderDefinition> = {
-  [VIRTUAL_NODE_KINDS.MERGED_REQUIREMENTS]: {
-    name: 'Merged Requirements',
-    icon: 'mdi-playlist-check',
-    resolveChildren: resolveMergedRequirements,
+  [VIRTUAL_NODE_KINDS.GENERIC_MERGED_VIEW]: {
+    name: 'Merged View',
+    icon: 'mdi-lan-connect',
+    resolveChildren: resolveGenericMergedView,
     defaultViewHint: VIEW_HINTS.MERGED,
-    // No override hooks means this folder will use the default "proxy" behavior
   },
 
   [VIRTUAL_NODE_KINDS.LOCKED_INFO]: {

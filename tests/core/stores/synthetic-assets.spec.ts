@@ -6,6 +6,7 @@ import type { UnmergedAsset, AssetTreeNode } from '@/core/types';
 vi.mock('@/content/logic/virtual-folders/definitions', async () => {
   const { resolveAggregatedView } = await vi.importActual('../../mock-content/mockVirtualFolders');
   return {
+    VIRTUAL_NODE_KINDS: { GENERIC_MERGED_VIEW: 'GENERIC_MERGED_VIEW' },
     virtualFolderDefinitions: {
       AGGREGATED_VIEW: {
         name: 'Aggregated View',

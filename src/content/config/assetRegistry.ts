@@ -67,6 +67,7 @@ export const assetRegistry: Record<string, AssetDefinition> = {
     isDeletable: true,
     isStructuralFolder: false,
     postCloneFixup: fixTemplateFqn,
+    virtualFolderProviders: [VIRTUAL_NODE_KINDS.GENERIC_MERGED_VIEW],
     sortOrder: 10,
     isShownInStats: true,
   },
@@ -83,7 +84,7 @@ export const assetRegistry: Record<string, AssetDefinition> = {
     // Node is not a structural folder. Virtual folders are UI-level only.
     isStructuralFolder: false,
     postCloneFixup: fixTemplateFqn,
-    virtualFolderProviders: [VIRTUAL_NODE_KINDS.MERGED_REQUIREMENTS],
+    virtualFolderProviders: [VIRTUAL_NODE_KINDS.GENERIC_MERGED_VIEW],
     sortOrder: 20,
     isShownInStats: true,
   },
