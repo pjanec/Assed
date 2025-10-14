@@ -32,7 +32,7 @@
             :color="getAssetTypeColor(pkg.assetType)"
             size="small"
             class="ma-1"
-            @click.stop="$emit('package-click', pkg.id)"
+            @click.stop="openPackage(pkg.id)"
             v-dragsource="{ 
               assetId: pkg.id, 
               parentAssetId: props.node.id, 
@@ -141,6 +141,10 @@ const addPackage = () => {
 const showNodeMenu = () => {
   // TODO: Implement node context menu
   console.log('Showing node menu for:', props.node.id)
+}
+
+const openPackage = (packageId: string) => {
+  assetsStore.openInspectorFor(packageId, { reuse: true, focus: true });
 }
 </script>
 

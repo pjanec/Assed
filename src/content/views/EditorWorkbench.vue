@@ -291,7 +291,7 @@ watch(selectedNode, async (newNode) => {
   const { activePaneId } = storeToRefs(uiStore);
 
   if (openInspectors.value.length === 0) {
-    assetsStore.openInspector(newNode.id);
+    assetsStore.openInspectorFor(newNode.id, { reuse: true, focus: true });
   } else {
     const activePane = openInspectors.value.find((p: any) => p.paneId === activePaneId.value);
     const targetPaneId = activePane ? activePane.paneId : openInspectors.value[0].paneId;

@@ -458,6 +458,34 @@ export const useAssetsStore = defineStore('assets', {
         this.loading.assets = false;
       }
     },
+
+    async openInspectorFor(
+      target: string | Pick<AssetTreeNode, 'id' | 'virtualContext' | 'assetType' | 'type'>,
+      opts: { viewHint?: any; reuse?: boolean; focus?: boolean } = {}
+    ): Promise<void> {
+      const uiStore = useUiStore();
+      const assetId = typeof target === 'string' ? target : target.id;
+      const viewHint = opts.viewHint ?? (typeof target !== 'string' ? target.virtualContext?.viewHint : undefined) ?? (undefined as any);
+
+      // Preload details for smoother UI; synthetic handled in loadAssetDetails
+      try {
+        await this.loadAssetDetails({ id: assetId, type: ASSET_TREE_NODE_TYPES.ASSET } as AssetTreeNode, { force: false });
+      } catch (e) {
+        // Ignore preload errors here; UI can still open and show error states
+      }
+
+      if (opts.reuse && this.openInspectors.length > 0) {
+        const paneId = uiStore.activePaneId || this.openInspectors[0].paneId;
+        this.updateInspectorContent(paneId, assetId);
+        if (opts.focus !== false) uiStore.setActivePane(paneId);
+      } else {
+        this.openInspector(assetId);
+      }
+
+      if (viewHint) {
+        uiStore.selectedNodeViewHint = viewHint;
+      }
+    },
     
     async loadAssetDetails(node: AssetTreeNode, { force = false } = {}): Promise<AssetDetails> {
       const assetId = node.id;

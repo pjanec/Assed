@@ -67,17 +67,7 @@ export function useContextMenuActionsRegistration() {
         label: 'Open in New Inspector',
         icon: 'mdi-open-in-new',
         execute: async () => {
-          // Load asset details directly without changing selection
-          const treeNode = {
-            id: node.id,
-            type: node.type || 'asset',
-            name: node.name,
-            path: node.path,
-            virtualContext: node.virtualContext
-          } as any;
-          await assetsStore.loadAssetDetails(treeNode);
-          // Then add a new inspector pane
-          assetsStore.addInspector(node.id);
+          await assetsStore.openInspectorFor(node, { viewHint: node.virtualContext?.viewHint, reuse: false, focus: true });
           uiStore.hideContextMenu();
         }
       });

@@ -71,7 +71,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch, getCurrentInstance } from 'vue';
-import { useUiStore } from '@/core/stores/index';
+import { useUiStore, useAssetsStore } from '@/core/stores/index';
 import { useCoreConfigStore } from '@/core/stores/config';
 import { useDroppable } from '@/core/composables/useDroppable';
 import { DROP_TARGET_TYPES, CORE_DRAG_CONTEXTS, CONTEXT_MENU_KINDS, ASSET_TREE_NODE_TYPES, VIEW_HINTS } from '@/core/config/constants';
@@ -81,6 +81,7 @@ import type { AssetTreeNode } from '@/core/types';
 
 const uiStore = useUiStore();
 const coreConfig = useCoreConfigStore();
+const assetsStore = useAssetsStore();
 
 // Give each instance a unique ID for the drag-drop instance registry
 const instance = getCurrentInstance();
@@ -151,6 +152,7 @@ const itemClass = computed(() => {
 const handleClick = () => {
   const viewHint = (props.node.virtualContext && (props.node as any).virtualContext.viewHint) || VIEW_HINTS.DEFAULT;
   uiStore.selectNode(props.node, viewHint);
+  assetsStore.openInspectorFor(props.node, { viewHint, reuse: true, focus: true });
   if (isContainer.value) {
     toggleExpanded();
   }

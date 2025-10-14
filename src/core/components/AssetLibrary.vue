@@ -261,7 +261,7 @@ const handleCreateFolder = (newFolderName: string) => {
   });
 
   // Open an inspector for the newly created folder
-  assetsStore.openInspector(createdFolder.id);
+  assetsStore.openInspectorFor(createdFolder.id, { reuse: true, focus: true });
   // --- END ADDED LOGIC ---
 
   uiStore.clearActionStates(); // Close dialog through UI store
