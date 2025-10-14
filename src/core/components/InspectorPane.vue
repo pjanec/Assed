@@ -29,6 +29,18 @@
         
         <div class="d-flex ga-1 flex-shrink-0">
           <v-btn
+            icon="mdi-arrow-left"
+            size="small"
+            :disabled="!canGoBack"
+            @click="goBack"
+          />
+          <v-btn
+            icon="mdi-arrow-right"
+            size="small"
+            :disabled="!canGoForward"
+            @click="goForward"
+          />
+          <v-btn
             :icon="isActive ? 'mdi-pin' : 'mdi-pin-outline'"
             size="small"
             @click="toggleActive"
@@ -119,6 +131,9 @@ const viewModel = computed((): AssetDetails | null => {
 
 const isActive = computed(() => uiStore.activePaneId === props.paneId);
 
+const canGoBack = computed(() => assetsStore.canHistoryBack(props.paneId));
+const canGoForward = computed(() => assetsStore.canHistoryForward(props.paneId));
+
 // Use defineAsyncComponent to handle loading/error states gracefully
 const asyncComponent = computed(() => {
   if (!viewModel.value) return null as any;
@@ -136,6 +151,14 @@ const closeInspector = () => {
 
 const toggleActive = () => {
   uiStore.setActivePane(props.paneId);
+};
+
+const goBack = async () => {
+  await assetsStore.historyBack(props.paneId);
+};
+
+const goForward = async () => {
+  await assetsStore.historyForward(props.paneId);
 };
 
 // Expose current pane id to BaseInspector for tab persistence

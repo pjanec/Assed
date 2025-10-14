@@ -26,6 +26,7 @@ import { useUiStore } from './ui'; // Import the new UI store
 import { useWorkspaceStore } from './workspace'; // This is now safe to import directly
 // --- ^^^ KEY CHANGES ^^^ ---
 import { generateUUID } from '@/core/utils/idUtils'; // Import the UUID generator
+import * as InspectorHistory from '@/core/history/inspectorHistory';
 
 // Helper to generate unique IDs for panes
 const generatePaneId = (): string => `pane_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
@@ -44,6 +45,8 @@ interface AssetsState {
   
   // Loading states
   loading: LoadingStates;
+  // Per-pane inspector navigation history
+  inspectorHistoryByPane: Map<string, InspectorHistory.InspectorHistoryState>;
 }
 
 export const useAssetsStore = defineStore('assets', {
@@ -64,6 +67,7 @@ export const useAssetsStore = defineStore('assets', {
       assets: false,
       assetDetails: new Set()
     },
+    inspectorHistoryByPane: new Map(),
   }),
 
     // File: EnvEdit/src/stores/assets.ts
@@ -430,6 +434,14 @@ export const useAssetsStore = defineStore('assets', {
   },
 
   actions: {
+    canHistoryBack(paneId: string): boolean {
+      const hist = this.inspectorHistoryByPane.get(paneId);
+      return hist ? InspectorHistory.canBack(hist) : false;
+    },
+    canHistoryForward(paneId: string): boolean {
+      const hist = this.inspectorHistoryByPane.get(paneId);
+      return hist ? InspectorHistory.canForward(hist) : false;
+    },
     async loadAssets(): Promise<void> {
       this.loading.assets = true;
       try {
@@ -480,10 +492,69 @@ export const useAssetsStore = defineStore('assets', {
         if (opts.focus !== false) uiStore.setActivePane(paneId);
       } else {
         this.openInspector(assetId);
+        const paneId = this.openInspectors[this.openInspectors.length - 1]?.paneId;
+        if (paneId) this._historyPush(paneId, assetId);
       }
 
       if (viewHint) {
         uiStore.selectedNodeViewHint = viewHint;
+      }
+    },
+
+    _getOrCreateHistory(paneId: string): InspectorHistory.InspectorHistoryState {
+      let hist = this.inspectorHistoryByPane.get(paneId);
+      if (!hist) {
+        hist = InspectorHistory.createHistory();
+        this.inspectorHistoryByPane.set(paneId, hist);
+      }
+      return hist;
+    },
+
+    _historyPush(paneId: string, assetId: string): void {
+      const hist = this._getOrCreateHistory(paneId);
+      InspectorHistory.push(hist, assetId);
+    },
+
+    _historyReplace(paneId: string, assetId: string): void {
+      const hist = this._getOrCreateHistory(paneId);
+      InspectorHistory.replace(hist, assetId);
+    },
+
+    async historyBack(paneId: string): Promise<void> {
+      const hist = this._getOrCreateHistory(paneId);
+      const exists = async (id: string) => {
+        if (this.assets.some(a => a.id === id)) return true;
+        try {
+          const coreConfig = useCoreConfigStore();
+          if (!coreConfig.persistenceAdapter) return false;
+          await coreConfig.persistenceAdapter.loadAssetDetails(id);
+          return true;
+        } catch {
+          return false;
+        }
+      };
+      const targetId = await InspectorHistory.back(hist, exists);
+      if (targetId) {
+        this.updateInspectorContent(paneId, targetId);
+      }
+    },
+
+    async historyForward(paneId: string): Promise<void> {
+      const hist = this._getOrCreateHistory(paneId);
+      const exists = async (id: string) => {
+        if (this.assets.some(a => a.id === id)) return true;
+        try {
+          const coreConfig = useCoreConfigStore();
+          if (!coreConfig.persistenceAdapter) return false;
+          await coreConfig.persistenceAdapter.loadAssetDetails(id);
+          return true;
+        } catch {
+          return false;
+        }
+      };
+      const targetId = await InspectorHistory.forward(hist, exists);
+      if (targetId) {
+        this.updateInspectorContent(paneId, targetId);
       }
     },
     
@@ -570,6 +641,7 @@ export const useAssetsStore = defineStore('assets', {
       const index = this.openInspectors.findIndex(p => p.paneId === paneId);
       if (index > -1) {
         this.openInspectors.splice(index, 1);
+        this.inspectorHistoryByPane.delete(paneId);
         if (uiStore.activePaneId === paneId) {
           uiStore.setActivePane(this.openInspectors[0]?.paneId || null);
         }
@@ -580,7 +652,11 @@ export const useAssetsStore = defineStore('assets', {
     updateInspectorContent(paneId: string, newAssetId: string): void {
       const inspector = this.openInspectors.find(p => p.paneId === paneId);
       if (inspector) {
-        inspector.assetId = newAssetId;
+        if (inspector.assetId !== newAssetId) {
+          inspector.assetId = newAssetId;
+          // user navigation: push to history
+          this._historyPush(paneId, newAssetId);
+        }
       }
     },
 
