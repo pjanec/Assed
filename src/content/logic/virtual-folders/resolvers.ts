@@ -1,8 +1,11 @@
 import type { UnmergedAsset, AssetTreeNode } from '@/core/types';
-import { ASSET_TYPES } from '@/content/config/constants';
 import { ASSET_TREE_NODE_TYPES } from '@/core/config/constants';
-import { VIRTUAL_NODE_KINDS, virtualFolderDefinitions } from './definitions';
+import { virtualFolderDefinitions } from './definitions';
+import { VIRTUAL_NODE_KINDS, type VirtualNodeKind } from './kinds';
 import { calculateMergedAsset } from '@/content/utils/mergeUtils';
+import { assetRegistry } from '@/content/config/assetRegistry';
+import { resolveInheritedCollection } from '@/core/utils/inheritanceUtils';
+import { ASSET_TYPES } from '@/content/config/constants';
 
 /**
  * Calculates the final "merged" state of all child packages for a Node.
@@ -68,26 +71,47 @@ export function resolveGenericMergedView(
 ): AssetTreeNode[] {
   const allAssetsMap = new Map(allAssets.map(a => [a.id, a]));
 
-  // 1. Collect all functional descendants (exclude structural folders)
-  const descendantAssets = allAssets.filter(a =>
-    a.fqn.startsWith(sourceAsset.fqn + '::') &&
-    a.assetType !== ASSET_TYPES.NAMESPACE_FOLDER
-  );
-
-  // 2. Group by asset type
-  const groupedByType = descendantAssets.reduce((acc: Record<string, UnmergedAsset[]>, asset) => {
-    const t = asset.assetType;
-    if (!acc[t]) acc[t] = [];
-    acc[t].push(asset);
-    return acc;
-  }, {} as Record<string, UnmergedAsset[]>);
+  // Candidate child types: registry-defined children plus common functional types
+  const potentialChildTypes = new Set<string>([
+    ...(assetRegistry[sourceAsset.assetType]?.validChildren || []),
+    ASSET_TYPES.PACKAGE,
+    ASSET_TYPES.OPTION,
+  ]);
 
   const provider = virtualFolderDefinitions[VIRTUAL_NODE_KINDS.GENERIC_MERGED_VIEW];
+  const subFolders: AssetTreeNode[] = [];
 
-  // 3. Build sub-folders per asset type
-  const subFolders: AssetTreeNode[] = Object.entries(groupedByType).map(([assetType, assets]) => {
+  potentialChildTypes.forEach(assetType => {
+    if (assetType === ASSET_TYPES.NAMESPACE_FOLDER) return;
 
-    const children: AssetTreeNode[] = assets.map(asset => {
+    // Start with children directly under the source asset according to structural inheritance
+    const byKey = new Map<string, UnmergedAsset>();
+    resolveInheritedCollection(sourceAsset, assetType, allAssets, assetRegistry)
+      .forEach(a => byKey.set(a.assetKey, a));
+
+    // If this child type commonly sits under functional intermediaries (e.g., Packages under Nodes),
+    // walk one functional hop through those intermediaries and include their children unless overridden locally.
+    const directFunctionalChildren = (assetRegistry[sourceAsset.assetType]?.validChildren || [])
+      .filter(t => !assetRegistry[t]?.isStructuralFolder);
+
+    const intermediaryTypes = directFunctionalChildren.filter(t => (assetRegistry[t]?.validChildren || []).includes(assetType));
+
+    intermediaryTypes.forEach(intermediaryType => {
+      const intermediaries = resolveInheritedCollection(sourceAsset, intermediaryType, allAssets, assetRegistry);
+      intermediaries.forEach(interAsset => {
+        resolveInheritedCollection(interAsset as UnmergedAsset, assetType, allAssets, assetRegistry)
+          .forEach(child => {
+            if (!byKey.has(child.assetKey)) {
+              byKey.set(child.assetKey, child);
+            }
+          });
+      });
+    });
+
+    const finalChildren = Array.from(byKey.values());
+    if (finalChildren.length === 0) return;
+
+    const children: AssetTreeNode[] = finalChildren.map(asset => {
       const mergedResult = calculateMergedAsset(asset.id, allAssetsMap);
       return {
         id: asset.id,
@@ -115,7 +139,7 @@ export function resolveGenericMergedView(
       virtualContext: { kind: VIRTUAL_NODE_KINDS.GENERIC_MERGED_VIEW, sourceAssetId: sourceAsset.id },
     } as AssetTreeNode;
 
-    return subFolderNode;
+    subFolders.push(subFolderNode);
   });
 
   return subFolders.sort((a, b) => a.name.localeCompare(b.name));

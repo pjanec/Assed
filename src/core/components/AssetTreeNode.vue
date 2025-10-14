@@ -116,7 +116,8 @@ const { isDraggingOver, handleDragOver, handleDragLeave, handleDrop } = useDropp
 
 
 
-const isExpanded = ref(props.node.type !== 'asset');
+// Start collapsed for virtual folders to avoid clutter; otherwise, expand non-asset nodes by default
+const isExpanded = ref(props.node.virtualContext ? false : (props.node.type !== 'asset'));
 watch(() => uiStore.nodeToExpand, (nodeId) => {
   if (nodeId && nodeId === props.node.id) {
     isExpanded.value = true;

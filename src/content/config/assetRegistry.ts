@@ -4,7 +4,7 @@ import type { Asset, UnmergedAsset, AssetDefinition, CloneMap, ValidationRules }
 import type { Component } from 'vue';
 import { findNearestFunctionalParent } from '@/content/utils/assetUtils';
 import { ASSET_TYPES } from '@/content/config/constants';
-import { VIRTUAL_NODE_KINDS } from '@/content/logic/virtual-folders/definitions';
+import { VIRTUAL_NODE_KINDS } from '@/content/logic/virtual-folders/kinds';
 
 /**
  * Define a reusable type for the async component loader

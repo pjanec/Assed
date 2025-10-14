@@ -1,16 +1,15 @@
-import type { UnmergedAsset, AssetTreeNode, VirtualNodeKind, ViewHint } from '@/core/types';
+import type { UnmergedAsset, AssetTreeNode, ViewHint } from '@/core/types';
 import type { Component } from 'vue';
 import type { DragPayload, DropTarget } from '@/core/types/drag-drop';
 import type { DropAction } from '@/core/registries/interactionRegistry';
 import type { ContextMenuAction } from '@/core/types/ui';
 import { resolveGenericMergedView } from './resolvers';
+import type { VirtualNodeKind } from './kinds';
+import { VIRTUAL_NODE_KINDS } from './kinds';
 import { VIEW_HINTS } from '@/core/config/constants';
 
 // 1. Define the kinds as a constant object for type safety
-export const VIRTUAL_NODE_KINDS = {
-  GENERIC_MERGED_VIEW: 'GENERIC_MERGED_VIEW',
-  LOCKED_INFO: 'LOCKED_INFO',
-} as const;
+// Kinds moved to './kinds'
 
 // 2. Define the Virtual Folder "Blueprint" interface
 export interface VirtualFolderDefinition {

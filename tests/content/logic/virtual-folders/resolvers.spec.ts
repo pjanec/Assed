@@ -1,167 +1,84 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createTestEnvironment } from '../../../test-utils';
 import { ASSET_TYPES } from '../../../../src/content/config/constants';
-import { resolveMergedRequirements } from '../../../../src/content/logic/virtual-folders/resolvers';
+import { resolveGenericMergedView } from '../../../../src/content/logic/virtual-folders/resolvers';
 import type { UnmergedAsset } from '../../../../src/core/types';
 
-describe('Virtual Folder Resolvers - Merged Requirements', () => {
-  let assetsStore: any, workspaceStore: any;
+describe('Virtual Folder Resolvers - Generic Merged View', () => {
+  let assetsStore: any;
 
-  const templateAsset: UnmergedAsset = {
+  const templateEnv: UnmergedAsset = {
     id: 'template-1',
-    fqn: 'BaseWebServer',
-    assetType: ASSET_TYPES.PACKAGE,
-    assetKey: 'BaseWebServer',
-    templateFqn: null,
-    overrides: {
-      name: 'base-server',
-      conf: {
-        port: 80,
-        ssl: false,
-        license: 'MIT',
-        resources: {
-          cpu: '0.5 cores'
-        }
-      }
-    }
-  };
-
-  const realAsset: UnmergedAsset = {
-    id: 'real-1',
-    fqn: 'DataCenter-minimal::WebServer::Nginx',
-    assetType: ASSET_TYPES.PACKAGE,
-    assetKey: 'Nginx',
-    templateFqn: 'BaseWebServer',
-    overrides: {
-      name: 'nginx',
-      conf: {
-        version: '1.21.0'
-      }
-    }
-  };
-
-  const nodeAsset: UnmergedAsset = {
-    id: 'node-1',
-    fqn: 'DataCenter-minimal::WebServer',
-    assetType: ASSET_TYPES.NODE,
-    assetKey: 'WebServer',
+    fqn: 'BaseEnv',
+    assetType: ASSET_TYPES.ENVIRONMENT,
+    assetKey: 'BaseEnv',
     templateFqn: null,
     overrides: {}
   };
 
-  const initialData: UnmergedAsset[] = [templateAsset, realAsset, nodeAsset];
+  const inheritedPackage: UnmergedAsset = {
+    id: 'pkg-1-inherited',
+    fqn: 'BaseEnv::BaseWebServer',
+    assetType: ASSET_TYPES.PACKAGE,
+    assetKey: 'BaseWebServer',
+    templateFqn: null,
+    overrides: { port: 80, logging: 'standard' }
+  };
 
-  beforeEach(() => {
+  const startAsset: UnmergedAsset = {
+    id: 'env-1-start',
+    fqn: 'ProdEnv',
+    assetType: ASSET_TYPES.ENVIRONMENT,
+    assetKey: 'ProdEnv',
+    templateFqn: 'BaseEnv',
+    overrides: {}
+  };
+
+  const overridePackage: UnmergedAsset = {
+    id: 'pkg-2-override',
+    fqn: 'ProdEnv::BaseWebServer',
+    assetType: ASSET_TYPES.PACKAGE,
+    assetKey: 'BaseWebServer',
+    templateFqn: null,
+    overrides: { port: 443, ssl: true }
+  };
+
+  const localPackage: UnmergedAsset = {
+    id: 'pkg-3-local',
+    fqn: 'ProdEnv::APIServer',
+    assetType: ASSET_TYPES.PACKAGE,
+    assetKey: 'APIServer',
+    templateFqn: null,
+    overrides: { threads: 4 }
+  };
+
+  const initialData: UnmergedAsset[] = [
+    templateEnv, inheritedPackage, startAsset, overridePackage, localPackage
+  ];
+
+  beforeEach(async () => {
     const env = createTestEnvironment(initialData);
     assetsStore = env.assetsStore;
-    workspaceStore = env.workspaceStore;
+    await assetsStore.loadAssets();
   });
 
-  it('should produce identical merged properties for virtual assets as real assets', async () => {
-    // 1. ARRANGE: Load assets (this now pre-loads asset details for all assets)
-    await assetsStore.loadAssets();
-
-    // 2. ACT: Test the virtual folder resolver with assets that have overrides
+  it('should correctly resolve inherited, overridden, and local child assets', () => {
     const assetsWithOverrides = assetsStore.assetsWithOverrides;
-    const result = resolveMergedRequirements(nodeAsset, assetsWithOverrides);
+    const result = resolveGenericMergedView(startAsset, assetsWithOverrides);
 
-    // 3. ASSERT: Verify the virtual asset has the correct merged properties
     expect(result).toHaveLength(1);
-    
-    const virtualNode = result[0];
-    expect(virtualNode.virtualContext?.payload).toBeDefined();
-    
-    const virtualMergedProperties = virtualNode.virtualContext?.payload;
-    
-    // The virtual asset should have the same merged properties as the real asset
-    // This should include both template properties AND the asset's own overrides
-    expect(virtualMergedProperties).toEqual({
-      name: 'nginx', // From real asset overrides
-      conf: {
-        port: 80,        // From template
-        ssl: false,      // From template
-        license: 'MIT',  // From template
-        resources: {     // From template
-          cpu: '0.5 cores'
-        },
-        version: '1.21.0' // From real asset overrides (overwrites template)
-      }
-    });
-  });
+    const packagesFolder = result[0];
+    expect(packagesFolder.name).toBe('Packages');
+    expect(packagesFolder.children).toHaveLength(2);
 
-  it('should fail when assets have empty overrides (the bug we fixed)', async () => {
-    // 1. ARRANGE: Load assets but DON'T populate asset details cache
-    await assetsStore.loadAssets();
-    
-    // Use unmergedAssets which strips overrides (the old buggy behavior)
-    const assetsWithoutOverrides = assetsStore.unmergedAssets;
-    
-    // 2. ACT: Test the virtual folder resolver with assets that have empty overrides
-    const result = resolveMergedRequirements(nodeAsset, assetsWithoutOverrides);
+    const webServerNode = packagesFolder.children.find(c => c.name === 'BaseWebServer');
+    expect(webServerNode).toBeDefined();
+    expect(webServerNode?.id).toBe('pkg-2-override');
+    expect(webServerNode?.virtualContext?.payload).toEqual({ port: 443, ssl: true });
 
-    // 3. ASSERT: Verify the virtual asset has incomplete merged properties
-    expect(result).toHaveLength(1);
-    
-    const virtualNode = result[0];
-    const virtualMergedProperties = virtualNode.virtualContext?.payload;
-    
-    // The bug: when assets have empty overrides, the template lookup fails
-    // because the template asset also has empty overrides in unmergedAssets
-    // This results in an empty merged result instead of template properties
-    expect(virtualMergedProperties).toEqual({});
-  });
-
-  it('should handle assets with no template correctly', async () => {
-    // 1. ARRANGE: Create an asset with no template
-    const standaloneAsset: UnmergedAsset = {
-      id: 'standalone-1',
-      fqn: 'DataCenter-minimal::WebServer::Standalone',
-      assetType: ASSET_TYPES.PACKAGE,
-      assetKey: 'Standalone',
-      templateFqn: null,
-      overrides: {
-        name: 'standalone-server',
-        conf: {
-          port: 8080,
-          custom: 'value'
-        }
-      }
-    };
-
-    const testData = [...initialData, standaloneAsset];
-    const env = createTestEnvironment(testData);
-    assetsStore = env.assetsStore;
-    workspaceStore = env.workspaceStore;
-    
-    await assetsStore.loadAssets();
-    
-    // Load asset details
-    const standaloneAssetTreeNode = {
-      id: standaloneAsset.id,
-      type: 'ASSET' as const,
-      assetType: standaloneAsset.assetType
-    };
-    await assetsStore.loadAssetDetails(standaloneAssetTreeNode);
-
-    // 2. ACT: Test with the standalone asset
-    const assetsWithOverrides = assetsStore.assetsWithOverrides;
-    const result = resolveMergedRequirements(nodeAsset, assetsWithOverrides);
-
-    // 3. ASSERT: Should have 2 virtual nodes now (Nginx + Standalone)
-    expect(result).toHaveLength(2);
-    
-    const standaloneVirtualNode = result.find(n => n.name === 'Standalone');
-    expect(standaloneVirtualNode).toBeDefined();
-    
-    const standaloneMergedProperties = standaloneVirtualNode?.virtualContext?.payload;
-    
-    // Should only have its own overrides since there's no template
-    expect(standaloneMergedProperties).toEqual({
-      name: 'standalone-server',
-      conf: {
-        port: 8080,
-        custom: 'value'
-      }
-    });
+    const apiServerNode = packagesFolder.children.find(c => c.name === 'APIServer');
+    expect(apiServerNode).toBeDefined();
+    expect(apiServerNode?.id).toBe('pkg-3-local');
+    expect(apiServerNode?.virtualContext?.payload).toEqual({ threads: 4 });
   });
 });
