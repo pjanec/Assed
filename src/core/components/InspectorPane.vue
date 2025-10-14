@@ -13,9 +13,18 @@
           <div class="flex-1-1 min-width-0">
             <!-- Main title row with compact secondary info -->
             <div class="d-flex align-center ga-4">
-              <span class="text-h6 font-weight-medium text-truncate">
-                {{ viewModel.unmerged.assetKey }}
-              </span>
+              <v-tooltip location="bottom">
+                <template #activator="{ props }">
+                  <span class="text-h6 font-weight-medium text-truncate" v-bind="props">
+                    {{ viewModel.unmerged.assetKey }}
+                  </span>
+                </template>
+                <div class="d-flex flex-column">
+                  <span class="text-h6 font-weight-medium">{{ viewModel.unmerged.assetKey }}</span>
+                  <span class="text-body-2" >{{ viewModel.unmerged.fqn }}</span>
+                </div>
+              </v-tooltip>
+
               <!-- FQN on a single line -->
               <div class="asset-secondary-info flex-shrink-1 min-width-0">
                 <div class="text-body-2 text-medium-emphasis text-truncate">
