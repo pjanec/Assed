@@ -54,32 +54,56 @@
         <h3 v-else class="text-h6">Inspector</h3>
         
         <div class="d-flex ga-1 flex-shrink-0 inspector-header-actions">
-          <v-btn
-            icon="mdi-arrow-left"
-            size="x-small"
-            density="compact"
-            :disabled="!canGoBack"
-            @click="goBack"
-          />
-          <v-btn
-            icon="mdi-arrow-right"
-            size="x-small"
-            density="compact"
-            :disabled="!canGoForward"
-            @click="goForward"
-          />
-          <v-btn
-            :icon="isActive ? 'mdi-pin' : 'mdi-pin-outline'"
-            size="x-small"
-            density="compact"
-            @click="toggleActive"
-          />
-          <v-btn
-            icon="mdi-close-circle-outline"
-            size="x-small"
-            density="compact"
-            @click="closeInspector"
-          />
+          <v-tooltip location="bottom">
+            <template #activator="{ props }">
+              <v-btn
+                v-bind="props"
+                icon="mdi-arrow-left"
+                size="x-small"
+                density="compact"
+                :disabled="!canGoBack"
+                @click="goBack"
+              />
+            </template>
+            <span>Back</span>
+          </v-tooltip>
+          <v-tooltip location="bottom">
+            <template #activator="{ props }">
+              <v-btn
+                v-bind="props"
+                icon="mdi-arrow-right"
+                size="x-small"
+                density="compact"
+                :disabled="!canGoForward"
+                @click="goForward"
+              />
+            </template>
+            <span>Forward</span>
+          </v-tooltip>
+          <v-tooltip location="bottom">
+            <template #activator="{ props }">
+              <v-btn
+                v-bind="props"
+                :icon="uiStore.activePaneId === paneId ? 'mdi-lock' : 'mdi-lock-open-outline'"
+                size="x-small"
+                density="compact"
+                @click="uiStore.setActivePane(paneId)"
+              />
+            </template>
+            <span>Lock to current asset</span>
+          </v-tooltip>
+          <v-tooltip location="bottom">
+            <template #activator="{ props }">
+              <v-btn
+                v-bind="props"
+                icon="mdi-close-circle-outline"
+                size="x-small"
+                density="compact"
+                @click="closeInspector"
+              />
+            </template>
+            <span>Close</span>
+          </v-tooltip>
         </div>
       </div>
     </div>
@@ -222,9 +246,7 @@ const closeInspector = () => {
   assetsStore.closeInspector(props.paneId);
 };
 
-const toggleActive = () => {
-  uiStore.setActivePane(props.paneId);
-};
+// lock behavior removed; icon now reflects focus state only
 
 const goBack = async () => {
   await assetsStore.historyBack(props.paneId);
