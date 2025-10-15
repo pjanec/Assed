@@ -242,7 +242,7 @@ export const useAssetsStore = defineStore('assets', {
             const definition = coreConfig.getAssetDefinition(realNode.assetType);
             if (definition?.virtualFolderProviders) {
               for (const providerKind of definition.virtualFolderProviders) {
-                const provider = virtualFolderDefinitions[providerKind];
+                const provider = virtualFolderDefinitions[providerKind as unknown as keyof typeof virtualFolderDefinitions];
                 if (!provider) continue;
 
                 // Find the corresponding UnmergedAsset with full overrides

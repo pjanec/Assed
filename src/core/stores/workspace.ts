@@ -43,6 +43,7 @@ interface CascadingChanges {
   newFqn: string;
   fqnUpdates: { assetId: string; oldFqn: string; newFqn: string }[];
   templateLinkUpdates: { assetId: string; oldTemplateFqn: string; newTemplateFqn: string }[];
+  linkedOverrideUpdates?: { assetId: string; oldAssetKey: string; newAssetKey: string; oldFqn: string; newFqn: string }[];
 }
 
 interface NewFolderDialogState {
@@ -347,12 +348,13 @@ export const useWorkspaceStore = defineStore('workspace', {
     calculateFqnChangeConsequences({ assetId, newFqn }: { assetId: string; newFqn: string }) {
       const assetsStore = useAssetsStore();
       const assetToRefactor = assetsStore.unmergedAssets.find(a => a.id === assetId);
-      if (!assetToRefactor) return { fqnUpdates: [], templateLinkUpdates: [] };
+      if (!assetToRefactor) return { fqnUpdates: [], templateLinkUpdates: [], linkedOverrideUpdates: [] };
 
       const oldFqn = assetToRefactor.fqn;
 
       const fqnUpdates: any[] = [];
       const templateLinkUpdates: any[] = [];
+      const linkedOverrideUpdates: any[] = [];
 
       // Find all descendants and calculate their new FQNs
       assetsStore.unmergedAssets.forEach(asset => {
@@ -378,7 +380,35 @@ export const useWorkspaceStore = defineStore('workspace', {
           });
         }
       });
-      return { fqnUpdates, templateLinkUpdates };
+
+      // Note: Do not include the primary asset itself here; callers track it separately.
+
+      // New: Detect linked overrides when renaming a child of a template parent
+      const oldParts = oldFqn.split('::');
+      if (oldParts.length > 1) {
+        const parentFqn = oldParts.slice(0, -1).join('::');
+        const oldAssetKey = oldParts[oldParts.length - 1];
+        const newAssetKey = newFqn.split('::').pop() as string;
+
+        // Find assets that inherit from the parent template
+        const inheritingAssets = assetsStore.unmergedAssets.filter(a => a.templateFqn === parentFqn);
+        for (const inheriting of inheritingAssets) {
+          const overrideChildFqn = `${inheriting.fqn}::${oldAssetKey}`;
+          const overrideChild = assetsStore.unmergedAssets.find(a => a.fqn === overrideChildFqn);
+          if (overrideChild) {
+            const newOverrideFqn = `${inheriting.fqn}::${newAssetKey}`;
+            linkedOverrideUpdates.push({
+              assetId: overrideChild.id,
+              oldAssetKey: overrideChild.assetKey,
+              newAssetKey,
+              oldFqn: overrideChild.fqn,
+              newFqn: newOverrideFqn
+            });
+          }
+        }
+      }
+
+      return { fqnUpdates, templateLinkUpdates, linkedOverrideUpdates };
     },
 
     invalidateAllCaches() {
@@ -854,6 +884,16 @@ export class ApplyRefactoringCommand implements Command {
     this.cascadingChanges.templateLinkUpdates.forEach((c: any) => {
       applyChange(c.assetId, { templateFqn: isExecuting ? c.newTemplateFqn : c.oldTemplateFqn });
     });
+
+    // Apply linked override updates (rename overridden children to keep links)
+    if (this.cascadingChanges.linkedOverrideUpdates && this.cascadingChanges.linkedOverrideUpdates.length > 0) {
+      this.cascadingChanges.linkedOverrideUpdates.forEach((c: any) => {
+        applyChange(c.assetId, {
+          assetKey: isExecuting ? c.newAssetKey : c.oldAssetKey,
+          fqn: isExecuting ? c.newFqn : c.oldFqn
+        });
+      });
+    }
   }
 
   execute(workspace: any): void {

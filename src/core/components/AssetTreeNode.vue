@@ -34,7 +34,7 @@
           <div v-else style="width: 24px;" />
 
           <div class="icon-wrapper me-2">
-            <v-icon :color="iconColor">
+            <v-icon :color="iconColor" data-testid="base-icon" :aria-label="baseIcon">
               {{ baseIcon }}
             </v-icon>
 
@@ -42,6 +42,7 @@
               v-if="inheritanceIcon"
               class="inheritance-overlay"
               data-testid="inheritance-overlay"
+              :aria-label="inheritanceIcon"
             >
               {{ inheritanceIcon }}
             </v-icon>

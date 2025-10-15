@@ -26,6 +26,12 @@
             title="Template Link Updates"
             :changes="templateLinkUpdatesForViewer"
           />
+          <AffectedAssetsViewer
+            v-if="linkedOverrideUpdatesForViewer.length > 0"
+            title="Linked Override Updates"
+            :changes="linkedOverrideUpdatesForViewer"
+            class="mt-4"
+          />
         </div>
         <div v-else>
            <p class="mb-4">
@@ -61,6 +67,7 @@ interface Consequences {
   newAssetKey: string;
   fqnUpdates?: any[];
   templateLinkUpdates?: any[];
+  linkedOverrideUpdates?: { assetId: string; oldAssetKey: string; newAssetKey: string; oldFqn: string; newFqn: string }[];
 }
 
 interface Props {
@@ -92,8 +99,8 @@ onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown);
 });
 
-const fqnUpdatesForViewer = computed(() => {
-  return (props.consequences.fqnUpdates || []).map(fqnUpdate => {
+const fqnUpdatesForViewer = computed((): { oldState: any; newState: any }[] => {
+  return (props.consequences.fqnUpdates || []).map((fqnUpdate: any) => {
     const asset = assetsStore.unmergedAssets.find(a => a.id === fqnUpdate.assetId);
     if (!asset) return null;
     return {
@@ -103,8 +110,8 @@ const fqnUpdatesForViewer = computed(() => {
   }).filter(item => item !== null);
 });
 
-const templateLinkUpdatesForViewer = computed(() => {
-  return (props.consequences.templateLinkUpdates || []).map(templateUpdate => {
+const templateLinkUpdatesForViewer = computed((): { oldState: any; newState: any }[] => {
+  return (props.consequences.templateLinkUpdates || []).map((templateUpdate: any) => {
     const asset = assetsStore.unmergedAssets.find(a => a.id === templateUpdate.assetId);
     if (!asset) return null;
     return {
@@ -114,8 +121,19 @@ const templateLinkUpdatesForViewer = computed(() => {
   }).filter(item => item !== null);
 });
 
+const linkedOverrideUpdatesForViewer = computed((): { oldState: any; newState: any }[] => {
+  return (props.consequences.linkedOverrideUpdates || []).map((update: any) => {
+    const asset = assetsStore.unmergedAssets.find(a => a.id === update.assetId);
+    if (!asset) return null;
+    return {
+      oldState: { ...asset, assetKey: update.oldAssetKey, fqn: update.oldFqn },
+      newState: { ...asset, assetKey: update.newAssetKey, fqn: update.newFqn }
+    };
+  }).filter(item => item !== null);
+});
+
 const totalAffectedCount = computed(() => {
-  return fqnUpdatesForViewer.value.length + templateLinkUpdatesForViewer.value.length;
+  return fqnUpdatesForViewer.value.length + templateLinkUpdatesForViewer.value.length + linkedOverrideUpdatesForViewer.value.length;
 });
 </script>
 

@@ -71,6 +71,45 @@ describe('Core Refactoring: Rename with Ripple Effects', () => {
   });
 });
 
+describe('Workspace: getRefactoringPlanForRename with Linked Overrides', () => {
+  let assetsStore: ReturnType<typeof useAssetsStore>;
+  let workspaceStore: ReturnType<typeof useWorkspaceStore>;
+
+  const initialData: UnmergedAsset[] = [
+    { id: '1', fqn: 'BaseWebServer', assetType: (MOCK_ASSET_TYPES.CONTAINER as any), assetKey: 'BaseWebServer', templateFqn: null, overrides: {} },
+    { id: '2', fqn: 'BaseWebServer::Nginx', assetType: (MOCK_ASSET_TYPES.WIDGET as any), assetKey: 'Nginx', templateFqn: null, overrides: {} },
+    { id: '3', fqn: 'ProdWebServer', assetType: (MOCK_ASSET_TYPES.CONTAINER as any), assetKey: 'ProdWebServer', templateFqn: 'BaseWebServer', overrides: {} },
+    { id: '4', fqn: 'ProdWebServer::Nginx', assetType: (MOCK_ASSET_TYPES.WIDGET as any), assetKey: 'Nginx', templateFqn: null, overrides: { port: 8080 } },
+  ];
+
+  beforeEach(async () => {
+    const env = createTestEnvironment(initialData);
+    assetsStore = env.assetsStore;
+    workspaceStore = env.workspaceStore;
+    await assetsStore.loadAssets();
+  });
+
+  it('should detect and plan updates for linked overrides', () => {
+    const assetToRename = assetsStore.unmergedAssets.find(a => a.fqn === 'BaseWebServer::Nginx');
+    expect(assetToRename).toBeTruthy();
+    const oldFqn = assetToRename!.fqn;
+    const newFqn = 'BaseWebServer::Apache';
+
+    const plan = (workspaceStore as any).calculateFqnChangeConsequences({ assetId: assetToRename!.id, newFqn });
+
+    // For this scenario, only descendant FQNs change; the primary is handled separately
+    // We assert only on linked overrides produced by the planner
+    expect(plan.linkedOverrideUpdates).toBeDefined();
+    expect(plan.linkedOverrideUpdates).toHaveLength(1);
+    const overrideUpdate = plan.linkedOverrideUpdates[0];
+    expect(overrideUpdate.assetId).toBe('4');
+    expect(overrideUpdate.oldAssetKey).toBe('Nginx');
+    expect(overrideUpdate.newAssetKey).toBe('Apache');
+    expect(overrideUpdate.oldFqn).toBe('ProdWebServer::Nginx');
+    expect(overrideUpdate.newFqn).toBe('ProdWebServer::Apache');
+  });
+});
+
 describe('Core Refactoring: Delete with Blocking Dependencies', () => {
   let assetsStore: ReturnType<typeof useAssetsStore>;
   let workspaceStore: ReturnType<typeof useWorkspaceStore>;

@@ -76,7 +76,7 @@ export const getAvailableActions = (draggedAssetId: string, dropTarget: DropTarg
 
   // Handle virtual context: check for override hooks or proxy to real asset
   if (dropTarget.virtualContext) {
-    const providerKind = dropTarget.virtualContext.kind;
+    const providerKind = dropTarget.virtualContext.kind as unknown as keyof typeof virtualFolderDefinitions;
     const provider = virtualFolderDefinitions[providerKind];
 
     // If the virtual folder has custom drop actions, use them instead

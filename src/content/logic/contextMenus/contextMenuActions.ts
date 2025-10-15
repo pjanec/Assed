@@ -51,7 +51,7 @@ export function useContextMenuActionsRegistration() {
   function getNodeMenuActions(node: AssetTreeNode): ContextMenuAction[] {
     // If a virtual folder defines custom menu actions, honor them
     if (node.virtualContext) {
-      const provider = virtualFolderDefinitions[node.virtualContext.kind];
+      const provider = virtualFolderDefinitions[node.virtualContext.kind as unknown as keyof typeof virtualFolderDefinitions];
       if (provider?.getContextMenuActions) return provider.getContextMenuActions(node);
     }
 

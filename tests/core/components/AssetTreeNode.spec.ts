@@ -78,10 +78,9 @@ describe('AssetTreeNode Inheritance Icons', () => {
       global: { plugins: [vuetify] },
     });
 
-    // Base icon wrapper should exist
-    // The base icon name comes from mock registry for PACKAGE: mdi-package-variant
-    // We check via text because <v-icon> renders the icon name as text content in tests
-    expect(document.body.textContent).toContain('mdi-package-variant');
+    const baseIcon = getByTestId('base-icon');
+    expect(baseIcon).toBeInTheDocument();
+    expect(baseIcon.getAttribute('aria-label')).toBe('mdi-package-variant');
     expect(queryByTestId('inheritance-overlay')).toBeNull();
   });
 
@@ -94,7 +93,7 @@ describe('AssetTreeNode Inheritance Icons', () => {
 
     const overlay = getByTestId('inheritance-overlay');
     expect(overlay).toBeInTheDocument();
-    expect(overlay.textContent).toBe('mdi-link-variant');
+    expect(overlay.getAttribute('aria-label')).toBe('mdi-link-variant');
   });
 
   it('renders a pencil overlay for an override asset', async () => {
@@ -106,7 +105,7 @@ describe('AssetTreeNode Inheritance Icons', () => {
 
     const overlay = getByTestId('inheritance-overlay');
     expect(overlay).toBeInTheDocument();
-    expect(overlay.textContent).toBe('mdi-pencil');
+    expect(overlay.getAttribute('aria-label')).toBe('mdi-pencil');
   });
 });
 

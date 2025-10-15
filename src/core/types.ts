@@ -174,11 +174,23 @@ export interface TemplateLinkUpdate {
 }
 
 /**
+ * Represents an update to a locally overriding child that must stay linked to its template sibling.
+ */
+export interface LinkedOverrideUpdate {
+  assetId: string;
+  oldAssetKey: string;
+  newAssetKey: string;
+  oldFqn: string;
+  newFqn: string;
+}
+
+/**
  * Detailed consequences of a refactoring operation.
  */
 export interface RefactorConsequences {
   fqnUpdates: FqnUpdate[];
   templateLinkUpdates: TemplateLinkUpdate[];
+  linkedOverrideUpdates?: LinkedOverrideUpdate[];
   oldFqn: string;
   newFqn: string;
   oldAssetKey: string;
