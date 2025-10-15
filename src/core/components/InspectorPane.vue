@@ -31,32 +31,53 @@
                   {{ viewModel.unmerged.fqn }}
                 </div>
               </div>
+
+              <!-- Template navigation button (compact, next to name/FQN) -->
+              <v-tooltip v-if="viewModel" location="bottom">
+                <template #activator="{ props }">
+                  <v-btn
+                    v-bind="props"
+                    icon="mdi-link-variant"
+                    variant="text"
+                    class="template-nav-btn"
+                    size="x-small"
+                    density="compact"
+                    :disabled="!templateTargetId"
+                    @click.stop="goToTemplate"
+                  />
+                </template>
+                <span>{{ viewModel.unmerged.templateFqn || 'No template' }}</span>
+              </v-tooltip>
             </div>
           </div>
         </div>
         <h3 v-else class="text-h6">Inspector</h3>
         
-        <div class="d-flex ga-1 flex-shrink-0">
+        <div class="d-flex ga-1 flex-shrink-0 inspector-header-actions">
           <v-btn
             icon="mdi-arrow-left"
-            size="small"
+            size="x-small"
+            density="compact"
             :disabled="!canGoBack"
             @click="goBack"
           />
           <v-btn
             icon="mdi-arrow-right"
-            size="small"
+            size="x-small"
+            density="compact"
             :disabled="!canGoForward"
             @click="goForward"
           />
           <v-btn
             :icon="isActive ? 'mdi-pin' : 'mdi-pin-outline'"
-            size="small"
+            size="x-small"
+            density="compact"
             @click="toggleActive"
           />
           <v-btn
             icon="mdi-close-circle-outline"
-            size="small"
+            size="x-small"
+            density="compact"
             @click="closeInspector"
           />
         </div>
@@ -156,6 +177,19 @@ const isFolder = computed(() => !!liveFolderNode.value && liveFolderNode.value.t
 const canGoBack = computed(() => assetsStore.canHistoryBack(props.paneId));
 const canGoForward = computed(() => assetsStore.canHistoryForward(props.paneId));
 
+// Template navigation target resolution
+const templateTargetId = computed<string | null>(() => {
+  const fqn = viewModel.value?.unmerged.templateFqn;
+  if (!fqn) return null;
+  const target = assetsStore.$state.assets.find(a => a.fqn === fqn);
+  return target ? target.id : null;
+});
+
+const goToTemplate = () => {
+  if (!templateTargetId.value) return;
+  assetsStore.updateInspectorContent(props.paneId, templateTargetId.value);
+};
+
 // Use defineAsyncComponent to handle loading/error states gracefully
 const asyncComponent = computed(() => {
   const live = assetsStore.getTreeNodeById(props.assetId);
@@ -237,6 +271,19 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+
+/* Compact header icon buttons (approx 60% of default) */
+.inspector-header :deep(.v-btn.v-btn--icon) {
+  --v-btn-size: 22px;
+  --v-btn-height: 22px;
+  min-width: 22px;
+  width: 22px;
+  height: 22px;
+}
+
+.inspector-header :deep(.v-btn .v-icon) {
+  font-size: 0.85rem;
 }
 
 /* Responsive header layout - stack vertically on narrow panes */
