@@ -33,9 +33,19 @@
           </v-btn>
           <div v-else style="width: 24px;" />
 
-          <v-icon :color="iconColor" class="me-2">
-            {{ nodeIcon }}
-          </v-icon>
+          <div class="icon-wrapper me-2">
+            <v-icon :color="iconColor">
+              {{ baseIcon }}
+            </v-icon>
+
+            <v-icon
+              v-if="inheritanceIcon"
+              class="inheritance-overlay"
+              data-testid="inheritance-overlay"
+            >
+              {{ inheritanceIcon }}
+            </v-icon>
+          </div>
         </div>
       </template>
 
@@ -175,8 +185,8 @@ defineExpose({
 const titleClass = computed(() => !isAsset.value && isContainer.value ? 'font-weight-medium' : 'font-weight-regular');
 const iconColor = computed(() => isAsset.value && props.node.assetType ? coreConfig.getAssetTypeColor(props.node.assetType) : 'primary');
 
-const nodeIcon = computed(() => {
-  // If the node has a virtual context, it might have its own icon
+// Determines the BASE icon for the asset or folder
+const baseIcon = computed<string>(() => {
   if (props.node.virtualContext && (props.node as any).icon) {
     return (props.node as any).icon;
   }
@@ -184,12 +194,32 @@ const nodeIcon = computed(() => {
   if (isAsset.value) {
     return coreConfig.getAssetIcon(props.node.assetType as any);
   }
+
   const typeIconMap: Record<string, string> = {
-    'folder': isExpanded.value ? 'mdi-folder-open-outline' : 'mdi-folder-outline',
-    'file-group': isExpanded.value ? 'mdi-file-multiple-outline' : 'mdi-file-multiple',
-    'namespace': 'mdi-file-tree-outline'
-  };
-  return typeIconMap[props.node.type || ''] || 'mdi-folder-outline';
+    [ASSET_TREE_NODE_TYPES.FOLDER]: isExpanded.value ? 'mdi-folder-open-outline' : 'mdi-folder-outline',
+    [ASSET_TREE_NODE_TYPES.FILE_GROUP]: isExpanded.value ? 'mdi-file-multiple-outline' : 'mdi-file-multiple',
+    [ASSET_TREE_NODE_TYPES.NAMESPACE]: 'mdi-file-tree-outline'
+  } as Record<string, string>;
+  return typeIconMap[props.node.type as string] || 'mdi-folder-outline';
+});
+
+// Determines the OVERLAY icon for inheritance state
+const inheritanceIcon = computed<string | null>(() => {
+  if (!isAsset.value) {
+    return null;
+  }
+
+  const hasTemplate = !!props.node.templateFqn;
+  const hasOverrides = !!(props.node as any).overrides && Object.keys((props.node as any).overrides || {}).length > 0;
+
+  if (hasTemplate) {
+    if (hasOverrides) {
+      return 'mdi-pencil';
+    }
+    return 'mdi-link-variant';
+  }
+
+  return null;
 });
 </script>
 
@@ -216,6 +246,25 @@ const nodeIcon = computed(() => {
 }
 
 
+/* Additive inheritance overlay styles */
+.icon-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.inheritance-overlay {
+  position: absolute;
+  bottom: -2px;
+  right: -4px;
+  font-size: 0.8em;
+  background-color: var(--v-background-base, white);
+  border-radius: 50%;
+  line-height: 1;
+  color: var(--v-primary-base, #1976D2);
+}
 </style>
 
 
