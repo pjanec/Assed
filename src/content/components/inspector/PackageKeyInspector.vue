@@ -58,9 +58,9 @@
         color="primary"
         variant="tonal"
         prepend-icon="mdi-magnify"
-        disabled
+        @click="handleResolve"
       >
-        Resolve... (Not Implemented)
+        Resolve...
       </v-btn>
     </div>
   </div>
@@ -68,7 +68,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useAssetsStore, useUiStore } from '@/core/stores';
+import { useAssetsStore, useUiStore, useWorkspaceStore } from '@/core/stores';
 import { useCoreConfigStore } from '@/core/stores/config';
 import type { AssetDetails, UnmergedAsset } from '@/core/types';
 import { ASSET_TYPES } from '@/content/config/constants';
@@ -82,6 +82,7 @@ const props = defineProps<Props>();
 
 const assetsStore = useAssetsStore();
 const uiStore = useUiStore();
+const workspaceStore = useWorkspaceStore();
 const coreConfig = useCoreConfigStore();
 
 const resolvedPackage = computed<UnmergedAsset | undefined>(() => {
@@ -108,6 +109,33 @@ const iconColor = computed(() => resolvedPackage.value ? coreConfig.getAssetType
 const inspectPackage = () => {
   if (resolvedPackage.value) {
     assetsStore.openInspectorFor(resolvedPackage.value.id, { reuse: true, focus: true });
+  }
+};
+
+// The resolution logic
+const handleResolve = async () => {
+  const allAssets = assetsStore.unmergedAssets;
+  const envFqn = getAssetEnvironmentFqn(props.asset.unmerged.fqn, allAssets);
+
+  // Filter for valid packages within the same environment
+  const validPackages = allAssets.filter(a =>
+    a.assetType === ASSET_TYPES.PACKAGE &&
+    getAssetEnvironmentFqn(a.fqn, allAssets) === envFqn
+  );
+
+  try {
+    const selectedPackage = await uiStore.promptForAssetSelection({
+      title: `Resolve Requirement: '${props.asset.unmerged.assetKey}'`,
+      items: validPackages,
+    });
+
+    if (selectedPackage) {
+      // Renaming the PackageKey's assetKey is the correct action to "re-link" it.
+      // This reuses our robust refactoring logic.
+      workspaceStore.renameAsset(props.asset.unmerged.id, selectedPackage.assetKey);
+    }
+  } catch (error) {
+    console.error("Asset selection was cancelled or failed:", error);
   }
 };
 </script>

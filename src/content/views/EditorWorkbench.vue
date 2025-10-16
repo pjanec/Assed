@@ -220,6 +220,9 @@
 
     <!-- Template Change Dialog -->
     <TemplateChangeDialog />
+
+    <!-- Asset Picker Dialog -->
+    <AssetPickerDialog />
   </v-app>
 </template>
 
@@ -240,6 +243,7 @@ import CrossEnvCopyDialog from '@/content/components/dialogs/CrossEnvCopyDialog.
 import ResolveAndCopyDialog from '@/content/components/dialogs/ResolveAndCopyDialog.vue';
 import ClearOverridesDialog from '@/core/components/dialogs/ClearOverridesDialog.vue';
 import TemplateChangeDialog from '@/core/components/dialogs/TemplateChangeDialog.vue';
+import AssetPickerDialog from '@/core/components/dialogs/AssetPickerDialog.vue';
 
 import type { Asset, UnmergedAsset, AssetTreeNode } from '@/core/types';
 import type { ValidationIssue } from '@/core/types/validation';

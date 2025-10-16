@@ -7,6 +7,9 @@ import type { MockPersistenceAdapter } from './MockPersistenceAdapter';
 import '@/content/logic/interactions/genericInteractions';
 import '@/content/logic/interactions/packageAssignmentInteractions';
 
+// Import validation rules to ensure they are registered during tests
+import { registerAllValidationRules } from '@/content/logic/validation';
+
 export const createMockContentPlugin = (mockAdapter: MockPersistenceAdapter) => ({
   install(app: App) {
     const coreConfigStore = useCoreConfigStore();
@@ -14,7 +17,9 @@ export const createMockContentPlugin = (mockAdapter: MockPersistenceAdapter) => 
     coreConfigStore.registerAssetRegistry(mockAssetRegistry);
     coreConfigStore.registerAssetTypes(MOCK_ASSET_TYPES);
     coreConfigStore.registerPersistenceAdapter(mockAdapter);
-    // --- ADD THIS LINE ---
     coreConfigStore.setStructuralAssetType(MOCK_ASSET_TYPES.CONTAINER);
+    
+    // Register validation rules
+    registerAllValidationRules();
   }
 });

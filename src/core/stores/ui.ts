@@ -58,6 +58,15 @@ interface TemplateChangeDialogState {
   diff: Change[];
 }
 
+// New interface for the asset picker dialog state
+interface AssetPickerDialogState {
+  show: boolean;
+  title: string;
+  items: Asset[];
+  // A promise resolver to return the selected asset asynchronously
+  resolver: ((value: Asset | null) => void) | null;
+}
+
 interface UiState {
   activePaneId: string | null;
   selectedNode: SelectedNode | null;
@@ -103,6 +112,8 @@ interface UiState {
   clearOverridesDialog: ClearOverridesDialogState;
   // Template change dialog
   templateChangeDialog: TemplateChangeDialogState;
+  // Asset picker dialog
+  assetPickerDialog: AssetPickerDialogState;
   // View-model hint for selected node
   selectedNodeViewHint: ViewHint | null;
   // Persist active tab per inspector pane
@@ -142,6 +153,7 @@ export const useUiStore = defineStore('ui', {
     dragDropConfirmationDialog: { show: false, dragPayload: null, dropTarget: null, displayPayload: null },
     clearOverridesDialog: { show: false, asset: null, changes: [] },
     templateChangeDialog: { show: false, asset: null, oldTemplateFqn: null, newTemplateFqn: null, diff: [] },
+    assetPickerDialog: { show: false, title: '', items: [], resolver: null },
     selectedNodeViewHint: null,
     inspectorActiveTab: new Map(),
     
@@ -268,6 +280,7 @@ export const useUiStore = defineStore('ui', {
       this.dragDropConfirmationDialog.show = false;
       this.clearOverridesDialog.show = false;
       this.templateChangeDialog.show = false;
+      this.assetPickerDialog.show = false;
     },
 
     // Generic action to prompt for ANY drag-drop confirmation
@@ -307,6 +320,21 @@ export const useUiStore = defineStore('ui', {
         newTemplateFqn: payload.newTemplateFqn,
         diff: payload.diff,
       };
+    },
+
+    /**
+     * Opens the asset picker dialog and returns a promise that resolves
+     * with the selected asset or null if canceled.
+     */
+    promptForAssetSelection(payload: { title: string; items: Asset[] }): Promise<Asset | null> {
+      return new Promise((resolve) => {
+        this.assetPickerDialog = {
+          show: true,
+          title: payload.title,
+          items: payload.items,
+          resolver: resolve,
+        };
+      });
     },
 
     // New Asset / Folder
