@@ -109,7 +109,7 @@ export const assetRegistry: Record<string, AssetDefinition> = {
     validChildren: [],
     icon: 'mdi-link-variant',
     color: 'deep-purple',
-    inspectorComponent: () => import('@/content/components/inspector/GenericAssetInspector.vue'),
+    inspectorComponent: () => import('@/content/components/inspector/PackageKeyInspector.vue'),
     isCreatableAtRoot: false,
     creationModes: ['simple'],
     isRenameable: true,
