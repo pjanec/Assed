@@ -11,7 +11,8 @@ import { useContentHandlersRegistration } from '@/content/logic/contextMenus';
 
 // Import interaction rules to ensure they are registered when the plugin is installed
 import '@/content/logic/interactions/genericInteractions';
-import '@/content/logic/interactions/packageInteractions';
+// import '@/content/logic/interactions/packageInteractions';
+import '@/content/logic/interactions/packageAssignmentInteractions';
 //import '@/content/logic/interactions/nodeCardInteractions';
 
 /**

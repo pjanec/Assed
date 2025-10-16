@@ -9,6 +9,12 @@ import { calculateMergedAsset } from '@/content/utils/mergeUtils';
 import { useAssetsStore } from '@/core/stores/assets';
 import type { CloneMap } from '@/core/types'; 
 
+export type PostCloneHook = (
+  newlyClonedAsset: UnmergedAsset,
+  originalSourceAsset: UnmergedAsset,
+  cloneMap: CloneMap
+) => UnmergedAsset;
+
 import type { 
   Asset, 
   UnmergedAsset, 
@@ -30,6 +36,22 @@ import { createTreeNodeFromAssetId } from '@/core/utils/assetTreeUtils';
 interface Command {
   execute(workspace: any, assetsStore?: any): void;
   unexecute(workspace: any): void;
+}
+
+export class CompositeCommand implements Command {
+  private commands: Command[];
+
+  constructor(commands: Command[]) {
+    this.commands = commands;
+  }
+
+  execute(workspace: any, assetsStore: any): void {
+    this.commands.forEach(cmd => cmd.execute(workspace, assetsStore));
+  }
+
+  unexecute(workspace: any): void {
+    [...this.commands].reverse().forEach(cmd => cmd.unexecute(workspace));
+  }
 }
 
 interface RefactorConfirmationState {
@@ -1209,11 +1231,13 @@ export class CloneAssetCommand implements Command {
   private newParentFqn: string | null;
   private newAssetKey: string;
   private clonedAssetIds: string[] = [];
+  private postCloneHookOverride?: PostCloneHook;
 
-  constructor(sourceAssetId: string, newParentFqn: string | null, newAssetKey: string) {
+  constructor(sourceAssetId: string, newParentFqn: string | null, newAssetKey: string, postCloneHookOverride?: PostCloneHook) {
     this.sourceAssetId = sourceAssetId;
     this.newParentFqn = newParentFqn;
     this.newAssetKey = newAssetKey;
+    this.postCloneHookOverride = postCloneHookOverride;
   }
 
   execute(workspace: any, assetsStore: any): void {
@@ -1243,10 +1267,12 @@ export class CloneAssetCommand implements Command {
       // 2. Update the cloneMap with the FQN transformation
       cloneMap.set(sourceAsset.fqn, newAsset.fqn);
 
-      // 3. Look up and apply the post-clone hook if it exists
+      // 3. Look up and apply the post-clone hook if it exists (override takes precedence)
       const coreConfig = useCoreConfigStore();
       const definition = coreConfig.getAssetDefinition(newAsset.assetType);
-      if (definition?.postCloneFixup) {
+      if (this.postCloneHookOverride) {
+        newAsset = this.postCloneHookOverride(newAsset, sourceAsset, cloneMap);
+      } else if (definition?.postCloneFixup) {
         newAsset = definition.postCloneFixup(newAsset, sourceAsset, cloneMap);
       }
         
