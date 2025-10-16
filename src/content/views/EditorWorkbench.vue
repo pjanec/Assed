@@ -208,6 +208,12 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- Cross-Environment Copy Dialog -->
+    <CrossEnvCopyDialog />
+
+    <!-- Resolve and Copy Dialog -->
+    <ResolveAndCopyDialog />
   </v-app>
 </template>
 
@@ -224,6 +230,8 @@ import RenameInputDialog from '@/core/components/dialogs/RenameInputDialog.vue';
 import RefactorConfirmationDialog from '@/core/components/dialogs/RefactorConfirmationDialog.vue'
 import ConfirmDeleteDialog from '@/core/components/dialogs/ConfirmDeleteDialog.vue'
 import DeletionBlockedDialog from '@/core/components/dialogs/DeletionBlockedDialog.vue'
+import CrossEnvCopyDialog from '@/content/components/dialogs/CrossEnvCopyDialog.vue';
+import ResolveAndCopyDialog from '@/content/components/dialogs/ResolveAndCopyDialog.vue';
 
 import type { Asset, UnmergedAsset, AssetTreeNode } from '@/core/types';
 import type { ValidationIssue } from '@/core/types/validation';

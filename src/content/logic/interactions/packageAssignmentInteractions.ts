@@ -206,11 +206,29 @@ const copyRequirementRule: InteractionRule = {
         const isCrossEnv = !areInSameEnvironment(draggedKey, targetNode, assetsStore.unmergedAssets);
 
         if (isCrossEnv) {
-          // This is the placeholder for the proactive resolution workflow.
-          // For now, it will clone the key, which will correctly show a validation error.
-          console.log("Cross-environment PackageKey copy detected. Proactive resolution will be implemented in Stage 5.");
-          const cloneCommand = new CloneAssetCommand(dragPayload.assetId, targetNode.fqn, draggedKey.assetKey);
-          workspaceStore.executeCommand(cloneCommand);
+          // Cross-Environment PackageKey Copy - Proactive Resolution Workflow
+          const targetEnvFqn = getAssetEnvironmentFqn(targetNode.fqn, assetsStore.unmergedAssets);
+          const requiredPackageExistsInTarget = assetsStore.unmergedAssets.some(p => 
+            p.assetType === ASSET_TYPES.PACKAGE && 
+            p.assetKey === draggedKey.assetKey && 
+            getAssetEnvironmentFqn(p.fqn, assetsStore.unmergedAssets) === targetEnvFqn
+          );
+
+          if (requiredPackageExistsInTarget) {
+            // If the package already exists, just clone the key instantly.
+            const cloneCommand = new CloneAssetCommand(dragPayload.assetId, targetNode.fqn, draggedKey.assetKey);
+            workspaceStore.executeCommand(cloneCommand);
+          } else {
+            // If the package is missing, trigger the confirmation dialog.
+            uiStore.promptForDragDropConfirmation({
+              dragPayload,
+              dropTarget,
+              displayPayload: {
+                type: 'ProactiveResolution', // A hint for the content dialog
+                sourcePackageName: draggedKey.assetKey
+              }
+            });
+          }
         } else {
           // Simple Clone for same-environment copy. This is the scenario you are testing.
           const cloneCommand = new CloneAssetCommand(dragPayload.assetId, targetNode.fqn, draggedKey.assetKey);
