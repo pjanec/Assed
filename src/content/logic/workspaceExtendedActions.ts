@@ -139,3 +139,29 @@ export function executeCrossEnvCopy(dragPayload: DragPayload, dropTarget: DropTa
 
   workspaceStore.executeCommand(new CompositeCommand(commands));
 }
+
+/**
+ * Executes a "Flatten and Rebase" clone to copy a package into an environment's pool.
+ * Called after a user confirms a cross-environment drag-and-drop onto an Environment asset.
+ */
+export function executePoolCopy(dragPayload: DragPayload, dropTarget: DropTarget) {
+  const assetsStore = useAssetsStore();
+  const workspaceStore = useWorkspaceStore();
+  const sourcePackage = assetsStore.unmergedAssets.find(a => a.id === dragPayload.assetId);
+  const targetEnv = assetsStore.unmergedAssets.find(a => a.id === dropTarget.id);
+
+  if (!sourcePackage || !targetEnv) {
+    console.error("Cannot execute pool copy: source package or target environment not found.");
+    return;
+  }
+
+  // This command only needs to create the package itself.
+  const cloneCommand = new CloneAssetCommand(
+    sourcePackage.id,
+    targetEnv.fqn, // The new parent is the environment itself
+    sourcePackage.assetKey,
+    crossEnvironmentCloneHook
+  );
+
+  workspaceStore.executeCommand(cloneCommand);
+}

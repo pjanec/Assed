@@ -79,12 +79,13 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useUiStore, useWorkspaceStore } from '@/core/stores';
+import { useUiStore, useWorkspaceStore, useAssetsStore } from '@/core/stores';
 import { useCoreConfigStore } from '@/core/stores/config';
 import { ASSET_TYPES } from '@/content/config/constants';
 
 const uiStore = useUiStore();
 const workspaceStore = useWorkspaceStore();
+const assetsStore = useAssetsStore();
 const coreConfig = useCoreConfigStore();
 
 // This component now reads from the generic state object.
@@ -113,9 +114,17 @@ const handleCancel = () => {
 const handleConfirm = () => {
   const { dragPayload, dropTarget } = dialogState.value;
   if (dragPayload && dropTarget) {
-    // The dialog's only job is to tell the workspace to execute the confirmed action.
-    // The complex command construction belongs in the interaction rule itself.
-    workspaceStore.executeCrossEnvCopy(dragPayload, dropTarget);
+    // Check the type of the drop target to determine which action to execute
+    const targetAsset = assetsStore.unmergedAssets.find(a => a.id === dropTarget.id);
+    if (targetAsset?.assetType === ASSET_TYPES.ENVIRONMENT) {
+      // It was dropped on an Environment, so just create the package.
+      import('@/content/logic/workspaceExtendedActions').then(({ executePoolCopy }) => {
+        executePoolCopy(dragPayload, dropTarget);
+      });
+    } else {
+      // It was dropped on a Node, so do the full package + key creation.
+      workspaceStore.executeCrossEnvCopy(dragPayload, dropTarget);
+    }
   }
   uiStore.clearActionStates();
 };

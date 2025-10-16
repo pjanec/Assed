@@ -239,8 +239,72 @@ const copyRequirementRule: InteractionRule = {
   ],
 };
 
+/**
+ * Defines the workflow for populating an environment's package pool.
+ * This rule handles dragging a `Package` asset directly onto an `Environment` asset,
+ * triggering the safe "Flatten and Rebase" copy mechanism.
+ */
+const populatePackagePoolRule: InteractionRule = {
+  validate: (dragPayload: DragPayload, dropTarget: DropTarget): boolean => {
+    const assetsStore = useAssetsStore();
+    const draggedAsset = assetsStore.unmergedAssets.find(a => a.id === dragPayload.assetId);
+    const targetEnv = assetsStore.unmergedAssets.find(a => a.id === dropTarget.id);
+
+    if (!draggedAsset || !targetEnv || draggedAsset.assetType !== ASSET_TYPES.PACKAGE || targetEnv.assetType !== ASSET_TYPES.ENVIRONMENT) {
+      return false;
+    }
+
+    // Validation: No Duplicate Keys in the target environment's pool.
+    const directChildren = assetsStore.unmergedAssets.filter(
+      a => a.fqn.startsWith(targetEnv.fqn + '::') && a.fqn.split('::').length === targetEnv.fqn.split('::').length + 1
+    );
+    const isDuplicate = directChildren.some(
+      child => child.assetType === ASSET_TYPES.PACKAGE && child.assetKey === draggedAsset.assetKey
+    );
+    return !isDuplicate;
+  },
+  actions: [
+    {
+      id: 'copy-to-environment',
+      label: 'Copy to Environment',
+      icon: 'mdi-content-copy',
+      cursor: 'copy',
+      execute: (dragPayload: DragPayload, dropTarget: DropTarget) => {
+        const uiStore = useUiStore();
+        const assetsStore = useAssetsStore();
+        const sourcePackage = assetsStore.unmergedAssets.find(a => a.id === dragPayload.assetId) as UnmergedAsset;
+        if (!sourcePackage) return;
+          
+        // This is always a cross-context copy, so we always show the dialog.
+        // The logic for calculating inheritance chains is identical to the Package -> Node workflow.
+        const allAssetsMap = new Map<string, UnmergedAsset>();
+        assetsStore.unmergedAssets.forEach(a => allAssetsMap.set(a.id, a));
+        const beforeChain = getPropertyInheritanceChain(sourcePackage, allAssetsMap);
+          
+        // For now, the "after" chain is just the target environment
+        // In a full implementation, this would show the flattened/rebased chain
+        const afterChain = [{ 
+          assetKey: sourcePackage.assetKey, 
+          fqn: `${dropTarget.id}::${sourcePackage.assetKey}`,
+          assetType: sourcePackage.assetType 
+        }];
+
+        uiStore.promptForDragDropConfirmation({
+          dragPayload,
+          dropTarget,
+          displayPayload: {
+            type: 'CrossEnvironmentCopy',
+            inheritanceComparison: { before: beforeChain, after: afterChain }
+          }
+        });
+      },
+    },
+  ],
+};
+
 registerInteraction(ASSET_TYPES.PACKAGE, ASSET_TYPES.NODE, assignRequirementRule);
 registerInteraction(ASSET_TYPES.PACKAGE_KEY, ASSET_TYPES.NODE, copyRequirementRule);
+registerInteraction(ASSET_TYPES.PACKAGE, ASSET_TYPES.ENVIRONMENT, populatePackagePoolRule);
 
 // Export the hook for use by the workspace store
 export { crossEnvironmentCloneHook };
