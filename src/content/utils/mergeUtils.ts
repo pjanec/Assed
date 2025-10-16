@@ -65,3 +65,45 @@ export function calculateMergedAsset(assetId: string, allAssets: Map<string, Unm
 
   return { properties: mergedProperties };
 }
+
+/**
+ * Gets the inheritance chain for an asset, showing the template hierarchy.
+ * This is used for displaying "before and after" states in cross-environment copy dialogs.
+ * @param asset The asset to get the inheritance chain for.
+ * @param allAssets A map of all available assets (ID -> UnmergedAsset) for lookup.
+ * @returns An array of assets representing the inheritance chain from base to derived.
+ */
+export function getPropertyInheritanceChain(asset: UnmergedAsset, allAssets: Map<string, UnmergedAsset>): UnmergedAsset[] {
+  const inheritanceChain: UnmergedAsset[] = [asset];
+  const fqnToIdMap = new Map<string, string>();
+  allAssets.forEach(a => fqnToIdMap.set(a.fqn, a.id));
+
+  let currentAsset: UnmergedAsset | undefined = asset;
+  const chainCheck = new Set<string>([currentAsset.fqn]);
+
+  while (currentAsset && currentAsset.templateFqn) {
+    if (chainCheck.has(currentAsset.templateFqn)) {
+      // Circular dependency detected, return what we have so far
+      break;
+    }
+
+    chainCheck.add(currentAsset.templateFqn);
+    
+    const templateId = fqnToIdMap.get(currentAsset.templateFqn);
+    if (!templateId) {
+      // Template not found, return what we have so far
+      break;
+    }
+    
+    const templateAsset = allAssets.get(templateId);
+    if (!templateAsset) {
+      // Template asset not found, return what we have so far
+      break;
+    }
+    
+    inheritanceChain.push(templateAsset);
+    currentAsset = templateAsset;
+  }
+
+  return inheritanceChain;
+}

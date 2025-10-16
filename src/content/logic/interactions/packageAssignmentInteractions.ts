@@ -1,10 +1,67 @@
 import { registerInteraction, type InteractionRule } from '@/core/registries/interactionRegistry';
 import { useAssetsStore, useUiStore } from '@/core/stores';
-import { useWorkspaceStore, CreateAssetCommand, DeriveAssetCommand, CloneAssetCommand, CompositeCommand } from '@/core/stores/workspace';
+import { useWorkspaceStore, CreateAssetCommand, DeriveAssetCommand, CloneAssetCommand, CompositeCommand, type PostCloneHook } from '@/core/stores/workspace';
 import type { UnmergedAsset } from '@/core/types';
 import type { DragPayload, DropTarget } from '@/core/types/drag-drop';
 import { ASSET_TYPES } from '@/content/config/constants';
-import { areInSameEnvironment, getAssetEnvironmentFqn } from '@/content/utils/assetUtils';
+import { areInSameEnvironment, getAssetEnvironmentFqn, isSharedAsset } from '@/content/utils/assetUtils';
+import { getPropertyInheritanceChain, calculateMergedAsset } from '@/content/utils/mergeUtils';
+import { generatePropertiesDiff } from '@/core/utils/diff';
+
+// --- The "Flatten and Rebase" Algorithm ---
+/**
+ * An injectable hook for the CloneAssetCommand that creates a functionally identical
+ * but structurally independent copy of a package for cross-environment operations.
+ * It "flattens" environment-specific inherited properties into local overrides
+ * and "rebases" the template link to the highest-level shared ancestor.
+ */
+const crossEnvironmentCloneHook: PostCloneHook = (newlyClonedAsset, originalSourceAsset, cloneMap) => {
+  const assetsStore = useAssetsStore();
+  const allAssetsMap = new Map<string, UnmergedAsset>();
+  // Use assetsWithOverrides to ensure full data is available for calculation
+  assetsStore.assetsWithOverrides.forEach(a => allAssetsMap.set(a.id, a));
+
+  // 1. Calculate final merged state of the original asset in its source context
+  const mergedResult = calculateMergedAsset(originalSourceAsset.id, allAssetsMap);
+  if ('error' in mergedResult) {
+    console.error("Failed to calculate merged state during clone:", mergedResult.error);
+    newlyClonedAsset.templateFqn = null; // Failsafe: break inheritance on error
+    newlyClonedAsset.overrides = {};
+    return newlyClonedAsset;
+  }
+  const finalSourceProperties = mergedResult.properties;
+
+  // 2. Find the highest shared ancestor in the property inheritance chain
+  const inheritanceChain = getPropertyInheritanceChain(originalSourceAsset, allAssetsMap);
+  let highestSharedAncestor: UnmergedAsset | null = null;
+  // Walk the chain from the root ancestor downwards
+  for (const asset of inheritanceChain.slice().reverse()) {
+    if (isSharedAsset(asset, assetsStore.unmergedAssets)) {
+      highestSharedAncestor = asset;
+      break;
+    }
+  }
+
+  // 3. Rebase the templateFqn and calculate the minimal necessary overrides
+  if (highestSharedAncestor) {
+    const ancestorMergedResult = calculateMergedAsset(highestSharedAncestor.id, allAssetsMap);
+    if ('properties' in ancestorMergedResult) {
+      newlyClonedAsset.templateFqn = highestSharedAncestor.fqn;
+      // The new overrides are the "diff" between the final state and the new base state
+      newlyClonedAsset.overrides = generatePropertiesDiff(ancestorMergedResult.properties, finalSourceProperties);
+    } else {
+      // Failsafe if ancestor merge fails
+      newlyClonedAsset.templateFqn = null;
+      newlyClonedAsset.overrides = finalSourceProperties;
+    }
+  } else {
+    // No shared ancestor found, so flatten everything into overrides
+    newlyClonedAsset.templateFqn = null;
+    newlyClonedAsset.overrides = finalSourceProperties;
+  }
+
+  return newlyClonedAsset;
+};
 
 // --- Rule 1: Assigning a Requirement (Package -> Node) ---
 /**
@@ -36,6 +93,7 @@ const assignRequirementRule: InteractionRule = {
       execute: (dragPayload: DragPayload, dropTarget: DropTarget) => {
         const assetsStore = useAssetsStore();
         const workspaceStore = useWorkspaceStore();
+        const uiStore = useUiStore();
 
         const sourcePackage = assetsStore.unmergedAssets.find(a => a.id === dragPayload.assetId) as UnmergedAsset;
         const targetNode = assetsStore.unmergedAssets.find(a => a.id === dropTarget.id) as UnmergedAsset;
@@ -45,8 +103,29 @@ const assignRequirementRule: InteractionRule = {
         const targetEnv = getAssetEnvironmentFqn(targetNode.fqn, assetsStore.unmergedAssets);
         const isCrossEnv = sourceEnv !== null && targetEnv !== null && sourceEnv !== targetEnv;
         if (isCrossEnv) {
-          // Placeholder for a cross-environment dialog (Stage 5)
-          console.log('Cross-environment copy detected. Dialog will be implemented in Stage 5.');
+          // Cross-Environment Workflow
+          const allAssetsMap = new Map<string, UnmergedAsset>();
+          assetsStore.unmergedAssets.forEach(a => allAssetsMap.set(a.id, a));
+            
+          const beforeChain = getPropertyInheritanceChain(sourcePackage, allAssetsMap);
+          // For now, the "after" chain is just the target environment
+          // In a full implementation, this would show the flattened/rebased chain
+          const afterChain = [{ 
+            assetKey: sourcePackage.assetKey, 
+            fqn: `${targetEnv}::${sourcePackage.assetKey}`,
+            assetType: sourcePackage.assetType 
+          }];
+            
+          // The content layer KNOWS this is a cross-env copy and prepares the specific data.
+          // It calls the GENERIC core action.
+          uiStore.promptForDragDropConfirmation({
+            dragPayload,
+            dropTarget,
+            displayPayload: {
+              type: 'CrossEnvironmentCopy', // A hint for the content dialog
+              inheritanceComparison: { before: beforeChain, after: afterChain }
+            }
+          });
         } else {
           // Intra-Environment: Ensure package exists, then create key
           const commands: (CreateAssetCommand | DeriveAssetCommand)[] = [];
@@ -144,5 +223,8 @@ const copyRequirementRule: InteractionRule = {
 
 registerInteraction(ASSET_TYPES.PACKAGE, ASSET_TYPES.NODE, assignRequirementRule);
 registerInteraction(ASSET_TYPES.PACKAGE_KEY, ASSET_TYPES.NODE, copyRequirementRule);
+
+// Export the hook for use by the workspace store
+export { crossEnvironmentCloneHook };
 
 

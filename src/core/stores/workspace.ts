@@ -234,6 +234,46 @@ export const useWorkspaceStore = defineStore('workspace', {
       const uiStore = useUiStore();
       uiStore.promptForNewFolder(parentFqn);
     },
+
+    // Execute cross-environment copy with "Flatten and Rebase" logic
+    async executeCrossEnvCopy(dragPayload: any, dropTarget: any) {
+      const assetsStore = useAssetsStore();
+      const sourcePackage = assetsStore.unmergedAssets.find(a => a.id === dragPayload.assetId);
+      const targetNode = assetsStore.unmergedAssets.find(a => a.id === dropTarget.id);
+
+      if (!sourcePackage || !targetNode) {
+        console.error("Cannot execute cross-env copy: source or target not found.");
+        return;
+      }
+
+      // Import the hook from the content layer
+      const { crossEnvironmentCloneHook } = await import('@/content/logic/interactions/packageAssignmentInteractions');
+      const { ASSET_TYPES } = await import('@/content/config/constants');
+
+      // This is the core logic that executes on confirmation
+      const commands = [];
+
+      // Command 1: The "Flatten and Rebase" Clone
+      const cloneCommand = new CloneAssetCommand(
+        sourcePackage.id,
+        targetNode.fqn,
+        sourcePackage.assetKey,
+        crossEnvironmentCloneHook // The injectable hook is passed here
+      );
+      commands.push(cloneCommand);
+
+      // Command 2: Create the PackageKey
+      const keyCreateCommand = new CreateAssetCommand({
+        assetType: ASSET_TYPES.PACKAGE_KEY,
+        assetKey: sourcePackage.assetKey,
+        fqn: `${targetNode.fqn}::${sourcePackage.assetKey}`,
+        templateFqn: null,
+        overrides: {},
+      });
+      commands.push(keyCreateCommand);
+
+      this.executeCommand(new CompositeCommand(commands));
+    },
     // ---------------------
 
     

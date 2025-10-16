@@ -31,6 +31,16 @@ interface RenameState {
   assetKey: string | null;
 }
 
+// Generic interface for drag-drop confirmation dialogs
+interface DragDropConfirmationDialogState {
+  show: boolean;
+  dragPayload: DragPayload | null;
+  dropTarget: DropTarget | null;
+  // An arbitrary payload for the content-layer component to use.
+  // The core does not know or care what is in this object.
+  displayPayload: Record<string, any> | null;
+}
+
 interface UiState {
   activePaneId: string | null;
   selectedNode: SelectedNode | null;
@@ -70,6 +80,8 @@ interface UiState {
   deleteConfirmationDialog: DeleteConfirmationDialogState;
   deleteBlockedDialog: DeleteBlockedDialogState;
   refactorConfirmationState: RefactorConfirmationState | null; // Can be null
+  // Generic drag-drop confirmation dialog
+  dragDropConfirmationDialog: DragDropConfirmationDialogState;
   // View-model hint for selected node
   selectedNodeViewHint: ViewHint | null;
   // Persist active tab per inspector pane
@@ -106,6 +118,7 @@ export const useUiStore = defineStore('ui', {
     deleteConfirmationDialog: { show: false, asset: null, impact: { deletableChildren: [] } },
     deleteBlockedDialog: { show: false, asset: null, impact: { blockingDependencies: [] } },
     refactorConfirmationState: null,
+    dragDropConfirmationDialog: { show: false, dragPayload: null, dropTarget: null, displayPayload: null },
     selectedNodeViewHint: null,
     inspectorActiveTab: new Map(),
     
@@ -229,6 +242,21 @@ export const useUiStore = defineStore('ui', {
       this.deleteConfirmationDialog.show = false;
       this.deleteBlockedDialog.show = false;
       this.refactorConfirmationState = null;
+      this.dragDropConfirmationDialog.show = false;
+    },
+
+    // Generic action to prompt for ANY drag-drop confirmation
+    promptForDragDropConfirmation(payload: {
+      dragPayload: DragPayload;
+      dropTarget: DropTarget;
+      displayPayload: Record<string, any>; // The content layer provides the specific data
+    }) {
+      this.dragDropConfirmationDialog = {
+        show: true,
+        dragPayload: payload.dragPayload,
+        dropTarget: payload.dropTarget,
+        displayPayload: payload.displayPayload,
+      };
     },
 
     // New Asset / Folder
