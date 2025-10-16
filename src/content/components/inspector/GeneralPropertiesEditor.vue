@@ -41,7 +41,8 @@
       </v-text-field>
 
       <v-autocomplete
-        v-model="editableTemplateFqn"
+        :model-value="asset.unmerged.templateFqn"
+        @update:model-value="handleTemplateChange"
         :items="lazyLoadedTemplates"  
         :loading="isLoadingTemplates" 
         @focus="loadAvailableTemplates" 
@@ -88,6 +89,7 @@ import { useAssetsStore, useWorkspaceStore, useUiStore } from '@/core/stores';
 import { UpdateAssetCommand } from '@/core/stores/workspace';
 import { cloneDeep } from 'lodash-es';
 import { generatePropertiesDiff } from '@/core/utils/diff';
+import { calculateMergedAsset } from '@/content/utils/mergeUtils';
 
 const props = defineProps({
   asset: { type: Object, required: true },
@@ -157,10 +159,37 @@ const editableTechnicalName = computed({
   set: (value) => emitChange('name', value, true),
 });
 
-const editableTemplateFqn = computed({
-  get: () => props.asset.unmerged.templateFqn,
-  set: (value) => emitChange('templateFqn', value || null),
-});
+// Template Change Handler with Confirmation
+const handleTemplateChange = (newTemplateFqn) => {
+  if (props.isReadOnly) return;
+
+  const oldTemplateFqn = props.asset.unmerged.templateFqn;
+  if (oldTemplateFqn === newTemplateFqn) return; // No change
+
+  // 1. Calculate "before" state
+  const allAssetsMap = new Map(assetsStore.unmergedAssets.map(a => [a.id, a]));
+  const stateBefore = calculateMergedAsset(props.asset.unmerged.id, allAssetsMap);
+
+  // 2. Calculate "after" state (in memory)
+  const tempAsset = cloneDeep(props.asset.unmerged);
+  tempAsset.templateFqn = newTemplateFqn;
+  const tempAssetsMap = new Map(allAssetsMap).set(tempAsset.id, tempAsset);
+  const stateAfter = calculateMergedAsset(tempAsset.id, tempAssetsMap);
+
+  // 3. Generate the diff
+  const diff = generatePropertiesDiff(
+    'properties' in stateBefore ? stateBefore.properties : null,
+    'properties' in stateAfter ? stateAfter.properties : null
+  );
+
+  // 4. Prompt for confirmation
+  uiStore.promptForTemplateChange({
+    asset: props.asset.unmerged,
+    oldTemplateFqn: oldTemplateFqn || null,
+    newTemplateFqn: newTemplateFqn || null,
+    diff,
+  });
+};
 
 // Logic for Clear Overrides
 const hasOverrides = computed(() => {

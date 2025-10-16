@@ -291,6 +291,23 @@ export const useWorkspaceStore = defineStore('workspace', {
       const command = new UpdateAssetCommand(assetId, oldData, newData);
       this.executeCommand(command);
     },
+
+    // Execute template change action
+    executeTemplateChange(assetId: string, newTemplateFqn: string | null) {
+      const assetsStore = useAssetsStore();
+      const assetDetails = assetsStore.getUnmergedDetails(assetId);
+      if (!assetDetails) {
+        console.error(`Cannot change template: Asset with ID ${assetId} not found.`);
+        return;
+      }
+
+      const oldData = assetDetails.unmerged;
+      const newData = cloneDeep(oldData);
+      newData.templateFqn = newTemplateFqn;
+
+      const command = new UpdateAssetCommand(assetId, oldData, newData);
+      this.executeCommand(command);
+    },
     // ---------------------
 
     

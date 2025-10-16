@@ -217,6 +217,9 @@
 
     <!-- Clear Overrides Dialog -->
     <ClearOverridesDialog />
+
+    <!-- Template Change Dialog -->
+    <TemplateChangeDialog />
   </v-app>
 </template>
 
@@ -236,6 +239,7 @@ import DeletionBlockedDialog from '@/core/components/dialogs/DeletionBlockedDial
 import CrossEnvCopyDialog from '@/content/components/dialogs/CrossEnvCopyDialog.vue';
 import ResolveAndCopyDialog from '@/content/components/dialogs/ResolveAndCopyDialog.vue';
 import ClearOverridesDialog from '@/core/components/dialogs/ClearOverridesDialog.vue';
+import TemplateChangeDialog from '@/core/components/dialogs/TemplateChangeDialog.vue';
 
 import type { Asset, UnmergedAsset, AssetTreeNode } from '@/core/types';
 import type { ValidationIssue } from '@/core/types/validation';

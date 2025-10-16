@@ -49,6 +49,15 @@ interface ClearOverridesDialogState {
   changes: Change[];
 }
 
+// New interface for template change dialog
+interface TemplateChangeDialogState {
+  show: boolean;
+  asset: Asset | null;
+  oldTemplateFqn: string | null;
+  newTemplateFqn: string | null;
+  diff: Change[];
+}
+
 interface UiState {
   activePaneId: string | null;
   selectedNode: SelectedNode | null;
@@ -92,6 +101,8 @@ interface UiState {
   dragDropConfirmationDialog: DragDropConfirmationDialogState;
   // Clear overrides dialog
   clearOverridesDialog: ClearOverridesDialogState;
+  // Template change dialog
+  templateChangeDialog: TemplateChangeDialogState;
   // View-model hint for selected node
   selectedNodeViewHint: ViewHint | null;
   // Persist active tab per inspector pane
@@ -130,6 +141,7 @@ export const useUiStore = defineStore('ui', {
     refactorConfirmationState: null,
     dragDropConfirmationDialog: { show: false, dragPayload: null, dropTarget: null, displayPayload: null },
     clearOverridesDialog: { show: false, asset: null, changes: [] },
+    templateChangeDialog: { show: false, asset: null, oldTemplateFqn: null, newTemplateFqn: null, diff: [] },
     selectedNodeViewHint: null,
     inspectorActiveTab: new Map(),
     
@@ -255,6 +267,7 @@ export const useUiStore = defineStore('ui', {
       this.refactorConfirmationState = null;
       this.dragDropConfirmationDialog.show = false;
       this.clearOverridesDialog.show = false;
+      this.templateChangeDialog.show = false;
     },
 
     // Generic action to prompt for ANY drag-drop confirmation
@@ -277,6 +290,22 @@ export const useUiStore = defineStore('ui', {
         show: true,
         asset: payload.asset,
         changes: payload.changes,
+      };
+    },
+
+    // Template Change
+    promptForTemplateChange(payload: {
+      asset: Asset;
+      oldTemplateFqn: string | null;
+      newTemplateFqn: string | null;
+      diff: Change[];
+    }) {
+      this.templateChangeDialog = {
+        show: true,
+        asset: payload.asset,
+        oldTemplateFqn: payload.oldTemplateFqn,
+        newTemplateFqn: payload.newTemplateFqn,
+        diff: payload.diff,
       };
     },
 
