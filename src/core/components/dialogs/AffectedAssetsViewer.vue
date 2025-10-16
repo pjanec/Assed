@@ -15,6 +15,13 @@
             </div>
           </div>
           <v-spacer />
+          <v-btn
+            icon="mdi-open-in-new"
+            size="x-small"
+            variant="text"
+            class="me-2"
+            @click.stop="emit('navigateToAsset', item.newState.id)"
+          />
           <v-chip v-if="item.diff" size="small" variant="tonal" class="ms-4">{{ item.diff.length }} change{{ item.diff.length > 1 ? 's' : '' }}</v-chip>
         </v-expansion-panel-title>
         <v-expansion-panel-text class="diff-content">
@@ -46,7 +53,8 @@ interface Props {
   changes: ChangeItem[];
 }
 
-defineProps<Props>();
+const props = defineProps<Props>();
+const emit = defineEmits<{ (e: 'navigateToAsset', assetId: string): void }>();
 
 const getChangeIcon = (type: string): string => {
   const icons: Record<string, string> = { 

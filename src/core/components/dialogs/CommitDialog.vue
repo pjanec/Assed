@@ -56,6 +56,7 @@
           <AffectedAssetsViewer
             title="Affected by Ripple Effect"
             :changes="allRippleChanges"
+            @navigateToAsset="onNavigateToAsset"
           />
         </div>
 
@@ -64,10 +65,21 @@
           <v-list density="compact" class="border rounded">
             <v-list-item v-for="item in addedAssets" :key="item.newState.id">
               <template #prepend>
-                <v-icon color="success" class="me-3">mdi-plus-box</v-icon>
+                <v-icon :color="coreConfig.getAssetTypeColor(item.newState.assetType as any)" class="me-3">
+                  {{ coreConfig.getAssetIcon(item.newState.assetType as any) }}
+                </v-icon>
               </template>
-              <v-list-item-title>{{ item.newState.assetKey }}</v-list-item-title>
-              <v-list-item-subtitle>{{ item.newState.fqn }}</v-list-item-subtitle>
+              <v-list-item-title class="font-weight-medium">{{ item.newState.assetKey }}</v-list-item-title>
+              <v-list-item-subtitle class="text-medium-emphasis">{{ item.newState.fqn }}</v-list-item-subtitle>
+              <template #append>
+                <v-btn
+                  icon="mdi-open-in-new"
+                  size="x-small"
+                  variant="text"
+                  class="ms-2"
+                  @click.stop="onNavigateToAsset(item.newState.id)"
+                />
+              </template>
             </v-list-item>
           </v-list>
         </div>
@@ -76,11 +88,13 @@
           <h4 class="text-subtitle-1 mb-2">Deleted ({{ deletedAssets.length }})</h4>
           <v-list density="compact" class="border rounded">
             <v-list-item v-for="item in deletedAssets" :key="item.oldState?.id || item.newState.id">
-               <template #prepend>
-                <v-icon color="error" class="me-3">mdi-minus-box</v-icon>
+              <template #prepend>
+                <v-icon :color="coreConfig.getAssetTypeColor((item.oldState?.assetType || item.newState.assetType) as any)" class="me-3">
+                  {{ coreConfig.getAssetIcon((item.oldState?.assetType || item.newState.assetType) as any) }}
+                </v-icon>
               </template>
-              <v-list-item-title>{{ item.oldState?.assetKey || item.newState.assetKey }}</v-list-item-title>
-              <v-list-item-subtitle>{{ item.oldState?.fqn || item.newState.fqn }}</v-list-item-subtitle>
+              <v-list-item-title class="font-weight-medium">{{ item.oldState?.assetKey || item.newState.assetKey }}</v-list-item-title>
+              <v-list-item-subtitle class="text-medium-emphasis">{{ item.oldState?.fqn || item.newState.fqn }}</v-list-item-subtitle>
             </v-list-item>
           </v-list>
         </div>
@@ -240,6 +254,11 @@ const handleCancel = () => emit('update:model-value', false);
 const handleCommit = () => {
   if (!canCommit.value) return;
   emit('save', { message: commitMessage.value });
+};
+
+const onNavigateToAsset = (assetId: string) => {
+  emit('update:model-value', false);
+  emit('navigateToAsset', assetId);
 };
 </script>
 
