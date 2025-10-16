@@ -60,14 +60,34 @@
       </v-autocomplete>
 
     </v-form>
+
+    <v-divider class="my-4"></v-divider>
+    <div class="d-flex align-center">
+      <div class="flex-grow-1">
+        <div class="text-subtitle-2">Reset to Template</div>
+        <div class="text-caption text-medium-emphasis">
+          This will remove all local property overrides from this asset.
+        </div>
+      </div>
+      <v-btn
+        color="warning"
+        variant="tonal"
+        size="small"
+        :disabled="!hasOverrides || isReadOnly"
+        @click="handleClearOverrides"
+      >
+        Clear Local Overrides
+      </v-btn>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { computed, ref, watch, nextTick } from 'vue'; // Import ref, watch, and nextTick
-import { useAssetsStore, useWorkspaceStore } from '@/core/stores';
+import { useAssetsStore, useWorkspaceStore, useUiStore } from '@/core/stores';
 import { UpdateAssetCommand } from '@/core/stores/workspace';
 import { cloneDeep } from 'lodash-es';
+import { generatePropertiesDiff } from '@/core/utils/diff';
 
 const props = defineProps({
   asset: { type: Object, required: true },
@@ -76,6 +96,7 @@ const props = defineProps({
 
 const assetsStore = useAssetsStore();
 const workspaceStore = useWorkspaceStore();
+const uiStore = useUiStore();
 
 // --- START: NEW LAZY-LOADING STATE ---
 const lazyLoadedTemplates = ref([]);
@@ -140,6 +161,24 @@ const editableTemplateFqn = computed({
   get: () => props.asset.unmerged.templateFqn,
   set: (value) => emitChange('templateFqn', value || null),
 });
+
+// Logic for Clear Overrides
+const hasOverrides = computed(() => {
+  return props.asset.unmerged.overrides && Object.keys(props.asset.unmerged.overrides).length > 0;
+});
+
+const handleClearOverrides = () => {
+  if (!hasOverrides.value || props.isReadOnly) return;
+
+  // 1. Calculate the diff between current overrides and an empty object
+  const changes = generatePropertiesDiff(props.asset.unmerged.overrides, {});
+
+  // 2. Call the UI store to open the confirmation dialog
+  uiStore.promptForClearOverrides({
+    asset: props.asset.unmerged,
+    changes,
+  });
+};
 
 // REMOVE the old `availableTemplates` computed property entirely.
 // const availableTemplates = computed(() => { ... });

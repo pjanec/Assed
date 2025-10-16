@@ -214,6 +214,9 @@
 
     <!-- Resolve and Copy Dialog -->
     <ResolveAndCopyDialog />
+
+    <!-- Clear Overrides Dialog -->
+    <ClearOverridesDialog />
   </v-app>
 </template>
 
@@ -232,6 +235,7 @@ import ConfirmDeleteDialog from '@/core/components/dialogs/ConfirmDeleteDialog.v
 import DeletionBlockedDialog from '@/core/components/dialogs/DeletionBlockedDialog.vue'
 import CrossEnvCopyDialog from '@/content/components/dialogs/CrossEnvCopyDialog.vue';
 import ResolveAndCopyDialog from '@/content/components/dialogs/ResolveAndCopyDialog.vue';
+import ClearOverridesDialog from '@/core/components/dialogs/ClearOverridesDialog.vue';
 
 import type { Asset, UnmergedAsset, AssetTreeNode } from '@/core/types';
 import type { ValidationIssue } from '@/core/types/validation';

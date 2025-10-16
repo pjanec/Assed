@@ -274,6 +274,23 @@ export const useWorkspaceStore = defineStore('workspace', {
 
       this.executeCommand(new CompositeCommand(commands));
     },
+
+    // Execute clear overrides action
+    executeClearOverrides(assetId: string) {
+      const assetsStore = useAssetsStore();
+      const assetDetails = assetsStore.getUnmergedDetails(assetId);
+      if (!assetDetails) {
+        console.error(`Cannot clear overrides: Asset with ID ${assetId} not found.`);
+        return;
+      }
+
+      const oldData = assetDetails.unmerged;
+      const newData = cloneDeep(oldData);
+      newData.overrides = {}; // The core of the operation
+
+      const command = new UpdateAssetCommand(assetId, oldData, newData);
+      this.executeCommand(command);
+    },
     // ---------------------
 
     

@@ -6,7 +6,8 @@ import type {
   DeleteConfirmationDialogState,
   DeleteBlockedDialogState,
   RefactorConfirmationState,
-  Asset
+  Asset,
+  Change
 } from '@/core/types';
 import type { MenuState, ContextMenuKind } from '@/core/types/ui';
 import { DIALOG_MODES, DROP_TARGET_TYPES, VIEW_HINTS } from '@/core/config/constants';
@@ -39,6 +40,13 @@ interface DragDropConfirmationDialogState {
   // An arbitrary payload for the content-layer component to use.
   // The core does not know or care what is in this object.
   displayPayload: Record<string, any> | null;
+}
+
+// New interface for clear overrides dialog
+interface ClearOverridesDialogState {
+  show: boolean;
+  asset: Asset | null;
+  changes: Change[];
 }
 
 interface UiState {
@@ -82,6 +90,8 @@ interface UiState {
   refactorConfirmationState: RefactorConfirmationState | null; // Can be null
   // Generic drag-drop confirmation dialog
   dragDropConfirmationDialog: DragDropConfirmationDialogState;
+  // Clear overrides dialog
+  clearOverridesDialog: ClearOverridesDialogState;
   // View-model hint for selected node
   selectedNodeViewHint: ViewHint | null;
   // Persist active tab per inspector pane
@@ -119,6 +129,7 @@ export const useUiStore = defineStore('ui', {
     deleteBlockedDialog: { show: false, asset: null, impact: { blockingDependencies: [] } },
     refactorConfirmationState: null,
     dragDropConfirmationDialog: { show: false, dragPayload: null, dropTarget: null, displayPayload: null },
+    clearOverridesDialog: { show: false, asset: null, changes: [] },
     selectedNodeViewHint: null,
     inspectorActiveTab: new Map(),
     
@@ -243,6 +254,7 @@ export const useUiStore = defineStore('ui', {
       this.deleteBlockedDialog.show = false;
       this.refactorConfirmationState = null;
       this.dragDropConfirmationDialog.show = false;
+      this.clearOverridesDialog.show = false;
     },
 
     // Generic action to prompt for ANY drag-drop confirmation
@@ -256,6 +268,15 @@ export const useUiStore = defineStore('ui', {
         dragPayload: payload.dragPayload,
         dropTarget: payload.dropTarget,
         displayPayload: payload.displayPayload,
+      };
+    },
+
+    // Clear Overrides
+    promptForClearOverrides(payload: { asset: Asset, changes: Change[] }) {
+      this.clearOverridesDialog = {
+        show: true,
+        asset: payload.asset,
+        changes: payload.changes,
       };
     },
 
