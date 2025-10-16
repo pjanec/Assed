@@ -13,7 +13,7 @@
         type="success"
         variant="tonal"
         class="mb-4"
-        icon="mdi-check-circle-outline"
+        :icon="coreConfig.getAssetIcon(ASSET_TYPES.PACKAGE_KEY)"
       >
         Requirement is resolved.
       </v-alert>
@@ -102,8 +102,8 @@ const resolvedPackage = computed<UnmergedAsset | undefined>(() => {
   );
 });
 
-const icon = computed(() => resolvedPackage.value ? 'mdi-link-variant' : 'mdi-link-variant-off');
-const iconColor = computed(() => resolvedPackage.value ? 'success' : 'error');
+const icon = computed(() => resolvedPackage.value ? coreConfig.getAssetIcon(ASSET_TYPES.PACKAGE_KEY) : 'mdi-link-variant-off');
+const iconColor = computed(() => resolvedPackage.value ? coreConfig.getAssetTypeColor(ASSET_TYPES.PACKAGE_KEY) : 'error');
 
 const inspectPackage = () => {
   if (resolvedPackage.value) {
