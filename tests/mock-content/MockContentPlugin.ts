@@ -3,6 +3,10 @@ import { useCoreConfigStore } from '@/core/stores/config';
 import { MOCK_ASSET_TYPES, mockAssetRegistry } from './mockAssetRegistry';
 import type { MockPersistenceAdapter } from './MockPersistenceAdapter';
 
+// Import interaction rules to ensure they are registered during tests
+import '@/content/logic/interactions/genericInteractions';
+import '@/content/logic/interactions/packageAssignmentInteractions';
+
 export const createMockContentPlugin = (mockAdapter: MockPersistenceAdapter) => ({
   install(app: App) {
     const coreConfigStore = useCoreConfigStore();

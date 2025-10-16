@@ -93,6 +93,16 @@ const copyRequirementRule: InteractionRule = {
     const targetNode = assetsStore.unmergedAssets.find(a => a.id === dropTarget.id);
     if (!draggedKey || !targetNode) return false;
 
+    // Rule 1: Prevent dropping onto the same parent node it already belongs to.
+    // This is the primary fix for the reported bug.
+    const sourceParentFqn = draggedKey.fqn.includes('::') 
+      ? draggedKey.fqn.substring(0, draggedKey.fqn.lastIndexOf('::'))
+      : null;
+    if (sourceParentFqn === targetNode.fqn) {
+      return false;
+    }
+
+    // Rule 2: No Duplicate Keys in the target node. This check is now safe.
     const existingKeys = assetsStore.unmergedAssets.filter(
       a => a.assetType === ASSET_TYPES.PACKAGE_KEY && a.fqn.startsWith(targetNode.fqn + '::')
     );
@@ -106,14 +116,27 @@ const copyRequirementRule: InteractionRule = {
       icon: 'mdi-content-copy',
       cursor: 'copy',
       execute: (dragPayload: DragPayload, dropTarget: DropTarget) => {
-        const assetsStore = useAssetsStore();
         const workspaceStore = useWorkspaceStore();
-        const targetNode = assetsStore.unmergedAssets.find(a => a.id === dropTarget.id) as UnmergedAsset;
-        if (!targetNode) return;
+        const assetsStore = useAssetsStore();
+        const uiStore = useUiStore();
 
-        // Simple clone to the target node; validation rules will highlight issues if any
-        const cloneCommand = new CloneAssetCommand(dragPayload.assetId, targetNode.fqn, dragPayload.assetKey);
-        workspaceStore.executeCommand(cloneCommand);
+        const draggedKey = assetsStore.unmergedAssets.find(a => a.id === dragPayload.assetId) as UnmergedAsset;
+        const targetNode = assetsStore.unmergedAssets.find(a => a.id === dropTarget.id) as UnmergedAsset;
+        if (!draggedKey || !targetNode) return;
+
+        const isCrossEnv = !areInSameEnvironment(draggedKey, targetNode, assetsStore.unmergedAssets);
+
+        if (isCrossEnv) {
+          // This is the placeholder for the proactive resolution workflow.
+          // For now, it will clone the key, which will correctly show a validation error.
+          console.log("Cross-environment PackageKey copy detected. Proactive resolution will be implemented in Stage 5.");
+          const cloneCommand = new CloneAssetCommand(dragPayload.assetId, targetNode.fqn, draggedKey.assetKey);
+          workspaceStore.executeCommand(cloneCommand);
+        } else {
+          // Simple Clone for same-environment copy. This is the scenario you are testing.
+          const cloneCommand = new CloneAssetCommand(dragPayload.assetId, targetNode.fqn, draggedKey.assetKey);
+          workspaceStore.executeCommand(cloneCommand);
+        }
       },
     },
   ],

@@ -32,7 +32,6 @@ export function useDroppable(dropTargetInfo: DropTarget) {
   // --- EVENT HANDLERS ---
 
   const handleDragOver = (event: DragEvent) => {
-    // --- START: MODIFICATION ---
     const { draggedAssetId } = uiStore;
     if (!draggedAssetId) return;
     
@@ -53,7 +52,6 @@ export function useDroppable(dropTargetInfo: DropTarget) {
       }
       isDraggingOver.value = false;
     }
-    // --- END: MODIFICATION ---
   };
 
   const handleDragLeave = () => {

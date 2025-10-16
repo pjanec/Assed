@@ -98,7 +98,6 @@ export const getAvailableActions = (draggedAssetId: string, dropTarget: DropTarg
   const genericKey = getKey('Asset', targetType);
     
   let rule = interactionRegistry.get(specificKey) || interactionRegistry.get(genericKey);
-
   if (!rule) {
     return [];
   }
@@ -113,10 +112,12 @@ export const getAvailableActions = (draggedAssetId: string, dropTarget: DropTarg
     ? rule.actions(dragPayload, effectiveDropTarget)
     : rule.actions;
 
-  return actions.filter(action => {
+  const filteredActions = actions.filter(action => {
     // Pass the full payload for individual enabling checks
     return !action.isEnabled || action.isEnabled(dragPayload, effectiveDropTarget);
   });
+
+  return filteredActions;
 };
 
 
