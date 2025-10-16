@@ -57,7 +57,7 @@ export const assetRegistry: Record<string, AssetDefinition> = {
   },
   [ASSET_TYPES.ENVIRONMENT]: {
     label: 'Environment',
-    validChildren: [ASSET_TYPES.NODE, ASSET_TYPES.OPTION, ASSET_TYPES.NAMESPACE_FOLDER],
+    validChildren: [ASSET_TYPES.NODE, ASSET_TYPES.OPTION, ASSET_TYPES.PACKAGE, ASSET_TYPES.NAMESPACE_FOLDER],
     icon: 'mdi-earth',
     color: 'success',
     inspectorComponent: () => import('@/content/components/inspector/EnvironmentInspector.vue'),
@@ -73,7 +73,7 @@ export const assetRegistry: Record<string, AssetDefinition> = {
   },
   [ASSET_TYPES.NODE]: {
     label: 'Node',
-    validChildren: [ASSET_TYPES.PACKAGE, ASSET_TYPES.NAMESPACE_FOLDER],
+    validChildren: [ASSET_TYPES.PACKAGE_KEY, ASSET_TYPES.NAMESPACE_FOLDER],
     icon: 'mdi-server',
     color: 'info',
     inspectorComponent: () => import('@/content/components/inspector/GenericAssetInspector.vue'),
@@ -103,6 +103,20 @@ export const assetRegistry: Record<string, AssetDefinition> = {
     postCloneFixup: fixTemplateFqn,
     sortOrder: 40,
     isShownInStats: true,
+  },
+  [ASSET_TYPES.PACKAGE_KEY]: {
+    label: 'Package Requirement',
+    validChildren: [],
+    icon: 'mdi-link-variant',
+    color: 'deep-purple',
+    inspectorComponent: () => import('@/content/components/inspector/GenericAssetInspector.vue'),
+    isCreatableAtRoot: false,
+    creationModes: ['simple'],
+    isRenameable: true,
+    isDeletable: true,
+    isStructuralFolder: false,
+    sortOrder: 50,
+    isShownInStats: false,
   },
   [ASSET_TYPES.OPTION]: {
     label: 'Option',

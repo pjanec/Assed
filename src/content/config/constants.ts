@@ -6,6 +6,7 @@ export const ASSET_TYPES = {
   ENVIRONMENT: 'Environment',
   NODE: 'Node',
   PACKAGE: 'Package',
+  PACKAGE_KEY: 'PackageKey',
   OPTION: 'Option',
 } as const;
 
