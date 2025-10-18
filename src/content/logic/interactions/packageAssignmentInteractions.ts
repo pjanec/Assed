@@ -4,7 +4,7 @@ import { useWorkspaceStore, CreateAssetCommand, DeriveAssetCommand, CloneAssetCo
 import type { UnmergedAsset } from '@/core/types';
 import type { DragPayload, DropTarget } from '@/core/types/drag-drop';
 import { ASSET_TYPES } from '@/content/config/constants';
-import { areInSameEnvironment, getAssetEnvironmentFqn, isSharedAsset } from '@/content/utils/assetUtils';
+import { areInSameEnvironment, getAssetEnvironmentFqn, isSharedAsset, isSameOrAncestorEnvironment } from '@/content/utils/assetUtils';
 import { isAncestorOf } from '@/core/utils/inheritanceUtils';
 import { getPropertyInheritanceChain, calculateMergedAsset } from '@/core/utils/mergeUtils';
 import { generatePropertiesDiff } from '@/core/utils/diff';
@@ -107,58 +107,24 @@ const assignRequirementRule: InteractionRule = {
 
         const sourceEnv = getAssetEnvironmentFqn(sourcePackage.fqn, assetsStore.unmergedAssets);
         const targetEnv = getAssetEnvironmentFqn(targetNode.fqn, assetsStore.unmergedAssets);
-          
-        // Check if the source and target are the same, OR if the source is an ancestor of the target.
-        const isEffectivelySameEnv = (sourceEnv === targetEnv) ||   
-                                     (sourceEnv && targetEnv && isAncestorOf(targetEnv, sourceEnv, assetsStore.unmergedAssets));
-          
-        // A "cross-environment" action is now defined as any action that is NOT effectively the same.
-        const isCrossEnv = !isEffectivelySameEnv;
-        if (isCrossEnv) {
-          // Cross-Environment Workflow
-          const allAssetsMap = new Map<string, UnmergedAsset>();
-          assetsStore.unmergedAssets.forEach(a => allAssetsMap.set(a.id, a));
-            
-          const beforeChain = getPropertyInheritanceChain(sourcePackage, allAssetsMap);
-          // For now, the "after" chain is just the target environment
-          // In a full implementation, this would show the flattened/rebased chain
-          const afterChain = [{ 
-            assetKey: sourcePackage.assetKey, 
-            fqn: `${targetEnv}::${sourcePackage.assetKey}`,
-            assetType: sourcePackage.assetType 
-          }];
-            
-          // The content layer KNOWS this is a cross-env copy and prepares the specific data.
-          // It calls the GENERIC core action.
-          uiStore.promptForDragDropConfirmation({
-            dragPayload,
-            dropTarget,
-            displayPayload: {
-              type: 'CrossEnvironmentCopy', // A hint for the content dialog
-              inheritanceComparison: { before: beforeChain, after: afterChain }
-            }
-          });
-        } else {
-          // --- THIS IS THE NEW "SMART DERIVE" LOGIC FOR SAME-ENVIRONMENT DROPS ---
-          const commands: (CreateAssetCommand | DeriveAssetCommand)[] = [];
-          const targetEnvFqn = getAssetEnvironmentFqn(targetNode.fqn, assetsStore.unmergedAssets);
 
-          // Check if the source is a shared package before attempting to derive.
+        // This is the complete check: Is the source shared, OR are the environments compatible?
+        if (isSharedAsset(sourcePackage, assetsStore.unmergedAssets) || isSameOrAncestorEnvironment(targetEnv, sourceEnv, assetsStore.unmergedAssets)) {
+            
+          // Execute the immediate, dialog-free "Smart Derive" workflow.
+          const commands: (CreateAssetCommand | DeriveAssetCommand)[] = [];
+            
           if (isSharedAsset(sourcePackage, assetsStore.unmergedAssets)) {
-            // It's a shared package; now check if it already exists in the target environment's pool.
             const existingPackageInPool = assetsStore.unmergedAssets.find(p =>
               p.assetType === ASSET_TYPES.PACKAGE &&
               p.assetKey === sourcePackage.assetKey &&
-              getAssetEnvironmentFqn(p.fqn, assetsStore.unmergedAssets) === targetEnvFqn
+              getAssetEnvironmentFqn(p.fqn, assetsStore.unmergedAssets) === targetEnv
             );
-
-            // Only create the derived package if it doesn't already exist.
             if (!existingPackageInPool) {
-              commands.push(new DeriveAssetCommand(sourcePackage, targetEnvFqn, sourcePackage.assetKey));
+              commands.push(new DeriveAssetCommand(sourcePackage, targetEnv, sourcePackage.assetKey));
             }
           }
             
-          // The final step is always to create the PackageKey on the node.
           const keyCreate = new CreateAssetCommand({
             assetType: ASSET_TYPES.PACKAGE_KEY,
             assetKey: sourcePackage.assetKey,
@@ -169,6 +135,27 @@ const assignRequirementRule: InteractionRule = {
           commands.push(keyCreate);
             
           workspaceStore.executeCommand(new CompositeCommand(commands));
+
+        } else {
+          // It's a true cross-environment action. Trigger the confirmation dialog.
+          const allAssetsMap = new Map<string, UnmergedAsset>();
+          assetsStore.unmergedAssets.forEach(a => allAssetsMap.set(a.id, a));
+            
+          const beforeChain = getPropertyInheritanceChain(sourcePackage, allAssetsMap);
+          const afterChain = [{ 
+            assetKey: sourcePackage.assetKey, 
+            fqn: `${targetEnv}::${sourcePackage.assetKey}`,
+            assetType: sourcePackage.assetType 
+          }];
+            
+          uiStore.promptForDragDropConfirmation({
+            dragPayload,
+            dropTarget,
+            displayPayload: {
+              type: 'CrossEnvironmentCopy',
+              inheritanceComparison: { before: beforeChain, after: afterChain }
+            }
+          });
         }
       },
     },
@@ -345,31 +332,36 @@ const populatePackagePoolRule: InteractionRule = {
       execute: (dragPayload: DragPayload, dropTarget: DropTarget) => {
         const uiStore = useUiStore();
         const assetsStore = useAssetsStore();
+        const workspaceStore = useWorkspaceStore();
         const sourcePackage = assetsStore.unmergedAssets.find(a => a.id === dragPayload.assetId) as UnmergedAsset;
-        if (!sourcePackage) return;
-          
-        // This is always a cross-context copy, so we always show the dialog.
-        // The logic for calculating inheritance chains is identical to the Package -> Node workflow.
-        const allAssetsMap = new Map<string, UnmergedAsset>();
-        assetsStore.unmergedAssets.forEach(a => allAssetsMap.set(a.id, a));
-        const beforeChain = getPropertyInheritanceChain(sourcePackage, allAssetsMap);
-          
-        // For now, the "after" chain is just the target environment
-        // In a full implementation, this would show the flattened/rebased chain
-        const afterChain = [{ 
-          assetKey: sourcePackage.assetKey, 
-          fqn: `${dropTarget.id}::${sourcePackage.assetKey}`,
-          assetType: sourcePackage.assetType 
-        }];
+        const targetEnv = assetsStore.unmergedAssets.find(a => a.id === dropTarget.id) as UnmergedAsset;
+        if (!sourcePackage || !targetEnv) return;
 
-        uiStore.promptForDragDropConfirmation({
-          dragPayload,
-          dropTarget,
-          displayPayload: {
-            type: 'CrossEnvironmentCopy',
-            inheritanceComparison: { before: beforeChain, after: afterChain }
-          }
-        });
+        // If the source is a shared package, derive it immediately without a dialog.
+        if (isSharedAsset(sourcePackage, assetsStore.unmergedAssets)) {
+          const command = new DeriveAssetCommand(sourcePackage, targetEnv.fqn, sourcePackage.assetKey);
+          workspaceStore.executeCommand(command);
+        } else {
+          // Otherwise, it's a cross-environment copy that requires confirmation.
+          const allAssetsMap = new Map<string, UnmergedAsset>();
+          assetsStore.unmergedAssets.forEach(a => allAssetsMap.set(a.id, a));
+          const beforeChain = getPropertyInheritanceChain(sourcePackage, allAssetsMap);
+              
+          const afterChain = [{ 
+            assetKey: sourcePackage.assetKey, 
+            fqn: `${targetEnv.fqn}::${sourcePackage.assetKey}`,
+            assetType: sourcePackage.assetType 
+          }];
+
+          uiStore.promptForDragDropConfirmation({
+            dragPayload,
+            dropTarget,
+            displayPayload: {
+              type: 'CrossEnvironmentCopy',
+              inheritanceComparison: { before: beforeChain, after: afterChain }
+            }
+          });
+        }
       },
     },
   ],

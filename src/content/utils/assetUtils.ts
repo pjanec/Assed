@@ -2,6 +2,7 @@
 import type { Asset } from '@/core/types';
 import { useAssetsStore } from '@/core/stores/assets';
 import { assetRegistry } from '@/content/config/assetRegistry';
+import { isAncestorOf } from '@/core/utils/inheritanceUtils';
 
 /**
  * Returns the appropriate Material Design Icon name for a given asset type.
@@ -96,6 +97,23 @@ export function areInSameEnvironment(assetA: Asset, assetB: Asset, allAssets: As
  */
 export function isSharedAsset(asset: Asset, allAssets: Asset[]): boolean {
   return getAssetEnvironmentFqn(asset.fqn, allAssets) === null;
+}
+
+/**
+ * Checks if two environment FQNs are the same or if one is an ancestor of the other.
+ * @param childEnvFqn The FQN of the environment that might be the descendant.
+ * @param potentialAncestorEnvFqn The FQN of the environment that might be the ancestor.
+ * @param allAssets A complete list of all assets in the project.
+ * @returns True if the environments are identical or if the potential ancestor is in the child's chain.
+ */
+export function isSameOrAncestorEnvironment(childEnvFqn: string | null, potentialAncestorEnvFqn: string | null, allAssets: Asset[]): boolean {
+  // If either environment doesn't exist in this context, they aren't compatible.
+  if (!childEnvFqn || !potentialAncestorEnvFqn) {
+    return false;
+  }
+    
+  // They are compatible if they are the same OR if one is an ancestor of the other.
+  return (childEnvFqn === potentialAncestorEnvFqn) || isAncestorOf(childEnvFqn, potentialAncestorEnvFqn, allAssets);
 }
 
 

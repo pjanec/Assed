@@ -5,6 +5,7 @@ import { ASSET_TYPES } from '@/content/config/constants';
 import type { UnmergedAsset, DragPayload, DropTarget } from '@/core/types';
 import { getAvailableActions } from '@/core/registries/interactionRegistry';
 import { isAncestorOf } from '@/core/utils/inheritanceUtils';
+import { isSameOrAncestorEnvironment } from '@/content/utils/assetUtils';
 
 describe('Ancestry-Aware Drag and Drop', () => {
   let assetsStore: ReturnType<typeof useAssetsStore>;
@@ -29,6 +30,16 @@ describe('Ancestry-Aware Drag and Drop', () => {
     expect(isAncestorOf('ProdEnv', 'BaseEnv', assetsStore.unmergedAssets)).toBe(true);
     expect(isAncestorOf('BaseEnv', 'ProdEnv', assetsStore.unmergedAssets)).toBe(false);
     expect(isAncestorOf('BaseEnv', 'BaseEnv', assetsStore.unmergedAssets)).toBe(false);
+  });
+
+  it('should correctly identify same or ancestor environment relationships', () => {
+    // Test the new isSameOrAncestorEnvironment utility function
+    expect(isSameOrAncestorEnvironment('ProdEnv', 'BaseEnv', assetsStore.unmergedAssets)).toBe(true);
+    expect(isSameOrAncestorEnvironment('BaseEnv', 'ProdEnv', assetsStore.unmergedAssets)).toBe(false);
+    expect(isSameOrAncestorEnvironment('BaseEnv', 'BaseEnv', assetsStore.unmergedAssets)).toBe(true);
+    expect(isSameOrAncestorEnvironment('ProdEnv', 'ProdEnv', assetsStore.unmergedAssets)).toBe(true);
+    expect(isSameOrAncestorEnvironment(null, 'BaseEnv', assetsStore.unmergedAssets)).toBe(false);
+    expect(isSameOrAncestorEnvironment('ProdEnv', null, assetsStore.unmergedAssets)).toBe(false);
   });
 
   it('should treat ancestor environment drops as same-environment', () => {
