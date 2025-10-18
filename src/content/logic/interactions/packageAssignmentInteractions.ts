@@ -132,19 +132,26 @@ const assignRequirementRule: InteractionRule = {
             }
           });
         } else {
-          // Intra-Environment: Ensure package exists, then create key
+          // --- THIS IS THE NEW "SMART DERIVE" LOGIC FOR SAME-ENVIRONMENT DROPS ---
           const commands: (CreateAssetCommand | DeriveAssetCommand)[] = [];
           const targetEnvFqn = getAssetEnvironmentFqn(targetNode.fqn, assetsStore.unmergedAssets);
-          if (targetEnvFqn) {
-            const existingPackage = assetsStore.unmergedAssets.find(p =>
+
+          // Check if the source is a shared package before attempting to derive.
+          if (isSharedAsset(sourcePackage, assetsStore.unmergedAssets)) {
+            // It's a shared package; now check if it already exists in the target environment's pool.
+            const existingPackageInPool = assetsStore.unmergedAssets.find(p =>
               p.assetType === ASSET_TYPES.PACKAGE &&
               p.assetKey === sourcePackage.assetKey &&
               getAssetEnvironmentFqn(p.fqn, assetsStore.unmergedAssets) === targetEnvFqn
             );
-            if (!existingPackage) {
+
+            // Only create the derived package if it doesn't already exist.
+            if (!existingPackageInPool) {
               commands.push(new DeriveAssetCommand(sourcePackage, targetEnvFqn, sourcePackage.assetKey));
             }
           }
+            
+          // The final step is always to create the PackageKey on the node.
           const keyCreate = new CreateAssetCommand({
             assetType: ASSET_TYPES.PACKAGE_KEY,
             assetKey: sourcePackage.assetKey,
@@ -153,6 +160,7 @@ const assignRequirementRule: InteractionRule = {
             overrides: {},
           });
           commands.push(keyCreate);
+            
           workspaceStore.executeCommand(new CompositeCommand(commands));
         }
       },
