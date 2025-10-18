@@ -1,4 +1,4 @@
-import { registerInteraction, type InteractionRule } from '@/core/registries/interactionRegistry';
+import { registerInteraction, type InteractionRule, type DropAction, type ValidationResult } from '@/core/registries/interactionRegistry';
 import { useAssetsStore, useUiStore } from '@/core/stores';
 import { useWorkspaceStore, CreateAssetCommand, DeriveAssetCommand, CloneAssetCommand, CompositeCommand, type PostCloneHook } from '@/core/stores/workspace';
 import type { UnmergedAsset } from '@/core/types';
@@ -160,90 +160,136 @@ const assignRequirementRule: InteractionRule = {
   ],
 };
 
+// --- NEW ACTION DEFINITIONS ---
+
+/**
+ * ACTION 1: Moves a PackageKey within the same environment.
+ */
+const MOVE_REQUIREMENT: DropAction = {
+  id: 'move-requirement',
+  label: 'Move Requirement',
+  icon: 'mdi-file-move',
+  cursor: 'move',
+  execute: (dragPayload, dropTarget, workspaceStore) => {
+    const assetsStore = useAssetsStore();
+    const targetNode = assetsStore.unmergedAssets.find(a => a.id === dropTarget.id);
+    if (!targetNode) return;
+      
+    // Use the existing, robust moveAsset logic
+    workspaceStore.moveAsset(dragPayload.assetId, targetNode.fqn);
+  },
+};
+
+/**
+ * ACTION 2: Copies (clones) a PackageKey within the same environment.
+ */
+const COPY_REQUIREMENT_SAME_ENV: DropAction = {
+  id: 'copy-requirement-same-env',
+  label: 'Copy Requirement',
+  icon: 'mdi-content-copy',
+  cursor: 'copy',
+  execute: (dragPayload, dropTarget, workspaceStore) => {
+    const assetsStore = useAssetsStore();
+    const draggedKey = assetsStore.unmergedAssets.find(a => a.id === dragPayload.assetId);
+    const targetNode = assetsStore.unmergedAssets.find(a => a.id === dropTarget.id);
+    if (!draggedKey || !targetNode) return;
+
+    // Use the existing CloneAssetCommand for a simple clone
+    const command = new CloneAssetCommand(dragPayload.assetId, targetNode.fqn, draggedKey.assetKey);
+    workspaceStore.executeCommand(command);
+  },
+};
+
+/**
+ * ACTION 3: Handles the cross-environment "Proactive Resolution" workflow.
+ * This contains the logic from the old rule's execute function.
+ */
+const PROACTIVE_RESOLUTION_ACTION: DropAction = {
+  id: 'proactive-resolve-requirement',
+  label: 'Copy Requirement',
+  icon: 'mdi-content-copy',
+  cursor: 'copy',
+  execute: (dragPayload, dropTarget) => {
+    const workspaceStore = useWorkspaceStore();
+    const assetsStore = useAssetsStore();
+    const uiStore = useUiStore();
+
+    const draggedKey = assetsStore.unmergedAssets.find(a => a.id === dragPayload.assetId) as UnmergedAsset;
+    const targetNode = assetsStore.unmergedAssets.find(a => a.id === dropTarget.id) as UnmergedAsset;
+    if (!draggedKey || !targetNode) return;
+
+    const targetEnvFqn = getAssetEnvironmentFqn(targetNode.fqn, assetsStore.unmergedAssets);
+    const requiredPackageExistsInTarget = assetsStore.unmergedAssets.some(p => 
+      p.assetType === ASSET_TYPES.PACKAGE && 
+      p.assetKey === draggedKey.assetKey && 
+      getAssetEnvironmentFqn(p.fqn, assetsStore.unmergedAssets) === targetEnvFqn
+    );
+
+    if (requiredPackageExistsInTarget) {
+      const cloneCommand = new CloneAssetCommand(dragPayload.assetId, targetNode.fqn, draggedKey.assetKey);
+      workspaceStore.executeCommand(cloneCommand);
+    } else {
+      uiStore.promptForDragDropConfirmation({
+        dragPayload,
+        dropTarget,
+        displayPayload: {
+          type: 'ProactiveResolution',
+          sourcePackageName: draggedKey.assetKey
+        }
+      });
+    }
+  },
+};
+
+// --- END: NEW ACTION DEFINITIONS ---
+
 // --- Rule 2: Copying a Requirement (PackageKey -> Node) ---
 
 /**
  * Defines the workflow for duplicating an existing package requirement.
- * This rule handles dragging a `PackageKey` from one `Node` to another.
- * Its purpose is to provide a quick way for users to replicate a dependency structure.
- * The logic will be enhanced in a later stage to proactively resolve dependencies
- * when copying across different environments.
+ * This rule now dynamically provides 'Move' and 'Copy' options based on context.
  */
-
 const copyRequirementRule: InteractionRule = {
-  validate: (dragPayload: DragPayload, dropTarget: DropTarget) => {
+  validate: (dragPayload: DragPayload, dropTarget: DropTarget): ValidationResult => {
     const assetsStore = useAssetsStore();
     const draggedKey = assetsStore.unmergedAssets.find(a => a.id === dragPayload.assetId);
     const targetNode = assetsStore.unmergedAssets.find(a => a.id === dropTarget.id);
-    if (!draggedKey || !targetNode) return { isValid: false, reason: 'Asset not found.' };
+    if (!draggedKey || !targetNode) return { isValid: false };
 
     const sourceParentFqn = draggedKey.fqn.includes('::') 
       ? draggedKey.fqn.substring(0, draggedKey.fqn.lastIndexOf('::'))
       : null;
     if (sourceParentFqn === targetNode.fqn) {
-      return { isValid: false, reason: "Cannot copy a requirement onto its own parent node." };
+      return { isValid: false, reason: "Cannot move or copy a requirement onto its own parent." };
     }
 
     const existingKeys = assetsStore.unmergedAssets.filter(
       a => a.assetType === ASSET_TYPES.PACKAGE_KEY && a.fqn.startsWith(targetNode.fqn + '::')
     );
     const isDuplicate = existingKeys.some(key => key.assetKey === draggedKey.assetKey);
-      
     if (isDuplicate) {
       return { isValid: false, reason: `Node already has a requirement for '${draggedKey.assetKey}'.` };
     }
-
+      
     return { isValid: true };
   },
-  actions: [
-    {
-      id: 'copy-requirement',
-      label: 'Copy Requirement',
-      icon: 'mdi-content-copy',
-      cursor: 'copy',
-      execute: (dragPayload: DragPayload, dropTarget: DropTarget) => {
-        const workspaceStore = useWorkspaceStore();
-        const assetsStore = useAssetsStore();
-        const uiStore = useUiStore();
+  actions: (dragPayload: DragPayload, dropTarget: DropTarget): DropAction[] => {
+    const assetsStore = useAssetsStore();
+    const draggedKey = assetsStore.unmergedAssets.find(a => a.id === dragPayload.assetId);
+    const targetNode = assetsStore.unmergedAssets.find(a => a.id === dropTarget.id);
 
-        const draggedKey = assetsStore.unmergedAssets.find(a => a.id === dragPayload.assetId) as UnmergedAsset;
-        const targetNode = assetsStore.unmergedAssets.find(a => a.id === dropTarget.id) as UnmergedAsset;
-        if (!draggedKey || !targetNode) return;
+    if (!draggedKey || !targetNode) return [];
 
-        const isCrossEnv = !areInSameEnvironment(draggedKey, targetNode, assetsStore.unmergedAssets);
+    const isSameEnv = areInSameEnvironment(draggedKey, targetNode, assetsStore.unmergedAssets);
 
-        if (isCrossEnv) {
-          // Cross-Environment PackageKey Copy - Proactive Resolution Workflow
-          const targetEnvFqn = getAssetEnvironmentFqn(targetNode.fqn, assetsStore.unmergedAssets);
-          const requiredPackageExistsInTarget = assetsStore.unmergedAssets.some(p => 
-            p.assetType === ASSET_TYPES.PACKAGE && 
-            p.assetKey === draggedKey.assetKey && 
-            getAssetEnvironmentFqn(p.fqn, assetsStore.unmergedAssets) === targetEnvFqn
-          );
-
-          if (requiredPackageExistsInTarget) {
-            // If the package already exists, just clone the key instantly.
-            const cloneCommand = new CloneAssetCommand(dragPayload.assetId, targetNode.fqn, draggedKey.assetKey);
-            workspaceStore.executeCommand(cloneCommand);
-          } else {
-            // If the package is missing, trigger the confirmation dialog.
-            uiStore.promptForDragDropConfirmation({
-              dragPayload,
-              dropTarget,
-              displayPayload: {
-                type: 'ProactiveResolution', // A hint for the content dialog
-                sourcePackageName: draggedKey.assetKey
-              }
-            });
-          }
-        } else {
-          // Simple Clone for same-environment copy. This is the scenario you are testing.
-          const cloneCommand = new CloneAssetCommand(dragPayload.assetId, targetNode.fqn, draggedKey.assetKey);
-          workspaceStore.executeCommand(cloneCommand);
-        }
-      },
-    },
-  ],
+    if (isSameEnv) {
+      // If in the same environment, offer both Move and Copy.
+      return [MOVE_REQUIREMENT, COPY_REQUIREMENT_SAME_ENV];
+    } else {
+      // If cross-environment, offer only the Proactive Resolution (Copy) action.
+      return [PROACTIVE_RESOLUTION_ACTION];
+    }
+  },
 };
 
 /**

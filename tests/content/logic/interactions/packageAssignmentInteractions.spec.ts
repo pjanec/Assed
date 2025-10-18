@@ -87,12 +87,16 @@ describe('Package Assignment Interactions', () => {
       console.log('[TEST DEBUG] First action:', actions[0]);
     }
 
-    // The test should find at least one action (copy-requirement)
+    // The test should find at least one action (move-requirement or copy-requirement-same-env)
     expect(actions.length).toBeGreaterThan(0);
     
-    const copyAction = actions.find(action => action.id === 'copy-requirement');
+    const copyAction = actions.find(action => action.id === 'copy-requirement-same-env');
     expect(copyAction).toBeDefined();
     expect(copyAction?.label).toBe('Copy Requirement');
+    
+    const moveAction = actions.find(action => action.id === 'move-requirement');
+    expect(moveAction).toBeDefined();
+    expect(moveAction?.label).toBe('Move Requirement');
   });
 
   it('should validate PackageKey -> Node interaction correctly', () => {
@@ -117,9 +121,13 @@ describe('Package Assignment Interactions', () => {
 
     console.log('[TEST DEBUG] Validation test - Available actions:', actions.length);
 
-    // Should find the copy-requirement action
-    const copyAction = actions.find(action => action.id === 'copy-requirement');
+    // Should find the copy-requirement-same-env action
+    const copyAction = actions.find(action => action.id === 'copy-requirement-same-env');
     expect(copyAction).toBeDefined();
+
+    // Should also find the move-requirement action
+    const moveAction = actions.find(action => action.id === 'move-requirement');
+    expect(moveAction).toBeDefined();
 
     // The action should be enabled
     if (copyAction?.isEnabled) {

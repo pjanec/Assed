@@ -56,7 +56,7 @@ describe('Stage 5 Workflow Integrations', () => {
     console.log('[TEST DEBUG] Actions:', actions);
     
     expect(actions.length).toBeGreaterThan(0);
-    const copyAction = actions.find((action: any) => action.id === 'copy-requirement');
+    const copyAction = actions.find((action: any) => action.id === 'proactive-resolve-requirement');
     expect(copyAction).toBeDefined();
     
     copyAction.execute(dragPayload, dropTarget);
@@ -138,9 +138,9 @@ describe('Stage 5 Workflow Integrations', () => {
     // ACT: Get available actions for cross-environment drop
     const actions = getAvailableActions(dragPayload.assetId, dropTarget);
 
-    // ASSERT: Should find the copy-requirement action
+    // ASSERT: Should find the proactive-resolve-requirement action
     expect(actions.length).toBe(1);
-    expect(actions[0].id).toBe('copy-requirement');
+    expect(actions[0].id).toBe('proactive-resolve-requirement');
     expect(actions[0].label).toBe('Copy Requirement');
   });
 
