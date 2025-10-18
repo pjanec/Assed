@@ -3,12 +3,14 @@
     <router-view />
     <!-- Add the single global context menu renderer -->
     <GlobalContextMenu />
+    <DragFeedbackTooltip />
   </v-app>
 </template>
 
 <script setup lang="ts">
 import { onMounted } from 'vue';
 import GlobalContextMenu from '@/core/components/GlobalContextMenu.vue';
+import DragFeedbackTooltip from '@/core/components/DragFeedbackTooltip.vue';
 
 // Import the single, clear setup function from the content plugin file
 import { registerContentHooks } from '@/content/plugin';

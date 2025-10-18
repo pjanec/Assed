@@ -98,6 +98,12 @@ interface UiState {
   // New FSM-based context menu system
   contextMenu: MenuState;
   
+  // Drag invalidation feedback
+  isDragInvalid: boolean;
+  dragInvalidationReason: string | null;
+  cursorX: number;
+  cursorY: number;
+  
   // All dialog states now live here
   cloneDialogState: CloneDialogState;
   renameState: RenameState;
@@ -159,12 +165,31 @@ export const useUiStore = defineStore('ui', {
     
     // Initialize the new FSM context menu
     contextMenu: { state: 'closed' },
+    
+    // Initialize drag invalidation state
+    isDragInvalid: false,
+    dragInvalidationReason: null,
+    cursorX: 0,
+    cursorY: 0,
   }),
   getters: {
     isDragging: (state) => !!state.dragSourceInfo,
     draggedAssetId: (state) => state.dragSourceInfo?.assetId || null,
   },
   actions: {
+    async manageInteractionLifecycle(handler: () => Promise<void>) {
+      if (this.isDialogPending) {
+        console.warn("Blocked a new interaction because one is already pending.");
+        return;
+      }
+      this.isDialogPending = true;
+      try {
+        await handler();
+      } finally {
+        this.clearActionStates();
+      }
+    },
+
     setActivePane(paneId: string | null) {
       this.activePaneId = paneId;
     },
@@ -218,6 +243,20 @@ export const useUiStore = defineStore('ui', {
     unregisterDragInstance(instanceId: string) {
       this.dragInstanceRegistry.delete(instanceId);
     },
+    setDragValidationState(isInvalid: boolean, reason: string | null) {
+      this.isDragInvalid = isInvalid;
+      this.dragInvalidationReason = reason;
+    },
+
+    setDragInvalidationReason(reason: string | null) {
+      this.dragInvalidationReason = reason;
+    },
+
+    setCursorPosition(x: number, y: number) {
+      this.cursorX = x;
+      this.cursorY = y;
+    },
+
     clearDragState() {
       console.log(`[DEBUG STORE] clearDragState: Clearing all drag-related state.`);
       this.dragSourceInfo = null;
@@ -227,6 +266,8 @@ export const useUiStore = defineStore('ui', {
       this.isDropMenuPending = false;
       this.isDialogPending = false; // Reset the flag
       this.dropTarget = null;
+      this.isDragInvalid = false;
+      this.dragInvalidationReason = null;
       this.closeCloneDialog();
     },
     showDropContextMenu({ x, y }: { x: number, y: number }) {
@@ -383,6 +424,9 @@ export const useUiStore = defineStore('ui', {
      * @param payload - The position and the strongly-typed context.
      */
     showContextMenu(payload: { x: number; y: number; ctx: ContextMenuKind }) {
+      if (this.isDialogPending) {
+        return;
+      }
       if (this.contextMenu.state !== 'closed') {
         // Optional: handle rapid clicks by ignoring them or closing the previous menu first
         return;

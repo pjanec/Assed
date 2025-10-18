@@ -3,7 +3,7 @@
     class="node-card"
     :class="{ 
       'node-card--selected': isSelected,
-      'node-card--drag-over': isDraggingOver 
+      'node-card--drag-over': isDraggingOver
     }"
     elevation="2"
     @click="$emit('click', node.id)"

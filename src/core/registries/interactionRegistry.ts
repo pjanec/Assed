@@ -18,8 +18,13 @@ export interface DropAction {
   isEnabled?: (dragPayload: DragPayload, dropTarget: DropTarget) => boolean;
 }
 
+export interface ValidationResult {
+  isValid: boolean;
+  reason?: string;
+}
+
 export interface InteractionRule {
-  validate?: (dragPayload: DragPayload, dropTarget: DropTarget) => boolean;
+  validate?: (dragPayload: DragPayload, dropTarget: DropTarget) => ValidationResult;
   actions: DropAction[] | ((dragPayload: DragPayload, dropTarget: DropTarget) => DropAction[]);
 }
 
@@ -62,10 +67,13 @@ const getTargetType = (dropTarget: DropTarget): string => {
  * @returns An array of valid DropAction objects.
  */
 export const getAvailableActions = (draggedAssetId: string, dropTarget: DropTarget): DropAction[] => {
+  const validationResult = getDropValidation(draggedAssetId, dropTarget);
+  if (!validationResult.isValid) {
+    return [];
+  }
+
   const assetsStore = useAssetsStore();
   const uiStore = useUiStore();
-
-  // Retrieve the full payload from the store
   const dragPayload = uiStore.dragSourceInfo;
   if (!dragPayload || dragPayload.assetId !== draggedAssetId) return [];
 
@@ -97,13 +105,13 @@ export const getAvailableActions = (draggedAssetId: string, dropTarget: DropTarg
   const specificKey = getKey(draggedType, targetType);
   const genericKey = getKey('Asset', targetType);
     
-  let rule = interactionRegistry.get(specificKey) || interactionRegistry.get(genericKey);
+  // Apply the same precedence logic here.
+  let rule = interactionRegistry.get(specificKey);
   if (!rule) {
-    return [];
+    rule = interactionRegistry.get(genericKey);
   }
-  
-  // Pass the full payload to the rule's validation
-  if (rule.validate && !rule.validate(dragPayload, effectiveDropTarget)) {
+    
+  if (!rule) {
     return [];
   }
 
@@ -118,6 +126,55 @@ export const getAvailableActions = (draggedAssetId: string, dropTarget: DropTarg
   });
 
   return filteredActions;
+};
+
+/**
+ * Gets the validation result for a potential drop, including the reason for failure.
+ */
+export const getDropValidation = (draggedAssetId: string, dropTarget: DropTarget): ValidationResult => {
+  const assetsStore = useAssetsStore();
+  const uiStore = useUiStore();
+  const dragPayload = uiStore.dragSourceInfo;
+  if (!dragPayload || dragPayload.assetId !== draggedAssetId) return { isValid: false, reason: 'Drag information is missing.' };
+
+  const draggedAsset = assetsStore.unmergedAssets.find(a => a.id === dragPayload.assetId);
+  if (!draggedAsset) return { isValid: false, reason: 'Source asset not found.' };
+
+  let effectiveDropTarget = dropTarget;
+  if (dropTarget.virtualContext) {
+    const providerKind = dropTarget.virtualContext.kind as unknown as keyof typeof virtualFolderDefinitions;
+    const provider = virtualFolderDefinitions[providerKind];
+    if (provider?.getDropActions) {
+      return { isValid: provider.getDropActions(dragPayload, dropTarget).length > 0 };
+    }
+    const realSourceAsset = assetsStore.unmergedAssets.find(a => a.id === dropTarget.virtualContext!.sourceAssetId);
+    if (realSourceAsset) {
+      effectiveDropTarget = { id: realSourceAsset.id, type: DROP_TARGET_TYPES.ASSET };
+    }
+  }
+
+  const draggedType = draggedAsset.assetType;
+  const targetType = getTargetType(effectiveDropTarget);
+
+  const specificKey = getKey(draggedType, targetType);
+  const genericKey = getKey('Asset', targetType);
+    
+  let rule = interactionRegistry.get(specificKey);
+  if (!rule) {
+    rule = interactionRegistry.get(genericKey);
+  }
+    
+  if (!rule) {
+    // If no rule is found at all, the drop is fundamentally unsupported.
+    // Return isValid: false with NO REASON.
+    return { isValid: false };
+  }
+
+  if (rule.validate) {
+    return rule.validate(dragPayload, effectiveDropTarget);
+  }
+
+  return { isValid: true };
 };
 
 

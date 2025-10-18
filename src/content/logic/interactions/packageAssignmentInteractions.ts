@@ -71,18 +71,23 @@ const crossEnvironmentCloneHook: PostCloneHook = (newlyClonedAsset, originalSour
  * to ensure environment isolation and data integrity.
  */
 const assignRequirementRule: InteractionRule = {
-  validate: (dragPayload: DragPayload, dropTarget: DropTarget): boolean => {
+  validate: (dragPayload: DragPayload, dropTarget: DropTarget) => {
     const assetsStore = useAssetsStore();
     const draggedAsset = assetsStore.unmergedAssets.find(a => a.id === dragPayload.assetId);
     const targetNode = assetsStore.unmergedAssets.find(a => a.id === dropTarget.id);
-    if (!draggedAsset || !targetNode) return false;
+    if (!draggedAsset || !targetNode) return { isValid: false, reason: 'Asset not found.' };
 
     // Validation: No Duplicate Keys under the target node
     const existingKeys = assetsStore.unmergedAssets.filter(
       a => a.assetType === ASSET_TYPES.PACKAGE_KEY && a.fqn.startsWith(targetNode.fqn + '::')
     );
     const isDuplicate = existingKeys.some(key => key.assetKey === draggedAsset.assetKey);
-    return !isDuplicate;
+    
+    if (isDuplicate) {
+      return { isValid: false, reason: `Node already has a requirement for '${draggedAsset.assetKey}'.` };
+    }
+    
+    return { isValid: true };
   },
   actions: [
     {
@@ -166,27 +171,29 @@ const assignRequirementRule: InteractionRule = {
  */
 
 const copyRequirementRule: InteractionRule = {
-  validate: (dragPayload: DragPayload, dropTarget: DropTarget): boolean => {
+  validate: (dragPayload: DragPayload, dropTarget: DropTarget) => {
     const assetsStore = useAssetsStore();
     const draggedKey = assetsStore.unmergedAssets.find(a => a.id === dragPayload.assetId);
     const targetNode = assetsStore.unmergedAssets.find(a => a.id === dropTarget.id);
-    if (!draggedKey || !targetNode) return false;
+    if (!draggedKey || !targetNode) return { isValid: false, reason: 'Asset not found.' };
 
-    // Rule 1: Prevent dropping onto the same parent node it already belongs to.
-    // This is the primary fix for the reported bug.
     const sourceParentFqn = draggedKey.fqn.includes('::') 
       ? draggedKey.fqn.substring(0, draggedKey.fqn.lastIndexOf('::'))
       : null;
     if (sourceParentFqn === targetNode.fqn) {
-      return false;
+      return { isValid: false, reason: "Cannot copy a requirement onto its own parent node." };
     }
 
-    // Rule 2: No Duplicate Keys in the target node. This check is now safe.
     const existingKeys = assetsStore.unmergedAssets.filter(
       a => a.assetType === ASSET_TYPES.PACKAGE_KEY && a.fqn.startsWith(targetNode.fqn + '::')
     );
     const isDuplicate = existingKeys.some(key => key.assetKey === draggedKey.assetKey);
-    return !isDuplicate;
+      
+    if (isDuplicate) {
+      return { isValid: false, reason: `Node already has a requirement for '${draggedKey.assetKey}'.` };
+    }
+
+    return { isValid: true };
   },
   actions: [
     {
@@ -245,13 +252,13 @@ const copyRequirementRule: InteractionRule = {
  * triggering the safe "Flatten and Rebase" copy mechanism.
  */
 const populatePackagePoolRule: InteractionRule = {
-  validate: (dragPayload: DragPayload, dropTarget: DropTarget): boolean => {
+  validate: (dragPayload: DragPayload, dropTarget: DropTarget) => {
     const assetsStore = useAssetsStore();
     const draggedAsset = assetsStore.unmergedAssets.find(a => a.id === dragPayload.assetId);
     const targetEnv = assetsStore.unmergedAssets.find(a => a.id === dropTarget.id);
 
     if (!draggedAsset || !targetEnv || draggedAsset.assetType !== ASSET_TYPES.PACKAGE || targetEnv.assetType !== ASSET_TYPES.ENVIRONMENT) {
-      return false;
+      return { isValid: false, reason: 'Invalid asset types for this operation.' };
     }
 
     // Validation: No Duplicate Keys in the target environment's pool.
@@ -261,7 +268,12 @@ const populatePackagePoolRule: InteractionRule = {
     const isDuplicate = directChildren.some(
       child => child.assetType === ASSET_TYPES.PACKAGE && child.assetKey === draggedAsset.assetKey
     );
-    return !isDuplicate;
+    
+    if (isDuplicate) {
+      return { isValid: false, reason: `Environment already has a package named '${draggedAsset.assetKey}'.` };
+    }
+    
+    return { isValid: true };
   },
   actions: [
     {

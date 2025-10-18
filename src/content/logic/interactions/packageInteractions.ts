@@ -126,7 +126,10 @@ function getPackageDropAction(draggedAsset: Asset, targetAsset: Asset, dragPaylo
   registerInteraction(ASSET_TYPES.PACKAGE, targetType, {
     validate: (dragPayload: DragPayload, dropTarget: DropTarget) => {
       // Rule: Disallow dropping a package onto the node it already belongs to.
-      return dropTarget.id !== dragPayload.parentAssetId;
+      if (dropTarget.id === dragPayload.parentAssetId) {
+        return { isValid: false, reason: 'Cannot drop a package onto its own parent node.' };
+      }
+      return { isValid: true };
     },
     actions: (dragPayload: DragPayload, dropTarget: DropTarget) => {
       const assetsStore = useAssetsStore();

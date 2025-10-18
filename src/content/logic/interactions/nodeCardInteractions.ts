@@ -44,7 +44,7 @@ const PACKAGE_TO_NODE_INTERACTION: InteractionRule = {
 
     // Basic validation: ensure both assets exist and types are correct.
     if (!draggedAsset || !targetNode || draggedAsset.assetType !== ASSET_TYPES.PACKAGE || targetNode.assetType !== ASSET_TYPES.NODE) {
-      return false;
+      return { isValid: false, reason: 'Invalid asset types for this operation.' };
     }
 
     // Collision check: ensure a package with the same key doesn't already exist on this node.
@@ -58,7 +58,11 @@ const PACKAGE_TO_NODE_INTERACTION: InteractionRule = {
     console.log(`[DEBUG 2.5] Validating 'PACKAGE_TO_NODE_INTERACTION': Is name '${draggedAsset.assetKey}' taken on target? ${isNameTaken}`);
       
     // The drop is valid only if the name is not taken.
-    return !isNameTaken;
+    if (isNameTaken) {
+      return { isValid: false, reason: `Node already has a package named '${draggedAsset.assetKey}'.` };
+    }
+    
+    return { isValid: true };
   },
   /**
    * Since there is only one action, it will be executed automatically without a menu.

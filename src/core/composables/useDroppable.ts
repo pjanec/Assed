@@ -1,7 +1,7 @@
 import { ref, onUnmounted, type Ref } from 'vue';
 import { useUiStore } from '@/core/stores/ui';
 import { useWorkspaceStore } from '@/core/stores/workspace';
-import { getAvailableActions } from '@/core/registries/interactionRegistry';
+import { getAvailableActions, getDropValidation } from '@/core/registries/interactionRegistry';
 import type { DragPayload, DropTarget } from '@/core/types/drag-drop';
 import { useAssetsStore } from '@/core/stores/assets';
 import { DROP_ACTION_IDS } from '../config/constants';
@@ -32,36 +32,44 @@ export function useDroppable(dropTargetInfo: DropTarget) {
   // --- EVENT HANDLERS ---
 
   const handleDragOver = (event: DragEvent) => {
+    event.stopPropagation();
+    uiStore.setCursorPosition(event.clientX, event.clientY);
     const { draggedAssetId } = uiStore;
     if (!draggedAssetId) return;
-    
-    const availableActions = getAvailableActions(draggedAssetId, dropTargetInfo);
+      
+    const validationResult = getDropValidation(draggedAssetId, dropTargetInfo);
 
-    if (availableActions.length > 0) {
-      event.preventDefault(); // Allow the drop
-      if (event.dataTransfer) {
-        // Set the cursor based on the first valid action.
-        // This provides immediate, context-aware visual feedback.
-        event.dataTransfer.dropEffect = availableActions[0].cursor;
-      }
+    // Always clear any previous reason at the start of evaluation.
+    uiStore.setDragInvalidationReason(null);
+
+    if (validationResult.isValid) {
+      // The drop is valid. Allow it and show the highlight.
+      event.preventDefault();   
       isDraggingOver.value = true;
     } else {
-      // If no actions are valid for this target, explicitly forbid the drop.
-      if (event.dataTransfer) {
-        event.dataTransfer.dropEffect = 'none';
+      // The drop is invalid.
+      isDraggingOver.value = false; // Do not show any highlight.
+        
+      // IMPORTANT: Only set the invalidation reason if the rule provided one.
+      // If `reason` is undefined, the tooltip will not appear.
+      if (validationResult.reason) {
+        uiStore.setDragInvalidationReason(validationResult.reason);
       }
-      isDraggingOver.value = false;
+        
+      // By NOT calling event.preventDefault(), the browser will show the "blocked" cursor.
     }
   };
 
   const handleDragLeave = () => {
     isDraggingOver.value = false;
+    uiStore.setDragInvalidationReason(null);
   };
 
   const handleDrop = (event: DragEvent) => {
     event.stopPropagation();
     event.preventDefault();
     isDraggingOver.value = false;
+    uiStore.setDragInvalidationReason(null);
     
     const { dragSourceInfo } = uiStore;
     if (!dragSourceInfo) return;

@@ -4,6 +4,7 @@ import { MoveAssetCommand, CloneAssetCommand, DeriveAssetCommand } from '@/core/
 import type { DropAction, InteractionRule } from '@/core/registries/interactionRegistry';
 import { registerInteraction } from '@/core/registries/interactionRegistry';
 import type { DragPayload, DropTarget } from '@/core/types/drag-drop';
+import type { UnmergedAsset } from '@/core/types';
 import { getValidChildrenForFolder, getValidChildTypes, assetRegistry } from '@/content/config/assetRegistry';
 import { ASSET_TYPES } from '@/content/config/constants';
 import { DROP_ACTION_IDS, DROP_TARGET_TYPES } from '@/core/config/constants';
@@ -83,33 +84,43 @@ const FOLDER_LIKE_INTERACTION_RULE: InteractionRule = {
   validate: (dragPayload: DragPayload, dropTarget: DropTarget) => {
     const assetsStore = useAssetsStore();
     const draggedAsset = assetsStore.unmergedAssets.find(a => a.id === dragPayload.assetId);
-    
-    // --- START FIX ---
-    let targetAsset = assetsStore.unmergedAssets.find(a => a.id === dropTarget.id);
-    if (!targetAsset && dropTarget.type === DROP_TARGET_TYPES.ROOT) {
-      // Create a virtual root asset for consistent rule checking
-      targetAsset = { assetType: ASSET_TYPES.ROOT } as any; 
+
+    // Handle the root drop target explicitly
+    if (dropTarget.type === DROP_TARGET_TYPES.ROOT) {
+      if (!draggedAsset) return { isValid: false };
+      const draggedAssetDef = assetRegistry[draggedAsset.assetType];
+      if (draggedAssetDef?.isCreatableAtRoot) {
+        return { isValid: true };
+      } else {
+        // This is a structural incompatibility, not a business rule failure.
+        // Return isValid: false with NO REASON to prevent the tooltip.
+        return { isValid: false };
+      }
     }
-    
-    if (!draggedAsset || !targetAsset) return false;
+
+    // The rest of the logic is for asset-to-asset drops
+    const targetAsset = assetsStore.unmergedAssets.find(a => a.id === dropTarget.id);
+
+    if (!draggedAsset || !targetAsset) return { isValid: false };
 
     // Check 1: Prevent dropping an asset into itself or its own children
     if (targetAsset.fqn && targetAsset.fqn.startsWith(draggedAsset.fqn)) {
-      return false;
+      return { isValid: false, reason: 'Cannot drop an asset into itself or its children.' };
     }
 
     // Check 2: Use assetRegistry to check for valid parent-child relationship
     const definition = assetRegistry[targetAsset.assetType!];
     const validChildren = definition?.isStructuralFolder
-      ? getValidChildrenForFolder(targetAsset)
+      ? getValidChildrenForFolder(targetAsset as UnmergedAsset)
       : getValidChildTypes(targetAsset.assetType);
 
     if (!validChildren.includes(draggedAsset.assetType)) {
-      return false; // The drop is invalid according to the registry
+      // This is a structural incompatibility, not a business rule failure.
+      // Return isValid: false with NO REASON to prevent the tooltip.
+      return { isValid: false };
     }
     
-    return true; // All checks passed
-    // --- END FIX ---
+    return { isValid: true };
   },
   actions: [
     MOVE_ACTION,
