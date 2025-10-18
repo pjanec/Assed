@@ -4,7 +4,7 @@ import { useWorkspaceStore } from '@/core/stores/workspace';
 import { getAvailableActions, getDropValidation } from '@/core/registries/interactionRegistry';
 import type { DragPayload, DropTarget } from '@/core/types/drag-drop';
 import { useAssetsStore } from '@/core/stores/assets';
-import { DROP_ACTION_IDS } from '../config/constants';
+import { DROP_ACTION_IDS, DROP_TARGET_TYPES } from '../config/constants';
 import { CONTEXT_MENU_KINDS } from '@/core/config/constants';
 
 /**
@@ -74,10 +74,29 @@ export function useDroppable(dropTargetInfo: DropTarget) {
     const { dragSourceInfo } = uiStore;
     if (!dragSourceInfo) return;
 
-    const availableActions = getAvailableActions(dragSourceInfo.assetId, dropTargetInfo);
+    // --- START: THIS IS THE NEW PROXY LOGIC ---
 
-    const targetAsset = assetsStore.unmergedAssets.find(a => a.id === dropTargetInfo.id);
-    console.log(`[DEBUG 3] Drop Event: Dropped on Target ID = ${dropTargetInfo.id}, Target FQN = ${targetAsset?.fqn || 'N/A (Root)'}`);
+    let effectiveDropTarget = dropTargetInfo; // Start with the original target
+
+    // If the drop target is virtual, find its real owner.
+    if (dropTargetInfo.virtualContext?.sourceAssetId) {
+      const realOwnerId = dropTargetInfo.virtualContext.sourceAssetId;
+        
+      // Create a new, corrected drop target object that points to the real asset.
+      effectiveDropTarget = {
+        id: realOwnerId,
+        type: DROP_TARGET_TYPES.ASSET, // Treat it as a direct asset drop
+      };
+      console.log(`[Drop Proxy] Virtual target detected. Redirecting drop to real asset: ${realOwnerId}`);
+    }
+
+    // --- END: NEW PROXY LOGIC ---
+
+    // The rest of the function now uses the `effectiveDropTarget` instead of `dropTargetInfo`.
+    const availableActions = getAvailableActions(dragSourceInfo.assetId, effectiveDropTarget);
+
+    const targetAsset = assetsStore.unmergedAssets.find(a => a.id === effectiveDropTarget.id);
+    console.log(`[DEBUG 3] Drop Event: Dropped on Target ID = ${effectiveDropTarget.id}, Target FQN = ${targetAsset?.fqn || 'N/A (Root)'}`);
     console.log(`[DEBUG 3.1] Found ${availableActions.length} available actions.`);
 
     if (availableActions.length === 0) {
@@ -87,7 +106,7 @@ export function useDroppable(dropTargetInfo: DropTarget) {
       const action = availableActions[0];
       console.log(`[DEBUG 4] Action: Exactly one action found ('${action.id}'). Executing immediately.`);
       
-      action.execute(dragSourceInfo, dropTargetInfo, workspaceStore);
+      action.execute(dragSourceInfo, effectiveDropTarget, workspaceStore);
 
       // Only clear state for actions that DON'T open a dialog.
       // The dialog itself is now responsible for cleanup on cancel/submit.
@@ -102,7 +121,7 @@ export function useDroppable(dropTargetInfo: DropTarget) {
         ctx: {
           kind: CONTEXT_MENU_KINDS.DROP_ACTIONS,
           draggable: dragSourceInfo,
-          droppable: dropTargetInfo,
+          droppable: effectiveDropTarget,
         },
       });
     }
