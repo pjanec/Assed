@@ -5,7 +5,7 @@ import type { UnmergedAsset } from '@/core/types';
 import type { DragPayload, DropTarget } from '@/core/types/drag-drop';
 import { ASSET_TYPES } from '@/content/config/constants';
 import { areInSameEnvironment, getAssetEnvironmentFqn, isSharedAsset } from '@/content/utils/assetUtils';
-import { getPropertyInheritanceChain, calculateMergedAsset } from '@/content/utils/mergeUtils';
+import { getPropertyInheritanceChain, calculateMergedAsset } from '@/core/utils/mergeUtils';
 import { generatePropertiesDiff } from '@/core/utils/diff';
 
 // --- The "Flatten and Rebase" Algorithm ---

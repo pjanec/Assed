@@ -1,4 +1,4 @@
-import type { UnmergedAsset } from "@/core/types";
+import type { UnmergedAsset, Asset } from "@/core/types";
 import { getInheritanceChain } from '@/core/utils/inheritanceUtils';
 
 // This deepMerge utility is generic and can be shared.
@@ -31,28 +31,27 @@ export function calculateMergedAsset(assetId: string, allAssets: Map<string, Unm
 
   const allAssetsArray = Array.from(allAssets.values());
   const inheritanceChain = getInheritanceChain(asset.fqn, allAssetsArray);
-
-  // The returned chain is from parent -> grandparent, so we reverse it to merge from the top down.
   const reversedChain = [...inheritanceChain].reverse();
     
   let mergedProperties: Record<string, any> = {};
 
   for (const template of reversedChain) {
-      mergedProperties = deepMerge(mergedProperties, template.overrides || {});
+      mergedProperties = deepMerge(mergedProperties, (template as UnmergedAsset).overrides || {});
   }
-  // Finally, merge the asset's own overrides.
   mergedProperties = deepMerge(mergedProperties, asset.overrides || {});
 
   return { properties: mergedProperties };
 }
 
 /**
- * REFACTORED to use the new generic utility.
+ * Gets the inheritance chain for an asset, showing the template hierarchy.
+ * @param asset The asset to get the inheritance chain for.
+ * @param allAssets A map of all available assets (ID -> UnmergedAsset) for lookup.
+ * @returns An array of assets representing the inheritance chain from base to derived.
  */
 export function getPropertyInheritanceChain(asset: UnmergedAsset, allAssets: Map<string, UnmergedAsset>): UnmergedAsset[] {
   const allAssetsArray = Array.from(allAssets.values());
   const ancestors = getInheritanceChain(asset.fqn, allAssetsArray);
     
-  // The function's purpose is to return the full chain including the start asset.
-  return [asset, ...ancestors];
+  return [asset, ...ancestors as UnmergedAsset[]];
 }

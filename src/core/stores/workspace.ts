@@ -5,7 +5,7 @@ import { useUiStore } from '@/core/stores/ui'
 import { cloneDeep, isEqual } from 'lodash-es';
 import { generateAssetDiff, generatePropertiesDiff } from '@/core/utils/diff';
 import { generateUUID } from '@/core/utils/idUtils';
-import { calculateMergedAsset } from '@/content/utils/mergeUtils';
+import { calculateMergedAsset } from '@/core/utils/mergeUtils';
 import { useAssetsStore } from '@/core/stores/assets';
 import type { CloneMap } from '@/core/types'; 
 

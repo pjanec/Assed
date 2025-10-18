@@ -4,7 +4,7 @@ import { useAssetsStore, useWorkspaceStore, useUiStore } from '@/core/stores';
 import { ASSET_TYPES } from '@/content/config/constants';
 import type { UnmergedAsset } from '@/core/types';
 import { UpdateAssetCommand } from '@/core/stores/workspace';
-import { calculateMergedAsset } from '@/content/utils/mergeUtils';
+import { calculateMergedAsset } from '@/core/utils/mergeUtils';
 import { generatePropertiesDiff } from '@/core/utils/diff';
 
 describe('Stage 7 Workflow: Change Template with Confirmation', () => {

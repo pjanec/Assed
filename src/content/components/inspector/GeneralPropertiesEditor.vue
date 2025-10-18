@@ -89,7 +89,7 @@ import { useAssetsStore, useWorkspaceStore, useUiStore } from '@/core/stores';
 import { UpdateAssetCommand } from '@/core/stores/workspace';
 import { cloneDeep } from 'lodash-es';
 import { generatePropertiesDiff } from '@/core/utils/diff';
-import { calculateMergedAsset } from '@/content/utils/mergeUtils';
+import { calculateMergedAsset } from '@/core/utils/mergeUtils';
 
 const props = defineProps({
   asset: { type: Object, required: true },

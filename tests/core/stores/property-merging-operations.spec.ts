@@ -5,7 +5,7 @@ import { createTestEnvironment } from '../../test-utils';
 import { useAssetsStore, useWorkspaceStore, useUiStore } from '@/core/stores';
 import { MOCK_ASSET_TYPES } from '../../mock-content/mockAssetRegistry';
 import type { UnmergedAsset } from '@/core/types';
-import { calculateMergedAsset } from '@/content/utils/mergeUtils';
+import { calculateMergedAsset } from '@/core/utils/mergeUtils';
 import { DeriveAssetCommand } from '@/core/stores/workspace';
 
 describe('Core Operations: Deep Property Merging', () => {

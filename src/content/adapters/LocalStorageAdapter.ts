@@ -2,7 +2,7 @@ import type { PersistenceAdapter } from '@/core/types/persistence';
 import type { UnmergedAsset, Asset, AssetDetails, Build, ChangeItem } from '@/core/types';
 import { mockData } from '@/content/services/mockData';
 import { config } from '@/config';
-import { calculateMergedAsset } from '@/content/utils/mergeUtils';
+import { calculateMergedAsset } from '@/core/utils/mergeUtils';
 
 export class LocalStorageAdapter implements PersistenceAdapter {
   private dbKey: string;

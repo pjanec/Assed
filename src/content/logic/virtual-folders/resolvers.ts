@@ -2,7 +2,7 @@ import type { UnmergedAsset, AssetTreeNode } from '@/core/types';
 import { ASSET_TREE_NODE_TYPES } from '@/core/config/constants';
 import { virtualFolderDefinitions } from './definitions';
 import { VIRTUAL_NODE_KINDS, type VirtualNodeKind } from './kinds';
-import { calculateMergedAsset } from '@/content/utils/mergeUtils';
+import { calculateMergedAsset } from '@/core/utils/mergeUtils';
 import { assetRegistry } from '@/content/config/assetRegistry';
 import { resolveInheritedCollection } from '@/core/utils/inheritanceUtils';
 import { ASSET_TYPES } from '@/content/config/constants';

@@ -1,7 +1,7 @@
 import { vi } from 'vitest';
 import type { PersistenceAdapter } from '@/core/types/persistence';
 import type { Asset, AssetDetails, UnmergedAsset, Build } from '@/core/types';
-import { calculateMergedAsset } from '@/content/utils/mergeUtils';
+import { calculateMergedAsset } from '@/core/utils/mergeUtils';
 
 export class MockPersistenceAdapter implements PersistenceAdapter {
   db = new Map<string, UnmergedAsset>();
