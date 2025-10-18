@@ -35,6 +35,15 @@ function analyzeNodeCloneDependencies(sourceNodeId: string, targetEnvFqn: string
   for (const key of keysToClone) {
     plan.keysToCreate.push({ newState: { ...key, fqn: `${targetEnvFqn}::${sourceNode.assetKey}::${key.assetKey}` } });
 
+    // Add command to create the key in the new node
+    plan.commands.push(new CreateAssetCommand({
+        assetType: ASSET_TYPES.PACKAGE_KEY,
+        assetKey: key.assetKey,
+        fqn: `${targetEnvFqn}::${sourceNode.assetKey}::${key.assetKey}`,
+        templateFqn: null,
+        overrides: {},
+    }));
+
     const sourcePackageEnv = getAssetEnvironmentFqn(sourceNode.fqn, allAssets);
     const sourcePackage = allAssets.find(p => p.assetType === ASSET_TYPES.PACKAGE && p.assetKey === key.assetKey && getAssetEnvironmentFqn(p.fqn, allAssets) === sourcePackageEnv);
     const targetPackage = allAssets.find(p => p.assetType === ASSET_TYPES.PACKAGE && p.assetKey === key.assetKey && getAssetEnvironmentFqn(p.fqn, allAssets) === targetEnvFqn);
@@ -66,7 +75,14 @@ const cloneNodeToEnvRule: InteractionRule = {
   validate: (dragPayload, dropTarget) => {
     const assetsStore = useAssetsStore();
     const sourceNode = assetsStore.unmergedAssets.find(a => a.id === dragPayload.assetId)!;
-    const existingNode = assetsStore.unmergedAssets.find(a => a.fqn === `${dropTarget.id}::${sourceNode.assetKey}`);
+    
+    // First, find the target environment asset by its ID.
+    const targetEnv = assetsStore.unmergedAssets.find(a => a.id === dropTarget.id);
+    if (!targetEnv) return { isValid: false, reason: 'Target environment not found' };
+
+    // Now, use the correct FQN of the target environment for the check.
+    const existingNode = assetsStore.unmergedAssets.find(a => a.fqn === `${targetEnv.fqn}::${sourceNode.assetKey}`);
+      
     if (existingNode) {
       return { isValid: false, reason: `Environment already contains a node named '${sourceNode.assetKey}'.` };
     }
