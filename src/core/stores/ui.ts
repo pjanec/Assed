@@ -67,6 +67,13 @@ interface AssetPickerDialogState {
   resolver: ((value: Asset | null) => void) | null;
 }
 
+interface GenericConfirmationState {
+  show: boolean;
+  dialogType: string | null;
+  payload: any;
+  resolver: ((confirmed: boolean) => void) | null;
+}
+
 interface UiState {
   activePaneId: string | null;
   selectedNode: SelectedNode | null;
@@ -120,6 +127,8 @@ interface UiState {
   templateChangeDialog: TemplateChangeDialogState;
   // Asset picker dialog
   assetPickerDialog: AssetPickerDialogState;
+  // Generic confirmation dialog
+  genericConfirmationState: GenericConfirmationState;
   // View-model hint for selected node
   selectedNodeViewHint: ViewHint | null;
   // Persist active tab per inspector pane
@@ -160,6 +169,7 @@ export const useUiStore = defineStore('ui', {
     clearOverridesDialog: { show: false, asset: null, changes: [] },
     templateChangeDialog: { show: false, asset: null, oldTemplateFqn: null, newTemplateFqn: null, diff: [] },
     assetPickerDialog: { show: false, title: '', items: [], resolver: null },
+    genericConfirmationState: { show: false, dialogType: null, payload: null, resolver: null },
     selectedNodeViewHint: null,
     inspectorActiveTab: new Map(),
     
@@ -322,6 +332,7 @@ export const useUiStore = defineStore('ui', {
       this.clearOverridesDialog.show = false;
       this.templateChangeDialog.show = false;
       this.assetPickerDialog.show = false;
+      this.genericConfirmationState.show = false;
     },
 
     // Generic action to prompt for ANY drag-drop confirmation
@@ -373,6 +384,24 @@ export const useUiStore = defineStore('ui', {
           show: true,
           title: payload.title,
           items: payload.items,
+          resolver: resolve,
+        };
+      });
+    },
+
+    /**
+     * Pauses a workflow and prompts for confirmation using a content-specific dialog.
+     * @param dialogType A key for the content layer to identify which dialog to show.
+     * @param payload Data to be passed as props to the content dialog.
+     * @returns A promise that resolves to `true` if confirmed, `false` if cancelled.
+     */
+    promptForGenericConfirmation(dialogType: string, payload: any): Promise<boolean> {
+      return new Promise((resolve) => {
+        this.isDialogPending = true;
+        this.genericConfirmationState = {
+          show: true,
+          dialogType,
+          payload,
           resolver: resolve,
         };
       });

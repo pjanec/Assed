@@ -13,6 +13,7 @@ import { useContentHandlersRegistration } from '@/content/logic/contextMenus';
 import '@/content/logic/interactions/genericInteractions';
 // import '@/content/logic/interactions/packageInteractions';
 import '@/content/logic/interactions/packageAssignmentInteractions';
+import '@/content/logic/interactions/nodeInteractions';
 //import '@/content/logic/interactions/nodeCardInteractions';
 
 /**
