@@ -5,6 +5,7 @@ import type { UnmergedAsset } from '@/core/types';
 import type { DragPayload, DropTarget } from '@/core/types/drag-drop';
 import { ASSET_TYPES } from '@/content/config/constants';
 import { areInSameEnvironment, getAssetEnvironmentFqn, isSharedAsset } from '@/content/utils/assetUtils';
+import { isAncestorOf } from '@/core/utils/inheritanceUtils';
 import { getPropertyInheritanceChain, calculateMergedAsset } from '@/core/utils/mergeUtils';
 import { generatePropertiesDiff } from '@/core/utils/diff';
 
@@ -106,7 +107,13 @@ const assignRequirementRule: InteractionRule = {
 
         const sourceEnv = getAssetEnvironmentFqn(sourcePackage.fqn, assetsStore.unmergedAssets);
         const targetEnv = getAssetEnvironmentFqn(targetNode.fqn, assetsStore.unmergedAssets);
-        const isCrossEnv = sourceEnv !== null && targetEnv !== null && sourceEnv !== targetEnv;
+          
+        // Check if the source and target are the same, OR if the source is an ancestor of the target.
+        const isEffectivelySameEnv = (sourceEnv === targetEnv) ||   
+                                     (sourceEnv && targetEnv && isAncestorOf(targetEnv, sourceEnv, assetsStore.unmergedAssets));
+          
+        // A "cross-environment" action is now defined as any action that is NOT effectively the same.
+        const isCrossEnv = !isEffectivelySameEnv;
         if (isCrossEnv) {
           // Cross-Environment Workflow
           const allAssetsMap = new Map<string, UnmergedAsset>();
