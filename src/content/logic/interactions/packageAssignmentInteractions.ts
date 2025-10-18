@@ -10,6 +10,7 @@ import { getPropertyInheritanceChain, calculateMergedAsset } from '@/core/utils/
 import { generatePropertiesDiff } from '@/core/utils/diff';
 import { getIntermediatePath, getParentPath, getAssetName } from '@/core/utils/fqnUtils';
 import { ensurePathExists } from '@/core/utils/pathUtils';
+import { executeCrossEnvCopy, executeResolveAndCopy, executePoolCopy } from '@/content/logic/workspaceExtendedActions';
 
 // --- The "Flatten and Rebase" Algorithm ---
 /**
@@ -98,7 +99,7 @@ const assignRequirementRule: InteractionRule = {
       label: 'Assign Requirement',
       icon: 'mdi-link-plus',
       cursor: 'link',
-      execute: (dragPayload: DragPayload, dropTarget: DropTarget) => {
+      execute: async (dragPayload: DragPayload, dropTarget: DropTarget) => {
         const assetsStore = useAssetsStore();
         const workspaceStore = useWorkspaceStore();
         const uiStore = useUiStore();
@@ -169,14 +170,17 @@ const assignRequirementRule: InteractionRule = {
             assetType: sourcePackage.assetType 
           }];
             
-          uiStore.promptForDragDropConfirmation({
-            dragPayload,
-            dropTarget,
-            displayPayload: {
+          const confirmed = await uiStore.promptForGenericConfirmation(
+            'cross-environment-copy',
+            {
               type: 'CrossEnvironmentCopy',
               inheritanceComparison: { before: beforeChain, after: afterChain }
             }
-          });
+          );
+
+          if (confirmed) {
+            executeCrossEnvCopy(dragPayload, dropTarget);
+          }
         }
       },
     },
@@ -232,7 +236,7 @@ const PROACTIVE_RESOLUTION_ACTION: DropAction = {
   label: 'Copy Requirement',
   icon: 'mdi-content-copy',
   cursor: 'copy',
-  execute: (dragPayload, dropTarget) => {
+  execute: async (dragPayload, dropTarget) => {
     const workspaceStore = useWorkspaceStore();
     const assetsStore = useAssetsStore();
     const uiStore = useUiStore();
@@ -252,14 +256,16 @@ const PROACTIVE_RESOLUTION_ACTION: DropAction = {
       const cloneCommand = new CloneAssetCommand(dragPayload.assetId, targetNode.fqn, draggedKey.assetKey);
       workspaceStore.executeCommand(cloneCommand);
     } else {
-      uiStore.promptForDragDropConfirmation({
-        dragPayload,
-        dropTarget,
-        displayPayload: {
+      const confirmed = await uiStore.promptForGenericConfirmation(
+        'proactive-resolution',
+        {
           type: 'ProactiveResolution',
           sourcePackageName: draggedKey.assetKey
         }
-      });
+      );
+      if (confirmed) {
+        executeResolveAndCopy(dragPayload, dropTarget);
+      }
     }
   },
 };
@@ -350,7 +356,7 @@ const populatePackagePoolRule: InteractionRule = {
       label: 'Copy to Environment',
       icon: 'mdi-content-copy',
       cursor: 'copy',
-      execute: (dragPayload: DragPayload, dropTarget: DropTarget) => {
+      execute: async (dragPayload: DragPayload, dropTarget: DropTarget) => {
         const uiStore = useUiStore();
         const assetsStore = useAssetsStore();
         const workspaceStore = useWorkspaceStore();
@@ -398,14 +404,17 @@ const populatePackagePoolRule: InteractionRule = {
             assetType: sourcePackage.assetType 
           }];
 
-          uiStore.promptForDragDropConfirmation({
-            dragPayload,
-            dropTarget,
-            displayPayload: {
+          const confirmed = await uiStore.promptForGenericConfirmation(
+            'cross-environment-copy',
+            {
               type: 'CrossEnvironmentCopy',
               inheritanceComparison: { before: beforeChain, after: afterChain }
             }
-          });
+          );
+
+          if (confirmed) {
+            executePoolCopy(dragPayload, dropTarget);
+          }
         }
       },
     },

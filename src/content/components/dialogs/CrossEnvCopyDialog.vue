@@ -1,6 +1,6 @@
 <template>
   <v-dialog
-    :model-value="dialogState.show"
+    :model-value="modelValue"
     @update:model-value="!$event && handleCancel()"
     max-width="600px"
     persistent
@@ -71,7 +71,7 @@
       <v-card-actions>
         <v-spacer></v-spacer>
         <v-btn variant="text" @click="handleCancel">Cancel</v-btn>
-        <v-btn color="primary" variant="elevated" @click="handleConfirm">Confirm Copy</v-btn>
+        <v-btn color="primary" variant="elevated" @click="$emit('confirm')">Confirm Copy</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
@@ -79,22 +79,22 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useUiStore, useWorkspaceStore, useAssetsStore } from '@/core/stores';
 import { useCoreConfigStore } from '@/core/stores/config';
-import { ASSET_TYPES } from '@/content/config/constants';
 
-const uiStore = useUiStore();
-const workspaceStore = useWorkspaceStore();
-const assetsStore = useAssetsStore();
+const props = withDefaults(defineProps<{
+  modelValue: boolean;
+  payload: any;
+}>(), {
+  modelValue: false,
+  payload: null
+});
+const emit = defineEmits(['update:model-value', 'confirm', 'cancel']);
+
 const coreConfig = useCoreConfigStore();
 
-// This component now reads from the generic state object.
-const dialogState = computed(() => uiStore.dragDropConfirmationDialog);
-
-// It knows how to interpret the generic displayPayload because it's a content component.
 const comparison = computed(() => {
-  if (dialogState.value.displayPayload?.type === 'CrossEnvironmentCopy') {
-    return dialogState.value.displayPayload.inheritanceComparison;
+  if (props.payload?.type === 'CrossEnvironmentCopy') {
+    return props.payload.inheritanceComparison;
   }
   return null;
 });
@@ -108,25 +108,7 @@ const getChainItemColor = (item: any) => {
 };
 
 const handleCancel = () => {
-  uiStore.clearActionStates();
-};
-
-const handleConfirm = () => {
-  const { dragPayload, dropTarget } = dialogState.value;
-  if (dragPayload && dropTarget) {
-    // Check the type of the drop target to determine which action to execute
-    const targetAsset = assetsStore.unmergedAssets.find(a => a.id === dropTarget.id);
-    if (targetAsset?.assetType === ASSET_TYPES.ENVIRONMENT) {
-      // It was dropped on an Environment, so just create the package.
-      import('@/content/logic/workspaceExtendedActions').then(({ executePoolCopy }) => {
-        executePoolCopy(dragPayload, dropTarget);
-      });
-    } else {
-      // It was dropped on a Node, so do the full package + key creation.
-      workspaceStore.executeCrossEnvCopy(dragPayload, dropTarget);
-    }
-  }
-  uiStore.clearActionStates();
+  emit('cancel');
 };
 </script>
 

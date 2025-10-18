@@ -1,6 +1,6 @@
 <template>
   <v-dialog
-    :model-value="dialogState.show"
+    :model-value="modelValue"
     @update:model-value="!$event && handleCancel()"
     max-width="500px"
     persistent
@@ -21,7 +21,7 @@
       <v-card-actions class="px-6 pb-4 pt-2">
         <v-spacer />
         <v-btn variant="text" @click="handleCancel">Cancel</v-btn>
-        <v-btn color="primary" variant="elevated" @click="handleConfirm">Create Package & Assign</v-btn>
+        <v-btn color="primary" variant="elevated" @click="$emit('confirm')">Create Package & Assign</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
@@ -29,38 +29,21 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useUiStore, useAssetsStore } from '@/core/stores';
-import { executeResolveAndCopy } from '@/content/logic/workspaceExtendedActions';
 
-const uiStore = useUiStore();
-const assetsStore = useAssetsStore();
-
-// This component reads from the generic state object provided by the core store.
-// It checks if the displayPayload indicates this is a "ProactiveResolution" dialog
-const dialogState = computed(() => {
-  const state = uiStore.dragDropConfirmationDialog;
-  return {
-    ...state,
-    show: state.show && state.displayPayload?.type === 'ProactiveResolution'
-  };
+const props = withDefaults(defineProps<{
+  modelValue: boolean;
+  payload: any;
+}>(), {
+  modelValue: false,
+  payload: null
 });
+const emit = defineEmits(['update:model-value', 'confirm', 'cancel']);
 
 const sourcePackageName = computed(() => {
-  if (!dialogState.value.dragPayload) return null;
-  const sourceKey = assetsStore.unmergedAssets.find(a => a.id === dialogState.value.dragPayload!.assetId);
-  return sourceKey?.assetKey || null;
+  return props.payload?.sourcePackageName || null;
 });
 
 const handleCancel = () => {
-  uiStore.clearActionStates();
-};
-
-const handleConfirm = () => {
-  const { dragPayload, dropTarget } = dialogState.value;
-  if (dragPayload && dropTarget) {
-    // This dialog calls the specific business logic action.
-    executeResolveAndCopy(dragPayload, dropTarget);
-  }
-  uiStore.clearActionStates();
+  emit('cancel');
 };
 </script>

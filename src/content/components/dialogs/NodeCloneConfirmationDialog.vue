@@ -53,6 +53,9 @@
 <script setup lang="ts">
 import AffectedAssetsViewer from '@/core/components/dialogs/AffectedAssetsViewer.vue';
 
-defineProps<{ modelValue: boolean; payload: any }>();
+withDefaults(defineProps<{ modelValue: boolean; payload: any }>(), {
+  modelValue: false,
+  payload: null
+});
 defineEmits(['update:model-value', 'confirm', 'cancel']);
 </script>

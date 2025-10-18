@@ -62,13 +62,12 @@ describe('Stage 5 Workflow Integrations', () => {
     copyAction.execute(dragPayload, dropTarget);
 
     // ASSERT 1: The GENERIC core uiStore should be in a state to show a dialog
-    expect(uiStore.dragDropConfirmationDialog.show).toBe(true);
-    expect(uiStore.dragDropConfirmationDialog.dragPayload).toEqual(dragPayload);
-    expect(uiStore.dragDropConfirmationDialog.dropTarget).toEqual(dropTarget);
-    expect(uiStore.dragDropConfirmationDialog.displayPayload?.type).toBe('ProactiveResolution');
+    expect(uiStore.genericConfirmationState.show).toBe(true);
+    expect(uiStore.genericConfirmationState.dialogType).toBe('proactive-resolution');
+    expect(uiStore.genericConfirmationState.payload?.type).toBe('ProactiveResolution');
 
     // ACT 2: Simulate the user confirming the dialog, which calls the CONTENT action
-    executeResolveAndCopy(uiStore.dragDropConfirmationDialog.dragPayload!, uiStore.dragDropConfirmationDialog.dropTarget!);
+    executeResolveAndCopy(dragPayload, dropTarget);
 
     // ASSERT 2: Verify that our mocked content action was called with the correct context
     expect(executeResolveAndCopy).toHaveBeenCalledOnce();
@@ -93,17 +92,18 @@ describe('Stage 5 Workflow Integrations', () => {
     assignAction.execute(dragPayload, dropTarget);
 
     // ASSERT 1: The GENERIC core uiStore should be ready to show a dialog
-    expect(uiStore.dragDropConfirmationDialog.show).toBe(true);
+    expect(uiStore.genericConfirmationState.show).toBe(true);
+    expect(uiStore.genericConfirmationState.dialogType).toBe('cross-environment-copy');
       
     // Check that the CONTENT layer provided the correct SPECIFIC data
-    const displayPayload = uiStore.dragDropConfirmationDialog.displayPayload;
-    expect(displayPayload?.type).toBe('CrossEnvironmentCopy');
-    expect(displayPayload?.inheritanceComparison).toBeDefined();
-    expect(displayPayload?.inheritanceComparison?.before).toBeDefined();
-    expect(displayPayload?.inheritanceComparison?.after).toBeDefined();
+    const payload = uiStore.genericConfirmationState.payload;
+    expect(payload?.type).toBe('CrossEnvironmentCopy');
+    expect(payload?.inheritanceComparison).toBeDefined();
+    expect(payload?.inheritanceComparison?.before).toBeDefined();
+    expect(payload?.inheritanceComparison?.after).toBeDefined();
 
     // ACT 2: Simulate the user confirming the dialog
-    executeCrossEnvCopy(uiStore.dragDropConfirmationDialog.dragPayload!, uiStore.dragDropConfirmationDialog.dropTarget!);
+    executeCrossEnvCopy(dragPayload, dropTarget);
 
     // ASSERT 2: Verify our mocked content action was called correctly
     expect(executeCrossEnvCopy).toHaveBeenCalledOnce();

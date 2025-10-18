@@ -32,16 +32,6 @@ interface RenameState {
   assetKey: string | null;
 }
 
-// Generic interface for drag-drop confirmation dialogs
-interface DragDropConfirmationDialogState {
-  show: boolean;
-  dragPayload: DragPayload | null;
-  dropTarget: DropTarget | null;
-  // An arbitrary payload for the content-layer component to use.
-  // The core does not know or care what is in this object.
-  displayPayload: Record<string, any> | null;
-}
-
 // New interface for clear overrides dialog
 interface ClearOverridesDialogState {
   show: boolean;
@@ -119,8 +109,6 @@ interface UiState {
   deleteConfirmationDialog: DeleteConfirmationDialogState;
   deleteBlockedDialog: DeleteBlockedDialogState;
   refactorConfirmationState: RefactorConfirmationState | null; // Can be null
-  // Generic drag-drop confirmation dialog
-  dragDropConfirmationDialog: DragDropConfirmationDialogState;
   // Clear overrides dialog
   clearOverridesDialog: ClearOverridesDialogState;
   // Template change dialog
@@ -165,7 +153,6 @@ export const useUiStore = defineStore('ui', {
     deleteConfirmationDialog: { show: false, asset: null, impact: { deletableChildren: [] } },
     deleteBlockedDialog: { show: false, asset: null, impact: { blockingDependencies: [] } },
     refactorConfirmationState: null,
-    dragDropConfirmationDialog: { show: false, dragPayload: null, dropTarget: null, displayPayload: null },
     clearOverridesDialog: { show: false, asset: null, changes: [] },
     templateChangeDialog: { show: false, asset: null, oldTemplateFqn: null, newTemplateFqn: null, diff: [] },
     assetPickerDialog: { show: false, title: '', items: [], resolver: null },
@@ -328,25 +315,10 @@ export const useUiStore = defineStore('ui', {
       this.deleteConfirmationDialog.show = false;
       this.deleteBlockedDialog.show = false;
       this.refactorConfirmationState = null;
-      this.dragDropConfirmationDialog.show = false;
       this.clearOverridesDialog.show = false;
       this.templateChangeDialog.show = false;
       this.assetPickerDialog.show = false;
       this.genericConfirmationState.show = false;
-    },
-
-    // Generic action to prompt for ANY drag-drop confirmation
-    promptForDragDropConfirmation(payload: {
-      dragPayload: DragPayload;
-      dropTarget: DropTarget;
-      displayPayload: Record<string, any>; // The content layer provides the specific data
-    }) {
-      this.dragDropConfirmationDialog = {
-        show: true,
-        dragPayload: payload.dragPayload,
-        dropTarget: payload.dropTarget,
-        displayPayload: payload.displayPayload,
-      };
     },
 
     // Clear Overrides

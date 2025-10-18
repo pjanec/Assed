@@ -113,7 +113,7 @@ describe('Ancestry-Aware Drag and Drop', () => {
 
     // ASSERT 2: Should NOT trigger cross-environment dialog because BaseEnv is an ancestor of ProdEnv
     // This verifies the ancestry-aware behavior prevents unnecessary dialogs
-    expect(uiStore.dragDropConfirmationDialog.show).toBe(false);
+    expect(uiStore.genericConfirmationState.show).toBe(false);
   });
 
   it('should preserve the correct assetKey when creating pure derivatives', async () => {

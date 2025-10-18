@@ -1,6 +1,7 @@
 <template>
-  <NodeCloneConfirmationDialog
-    v-if="dialogState.dialogType === 'node-clone-confirmation'"
+  <component
+    :is="currentDialogComponent"
+    v-if="currentDialogComponent"
     v-model="dialogState.show"
     :payload="dialogState.payload"
     @confirm="handleConfirm"
@@ -12,9 +13,24 @@
 import { computed } from 'vue';
 import { useUiStore } from '@/core/stores';
 import NodeCloneConfirmationDialog from './NodeCloneConfirmationDialog.vue';
+import CrossEnvCopyDialog from './CrossEnvCopyDialog.vue';
+import ResolveAndCopyDialog from './ResolveAndCopyDialog.vue';
 
 const uiStore = useUiStore();
 const dialogState = computed(() => uiStore.genericConfirmationState);
+
+const currentDialogComponent = computed(() => {
+  switch (dialogState.value.dialogType) {
+    case 'node-clone-confirmation':
+      return NodeCloneConfirmationDialog;
+    case 'cross-environment-copy':
+      return CrossEnvCopyDialog;
+    case 'proactive-resolution':
+      return ResolveAndCopyDialog;
+    default:
+      return null;
+  }
+});
 
 const handleConfirm = () => {
   dialogState.value.resolver?.(true);
