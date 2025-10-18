@@ -209,20 +209,21 @@
       </v-card>
     </v-dialog>
 
-    <!-- Cross-Environment Copy Dialog -->
-    <CrossEnvCopyDialog />
-
-    <!-- Resolve and Copy Dialog -->
-    <ResolveAndCopyDialog />
 
     <!-- Clear Overrides Dialog -->
-    <ClearOverridesDialog />
+    <ClearOverridesDialog 
+      v-if="uiStore.clearOverridesDialog.show"
+    />
 
     <!-- Template Change Dialog -->
-    <TemplateChangeDialog />
+    <TemplateChangeDialog 
+      v-if="uiStore.templateChangeDialog.show"
+    />
 
     <!-- Asset Picker Dialog -->
-    <AssetPickerDialog />
+    <AssetPickerDialog 
+      v-if="uiStore.assetPickerDialog.show"
+    />
   </v-app>
 </template>
 
@@ -239,8 +240,6 @@ import RenameInputDialog from '@/core/components/dialogs/RenameInputDialog.vue';
 import RefactorConfirmationDialog from '@/core/components/dialogs/RefactorConfirmationDialog.vue'
 import ConfirmDeleteDialog from '@/core/components/dialogs/ConfirmDeleteDialog.vue'
 import DeletionBlockedDialog from '@/core/components/dialogs/DeletionBlockedDialog.vue'
-import CrossEnvCopyDialog from '@/content/components/dialogs/CrossEnvCopyDialog.vue';
-import ResolveAndCopyDialog from '@/content/components/dialogs/ResolveAndCopyDialog.vue';
 import ClearOverridesDialog from '@/core/components/dialogs/ClearOverridesDialog.vue';
 import TemplateChangeDialog from '@/core/components/dialogs/TemplateChangeDialog.vue';
 import AssetPickerDialog from '@/core/components/dialogs/AssetPickerDialog.vue';
