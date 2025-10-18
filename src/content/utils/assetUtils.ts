@@ -116,6 +116,33 @@ export function isSameOrAncestorEnvironment(childEnvFqn: string | null, potentia
   return (childEnvFqn === potentialAncestorEnvFqn) || isAncestorOf(childEnvFqn, potentialAncestorEnvFqn, allAssets);
 }
 
+/**
+ * Checks if an asset is a "pure derivative" of a shared global template.
+ * A pure derivative has a templateFqn pointing to a shared asset and has no local overrides.
+ * @param asset The asset to check.
+ * @param allAssets A complete list of all assets in the project.
+ * @returns The shared template asset if the check passes, otherwise null.
+ */
+export function getSharedTemplateIfPureDerivative(asset: Asset, allAssets: Asset[]): Asset | null {
+  // 1. Must have a template
+  if (!asset.templateFqn) {
+    return null;
+  }
+
+  // 2. Overrides object must be empty (only for UnmergedAsset)
+  if ('overrides' in asset && asset.overrides && Object.keys(asset.overrides).length > 0) {
+    return null;
+  }
+
+  // 3. Find the template and check if it's shared
+  const templateAsset = allAssets.find(a => a.fqn === asset.templateFqn);
+  if (templateAsset && isSharedAsset(templateAsset, allAssets)) {
+    return templateAsset;
+  }
+
+  return null;
+}
+
 
 
 

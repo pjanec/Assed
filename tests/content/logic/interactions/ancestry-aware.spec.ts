@@ -5,7 +5,7 @@ import { ASSET_TYPES } from '@/content/config/constants';
 import type { UnmergedAsset, DragPayload, DropTarget } from '@/core/types';
 import { getAvailableActions } from '@/core/registries/interactionRegistry';
 import { isAncestorOf } from '@/core/utils/inheritanceUtils';
-import { isSameOrAncestorEnvironment } from '@/content/utils/assetUtils';
+import { isSameOrAncestorEnvironment, getSharedTemplateIfPureDerivative, getAssetEnvironmentFqn } from '@/content/utils/assetUtils';
 
 describe('Ancestry-Aware Drag and Drop', () => {
   let assetsStore: ReturnType<typeof useAssetsStore>;
@@ -40,6 +40,52 @@ describe('Ancestry-Aware Drag and Drop', () => {
     expect(isSameOrAncestorEnvironment('ProdEnv', 'ProdEnv', assetsStore.unmergedAssets)).toBe(true);
     expect(isSameOrAncestorEnvironment(null, 'BaseEnv', assetsStore.unmergedAssets)).toBe(false);
     expect(isSameOrAncestorEnvironment('ProdEnv', null, assetsStore.unmergedAssets)).toBe(false);
+  });
+
+  it('should correctly identify pure derivatives of shared templates', async () => {
+    // Test the new getSharedTemplateIfPureDerivative utility function
+    
+    // Test with a shared template (must be at root level, not under any environment)
+    const sharedTemplateAsset: UnmergedAsset = {
+      id: 'shared-template',
+      fqn: 'SharedTemplate', // Root level FQN (no environment prefix)
+      assetType: ASSET_TYPES.PACKAGE,
+      assetKey: 'SharedTemplate',
+      templateFqn: null,
+      overrides: { version: '1.0' }
+    };
+
+    const pureDerivativeOfShared: UnmergedAsset = {
+      id: 'pure-derivative-shared',
+      fqn: 'ProdEnv::PureDerivativeOfShared',
+      assetType: ASSET_TYPES.PACKAGE,
+      assetKey: 'PureDerivativeOfShared',
+      templateFqn: 'SharedTemplate',
+      overrides: {} // No overrides - pure derivative
+    };
+
+    // Create a fresh test environment with the shared template
+    const testDataWithShared = [...testData, sharedTemplateAsset, pureDerivativeOfShared];
+    const env = createTestEnvironment(testDataWithShared);
+    const testAssetsStore = env.assetsStore;
+    await testAssetsStore.loadAssets(); // Load the assets into the fresh environment
+
+    const sharedTemplateResult = getSharedTemplateIfPureDerivative(pureDerivativeOfShared, testAssetsStore.unmergedAssets);
+    expect(sharedTemplateResult).not.toBeNull();
+    expect(sharedTemplateResult?.fqn).toBe('SharedTemplate');
+
+    // Test with overrides (should not be pure)
+    const modifiedDerivative: UnmergedAsset = {
+      id: 'modified-derivative',
+      fqn: 'ProdEnv::ModifiedDerivative',
+      assetType: ASSET_TYPES.PACKAGE,
+      assetKey: 'ModifiedDerivative',
+      templateFqn: 'SharedTemplate',
+      overrides: { version: '2.0' } // Has overrides - not pure
+    };
+
+    const modifiedResult = getSharedTemplateIfPureDerivative(modifiedDerivative, testAssetsStore.unmergedAssets);
+    expect(modifiedResult).toBeNull(); // Should be null because it has overrides
   });
 
   it('should treat ancestor environment drops as same-environment', () => {

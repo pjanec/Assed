@@ -4,7 +4,7 @@ import { useWorkspaceStore, CreateAssetCommand, DeriveAssetCommand, CloneAssetCo
 import type { UnmergedAsset } from '@/core/types';
 import type { DragPayload, DropTarget } from '@/core/types/drag-drop';
 import { ASSET_TYPES } from '@/content/config/constants';
-import { areInSameEnvironment, getAssetEnvironmentFqn, isSharedAsset, isSameOrAncestorEnvironment } from '@/content/utils/assetUtils';
+import { areInSameEnvironment, getAssetEnvironmentFqn, isSharedAsset, isSameOrAncestorEnvironment, getSharedTemplateIfPureDerivative } from '@/content/utils/assetUtils';
 import { isAncestorOf } from '@/core/utils/inheritanceUtils';
 import { getPropertyInheritanceChain, calculateMergedAsset } from '@/core/utils/mergeUtils';
 import { generatePropertiesDiff } from '@/core/utils/diff';
@@ -108,9 +108,10 @@ const assignRequirementRule: InteractionRule = {
         const sourceEnv = getAssetEnvironmentFqn(sourcePackage.fqn, assetsStore.unmergedAssets);
         const targetEnv = getAssetEnvironmentFqn(targetNode.fqn, assetsStore.unmergedAssets);
 
-        // This is the complete check: Is the source shared, OR are the environments compatible?
+        const sharedTemplate = getSharedTemplateIfPureDerivative(sourcePackage, assetsStore.unmergedAssets);
+
         if (isSharedAsset(sourcePackage, assetsStore.unmergedAssets) || isSameOrAncestorEnvironment(targetEnv, sourceEnv, assetsStore.unmergedAssets)) {
-            
+          // This block is for same-env, ancestor-env, and shared-to-env drops. The logic is already correct.
           // Execute the immediate, dialog-free "Smart Derive" workflow.
           const commands: (CreateAssetCommand | DeriveAssetCommand)[] = [];
             
@@ -136,8 +137,25 @@ const assignRequirementRule: InteractionRule = {
             
           workspaceStore.executeCommand(new CompositeCommand(commands));
 
+        } else if (sharedTemplate) {
+          // NEW CASE: It's a cross-env drop, BUT the source is a pure derivative.
+          // We can treat this as a simple derive action without a dialog.
+          const commands: (CreateAssetCommand | DeriveAssetCommand)[] = [];
+          // Derive from the original shared template, not the intermediate package.
+          commands.push(new DeriveAssetCommand(sharedTemplate as UnmergedAsset, targetEnv, sharedTemplate.assetKey));
+          // Create the key
+          const keyCreate = new CreateAssetCommand({
+            assetType: ASSET_TYPES.PACKAGE_KEY,
+            assetKey: sourcePackage.assetKey,
+            fqn: `${targetNode.fqn}::${sourcePackage.assetKey}`,
+            templateFqn: null,
+            overrides: {},
+          });
+          commands.push(keyCreate);
+          workspaceStore.executeCommand(new CompositeCommand(commands));
+
         } else {
-          // It's a true cross-environment action. Trigger the confirmation dialog.
+          // It's a true, complex cross-environment action that requires user confirmation.
           const allAssetsMap = new Map<string, UnmergedAsset>();
           assetsStore.unmergedAssets.forEach(a => allAssetsMap.set(a.id, a));
             
@@ -337,12 +355,18 @@ const populatePackagePoolRule: InteractionRule = {
         const targetEnv = assetsStore.unmergedAssets.find(a => a.id === dropTarget.id) as UnmergedAsset;
         if (!sourcePackage || !targetEnv) return;
 
-        // If the source is a shared package, derive it immediately without a dialog.
+        const sharedTemplate = getSharedTemplateIfPureDerivative(sourcePackage, assetsStore.unmergedAssets);
+
         if (isSharedAsset(sourcePackage, assetsStore.unmergedAssets)) {
+          // This handles dragging a shared package directly.
           const command = new DeriveAssetCommand(sourcePackage, targetEnv.fqn, sourcePackage.assetKey);
           workspaceStore.executeCommand(command);
+        } else if (sharedTemplate) {
+          // NEW CASE: It's a pure derivative from another env. Just derive from its shared template.
+          const command = new DeriveAssetCommand(sharedTemplate as UnmergedAsset, targetEnv.fqn, sharedTemplate.assetKey);
+          workspaceStore.executeCommand(command);
         } else {
-          // Otherwise, it's a cross-environment copy that requires confirmation.
+          // It's a complex package from another env. Show the confirmation dialog.
           const allAssetsMap = new Map<string, UnmergedAsset>();
           assetsStore.unmergedAssets.forEach(a => allAssetsMap.set(a.id, a));
           const beforeChain = getPropertyInheritanceChain(sourcePackage, allAssetsMap);
