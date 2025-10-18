@@ -8,6 +8,8 @@ import { areInSameEnvironment, getAssetEnvironmentFqn, isSharedAsset, isSameOrAn
 import { isAncestorOf } from '@/core/utils/inheritanceUtils';
 import { getPropertyInheritanceChain, calculateMergedAsset } from '@/core/utils/mergeUtils';
 import { generatePropertiesDiff } from '@/core/utils/diff';
+import { getIntermediatePath, getParentPath, getAssetName } from '@/core/utils/fqnUtils';
+import { ensurePathExists } from '@/core/utils/pathUtils';
 
 // --- The "Flatten and Rebase" Algorithm ---
 /**
@@ -356,26 +358,43 @@ const populatePackagePoolRule: InteractionRule = {
         const targetEnv = assetsStore.unmergedAssets.find(a => a.id === dropTarget.id) as UnmergedAsset;
         if (!sourcePackage || !targetEnv) return;
 
+        // 1. Calculate the relative structure using our new utilities
+        const sourceEnvFqn = getAssetEnvironmentFqn(sourcePackage.fqn, assetsStore.unmergedAssets);
+        const intermediatePath = getIntermediatePath(sourcePackage.fqn, sourceEnvFqn);
+        const relativeFolderPath = getParentPath(intermediatePath);
+        const finalAssetName = getAssetName(intermediatePath);
+
+        // 2. Ensure the target folder structure exists, creating it if necessary.
+        // This returns the FQN of the final parent folder for our new asset.
+        const finalParentFqn = ensurePathExists(targetEnv.fqn, relativeFolderPath);
+          
+        // 3. Perform the "Purity Check" to decide the creation method
         const sharedTemplate = getSharedTemplateIfPureDerivative(sourcePackage, assetsStore.unmergedAssets);
 
-        if (isSharedAsset(sourcePackage, assetsStore.unmergedAssets)) {
-          // This handles dragging a shared package directly.
-          const command = new DeriveAssetCommand(sourcePackage, targetEnv.fqn, sourcePackage.assetKey);
-          workspaceStore.executeCommand(command);
-        } else if (sharedTemplate) {
-          // NEW CASE: It's a pure derivative from another env. Just derive from its shared template.
-          // Use the assetKey of the package that was dragged, not the shared template's assetKey
-          const command = new DeriveAssetCommand(sharedTemplate as UnmergedAsset, targetEnv.fqn, sourcePackage.assetKey);
-          workspaceStore.executeCommand(command);
+        if (isSharedAsset(sourcePackage, assetsStore.unmergedAssets) || sharedTemplate) {
+          // If the source is shared OR it's a pure derivative, create a simple derivative.
+          // The template is either the source itself (if shared) or its shared ancestor.
+          const templateToDeriveFrom = isSharedAsset(sourcePackage, assetsStore.unmergedAssets) ? sourcePackage : sharedTemplate;
+
+          if (templateToDeriveFrom) {
+            const command = new DeriveAssetCommand(
+              templateToDeriveFrom as UnmergedAsset, 
+              finalParentFqn, // Place it in the correct final folder
+              finalAssetName  // Use the original asset's name
+            );
+            workspaceStore.executeCommand(command);
+          }
         } else {
           // It's a complex package from another env. Show the confirmation dialog.
+          // Note: The dialog itself would need a minor update to use the `finalParentFqn`
+          // and `finalAssetName` upon confirmation, but for now, we just open it.
           const allAssetsMap = new Map<string, UnmergedAsset>();
           assetsStore.unmergedAssets.forEach(a => allAssetsMap.set(a.id, a));
           const beforeChain = getPropertyInheritanceChain(sourcePackage, allAssetsMap);
               
           const afterChain = [{ 
-            assetKey: sourcePackage.assetKey, 
-            fqn: `${targetEnv.fqn}::${sourcePackage.assetKey}`,
+            assetKey: finalAssetName, 
+            fqn: `${finalParentFqn}::${finalAssetName}`,
             assetType: sourcePackage.assetType 
           }];
 
