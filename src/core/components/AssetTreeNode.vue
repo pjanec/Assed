@@ -78,7 +78,7 @@ import { useUiStore, useAssetsStore } from '@/core/stores/index';
 import { useCoreConfigStore } from '@/core/stores/config';
 import { useDroppable } from '@/core/composables/useDroppable';
 import { DROP_TARGET_TYPES, CORE_DRAG_CONTEXTS, CONTEXT_MENU_KINDS, ASSET_TREE_NODE_TYPES, VIEW_HINTS } from '@/core/config/constants';
-
+import { isRealAsset, isDraggable as isNodeDraggable } from '@/core/utils/assetTreeUtils';
 
 import type { AssetTreeNode } from '@/core/types';
 
@@ -113,10 +113,10 @@ const emit = defineEmits<{
 
 // Compute virtual context and read-only state
 const isSelfReadOnly = computed(() => !!props.node.virtualContext);
-const isAsset = computed(() => props.node.type === ASSET_TREE_NODE_TYPES.ASSET);
+const isAsset = computed(() => isRealAsset(props.node));
 
-// An item cannot be dragged if it's not a real asset OR if it's a virtual folder itself.
-const isDraggable = computed(() => isAsset.value && !isSelfReadOnly.value);
+// The new `isDraggable` computed property is now extremely simple and declarative.
+const isDraggable = computed(() => isNodeDraggable(props.node));
 
 const { isDraggingOver, handleDragOver, handleDragLeave, handleDrop } = useDroppable({
   type: DROP_TARGET_TYPES.ASSET,

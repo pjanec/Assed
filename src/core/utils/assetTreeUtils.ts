@@ -2,6 +2,7 @@
 import type { UnmergedAsset, AssetTreeNode, SelectedNode } from '@/core/types';
 import { ASSET_TREE_NODE_TYPES } from '@/core/config/constants';
 import { useAssetsStore } from '@/core/stores/assets';
+import { useCoreConfigStore } from '@/core/stores/config';
 
 /**
  * Creates an AssetTreeNode from an asset ID by looking it up in the assets store.
@@ -71,3 +72,31 @@ export const createTreeNodeFromSelectedNode = (selectedNode: SelectedNode | any)
     assetType: undefined // Optional Asset properties
   };
 };
+
+/**
+ * Checks if a tree node represents a real, concrete asset.
+ * @param node The AssetTreeNode to check.
+ * @returns True if the node is of type 'asset'.
+ */
+export function isRealAsset(node: AssetTreeNode | null | undefined): boolean {
+  return !!node && node.type === ASSET_TREE_NODE_TYPES.ASSET;
+}
+
+/**
+ * Checks if a tree node should be draggable by the user.
+ * An asset is draggable if it's a real asset and not a synthetic one.
+ * @param node The AssetTreeNode to check.
+ * @returns True if the user should be able to start a drag operation from this node.
+ */
+export function isDraggable(node: AssetTreeNode | null | undefined): boolean {
+  if (!isRealAsset(node)) {
+    return false;
+  }
+
+  // Check the asset registry to see if the asset type is synthetic.
+  const coreConfig = useCoreConfigStore();
+  const definition = node?.assetType ? coreConfig.getAssetDefinition(node.assetType) : null;
+    
+  // Draggable if it's NOT synthetic.
+  return !definition?.isSynthetic;
+}
