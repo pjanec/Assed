@@ -1,4 +1,5 @@
 import type { UnmergedAsset } from "@/core/types";
+import { getInheritanceChain } from '@/core/utils/inheritanceUtils';
 
 // This deepMerge utility is generic and can be shared.
 function deepMerge(base: Record<string, any>, override: Record<string, any>): Record<string, any> {
@@ -28,82 +29,30 @@ export function calculateMergedAsset(assetId: string, allAssets: Map<string, Unm
     return { error: `Asset with ID ${assetId} not found during merge.` };
   }
 
-  const inheritanceChain: UnmergedAsset[] = [];
+  const allAssetsArray = Array.from(allAssets.values());
+  const inheritanceChain = getInheritanceChain(asset.fqn, allAssetsArray);
+
+  // The returned chain is from parent -> grandparent, so we reverse it to merge from the top down.
+  const reversedChain = [...inheritanceChain].reverse();
+    
   let mergedProperties: Record<string, any> = {};
 
-  const fqnToIdMap = new Map<string, string>();
-  allAssets.forEach(a => fqnToIdMap.set(a.fqn, a.id));
-
-  let currentAsset: UnmergedAsset | undefined = asset;
-  const chainCheck = new Set<string>([currentAsset.fqn]);
-
-  while (currentAsset && currentAsset.templateFqn) {
-    if (chainCheck.has(currentAsset.templateFqn)) {
-      return { error: `Circular dependency detected in template chain for asset ${asset.fqn}` };
-    }
-
-    chainCheck.add(currentAsset.templateFqn);
-    
-    const templateId = fqnToIdMap.get(currentAsset.templateFqn);
-    if (!templateId) {
-      return { error: `Template asset with FQN "${currentAsset.templateFqn}" not found for asset ${currentAsset.fqn}` };
-    }
-    
-    const templateAsset = allAssets.get(templateId);
-    if (!templateAsset) {
-      return { error: `Template asset with ID "${templateId}" not found.` };
-    }
-    
-    inheritanceChain.unshift(templateAsset);
-    currentAsset = templateAsset;
-  }
-
-  for (const template of inheritanceChain) {
+  for (const template of reversedChain) {
       mergedProperties = deepMerge(mergedProperties, template.overrides || {});
   }
+  // Finally, merge the asset's own overrides.
   mergedProperties = deepMerge(mergedProperties, asset.overrides || {});
 
   return { properties: mergedProperties };
 }
 
 /**
- * Gets the inheritance chain for an asset, showing the template hierarchy.
- * This is used for displaying "before and after" states in cross-environment copy dialogs.
- * @param asset The asset to get the inheritance chain for.
- * @param allAssets A map of all available assets (ID -> UnmergedAsset) for lookup.
- * @returns An array of assets representing the inheritance chain from base to derived.
+ * REFACTORED to use the new generic utility.
  */
 export function getPropertyInheritanceChain(asset: UnmergedAsset, allAssets: Map<string, UnmergedAsset>): UnmergedAsset[] {
-  const inheritanceChain: UnmergedAsset[] = [asset];
-  const fqnToIdMap = new Map<string, string>();
-  allAssets.forEach(a => fqnToIdMap.set(a.fqn, a.id));
-
-  let currentAsset: UnmergedAsset | undefined = asset;
-  const chainCheck = new Set<string>([currentAsset.fqn]);
-
-  while (currentAsset && currentAsset.templateFqn) {
-    if (chainCheck.has(currentAsset.templateFqn)) {
-      // Circular dependency detected, return what we have so far
-      break;
-    }
-
-    chainCheck.add(currentAsset.templateFqn);
+  const allAssetsArray = Array.from(allAssets.values());
+  const ancestors = getInheritanceChain(asset.fqn, allAssetsArray);
     
-    const templateId = fqnToIdMap.get(currentAsset.templateFqn);
-    if (!templateId) {
-      // Template not found, return what we have so far
-      break;
-    }
-    
-    const templateAsset = allAssets.get(templateId);
-    if (!templateAsset) {
-      // Template asset not found, return what we have so far
-      break;
-    }
-    
-    inheritanceChain.push(templateAsset);
-    currentAsset = templateAsset;
-  }
-
-  return inheritanceChain;
+  // The function's purpose is to return the full chain including the start asset.
+  return [asset, ...ancestors];
 }

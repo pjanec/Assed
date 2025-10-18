@@ -1,4 +1,40 @@
-import type { UnmergedAsset, AssetDefinition } from '@/core/types';
+import type { UnmergedAsset, AssetDefinition, Asset } from '@/core/types';
+
+/**
+ * The new, generic utility to traverse the inheritance chain.
+ * This is now the single source of truth for inheritance traversal.
+ * @param startAssetFqn The FQN of the asset to start the traversal from.
+ * @param allAssets A complete list of all assets in the project.
+ * @returns An array of ancestor assets, from immediate parent to the root of the chain.
+ */
+export function getInheritanceChain<T extends Asset>(startAssetFqn: string, allAssets: T[]): T[] {
+  const chain: T[] = [];
+  const fqnToAssetMap = new Map(allAssets.map(a => [a.fqn, a]));
+    
+  let currentAsset = fqnToAssetMap.get(startAssetFqn);
+  const visited = new Set<string>(); // To prevent infinite loops
+
+  while (currentAsset?.templateFqn && !visited.has(currentAsset.fqn)) {
+    visited.add(currentAsset.fqn);
+      
+    const parentAsset = fqnToAssetMap.get(currentAsset.templateFqn);
+    if (!parentAsset) {
+      break; // The chain is broken, stop here.
+    }
+      
+    chain.push(parentAsset);
+    currentAsset = parentAsset;
+  }
+
+  return chain;
+}
+
+/**
+ * Checks if a potential ancestor is in the structural inheritance chain of a child asset.
+ */
+export function isAncestorOf(childFqn: string, potentialAncestorFqn: string, allAssets: Asset[]): boolean {
+  return getInheritanceChain(childFqn, allAssets).some(ancestor => ancestor.fqn === potentialAncestorFqn);
+}
 
 function findFunctionalChildren(
   parentAsset: Pick<UnmergedAsset, 'fqn'>,
@@ -52,33 +88,26 @@ export function resolveInheritedCollection(
   assetRegistry: Record<string, AssetDefinition>
 ): UnmergedAsset[] {
   const finalCollection = new Map<string, UnmergedAsset>();
-  const fqnToAssetMap = new Map(allAssets.map(a => [a.fqn, a]));
 
+  // 1. Get local children (no change here)
   const localChildren = findFunctionalChildren(startAsset, childAssetType, allAssets, assetRegistry);
   localChildren.forEach(child => {
     finalCollection.set(child.assetKey, child);
   });
 
-  let currentTemplateFqn = startAsset.templateFqn;
-  const visitedTemplates = new Set<string>([startAsset.fqn]);
+  // 2. Get the entire inheritance chain in one call.
+  const inheritanceChain = getInheritanceChain(startAsset.fqn, allAssets);
 
-  while (currentTemplateFqn && !visitedTemplates.has(currentTemplateFqn)) {
-    visitedTemplates.add(currentTemplateFqn);
-    const templateAsset = fqnToAssetMap.get(currentTemplateFqn);
+  // 3. Iterate through the chain to find and add inherited children.
+  for (const templateAsset of inheritanceChain) {
+    const inheritedChildren = findFunctionalChildren(templateAsset, childAssetType, allAssets, assetRegistry);
 
-    if (templateAsset) {
-      const inheritedChildren = findFunctionalChildren(templateAsset, childAssetType, allAssets, assetRegistry);
-
-      inheritedChildren.forEach(child => {
-        if (!finalCollection.has(child.assetKey)) {
-          finalCollection.set(child.assetKey, child);
-        }
-      });
-
-      currentTemplateFqn = templateAsset.templateFqn;
-    } else {
-      break;
-    }
+    inheritedChildren.forEach(child => {
+      // Only add if a more specific version hasn't already been added.
+      if (!finalCollection.has(child.assetKey)) {
+        finalCollection.set(child.assetKey, child);
+      }
+    });
   }
 
   return Array.from(finalCollection.values());
