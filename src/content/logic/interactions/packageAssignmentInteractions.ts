@@ -142,7 +142,8 @@ const assignRequirementRule: InteractionRule = {
           // We can treat this as a simple derive action without a dialog.
           const commands: (CreateAssetCommand | DeriveAssetCommand)[] = [];
           // Derive from the original shared template, not the intermediate package.
-          commands.push(new DeriveAssetCommand(sharedTemplate as UnmergedAsset, targetEnv, sharedTemplate.assetKey));
+          // Use the assetKey of the package that was dragged, not the shared template's assetKey
+          commands.push(new DeriveAssetCommand(sharedTemplate as UnmergedAsset, targetEnv, sourcePackage.assetKey));
           // Create the key
           const keyCreate = new CreateAssetCommand({
             assetType: ASSET_TYPES.PACKAGE_KEY,
@@ -363,7 +364,8 @@ const populatePackagePoolRule: InteractionRule = {
           workspaceStore.executeCommand(command);
         } else if (sharedTemplate) {
           // NEW CASE: It's a pure derivative from another env. Just derive from its shared template.
-          const command = new DeriveAssetCommand(sharedTemplate as UnmergedAsset, targetEnv.fqn, sharedTemplate.assetKey);
+          // Use the assetKey of the package that was dragged, not the shared template's assetKey
+          const command = new DeriveAssetCommand(sharedTemplate as UnmergedAsset, targetEnv.fqn, sourcePackage.assetKey);
           workspaceStore.executeCommand(command);
         } else {
           // It's a complex package from another env. Show the confirmation dialog.
