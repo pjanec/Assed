@@ -158,8 +158,15 @@ const isChildMode = computed(() => !!props.parentAsset || !!props.childType);
 
 const assetTypes = computed(() => {
   // Use the core config store to get available asset types
-  return Object.entries(coreConfig.assetRegistry)
-    .filter(([, definition]) => definition.isCreatableAtRoot)
+  // Filter by both isCreatableAtRoot and _isSupportedInCurrentPerspective
+  return Object.entries(coreConfig.effectiveAssetRegistry)
+    .filter(([type, definition]) => {
+      // First check if it's creatable at root
+      if (!definition.isCreatableAtRoot) return false;
+      
+      // Then check if this type is supported in the current perspective
+      return (definition as any)._isSupportedInCurrentPerspective !== false;
+    })
     .map(([type]) => type);
 });
 

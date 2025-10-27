@@ -13,6 +13,23 @@
 
       <v-spacer />
 
+      <!-- Perspective Switcher -->
+      <div class="perspective-switcher mx-2">
+        <v-select
+          v-model="currentPerspective"
+          :items="availablePerspectives"
+          item-title="title"
+          item-value="value"
+          label="Perspective"
+          density="compact"
+          variant="outlined"
+          hide-details
+          style="min-width: 200px; background-color: rgba(255, 255, 255, 0.1);"
+        />
+      </div>
+
+      <v-spacer />
+
       <!-- Action Buttons -->
       <v-btn
         prepend-icon="mdi-undo"
@@ -228,11 +245,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, watch, ref, type Ref } from 'vue';
+import { computed, onMounted, watch, ref, type Ref, inject } from 'vue';
 import { storeToRefs } from 'pinia';
 import { generateAssetDiff } from '@/core/utils/diff';
 import { useRouter } from 'vue-router';
 import { useAssetsStore, useWorkspaceStore, useUiStore } from '@/core/stores/index';
+import { ConfigurationHub } from '@/core/stores/ConfigurationHub';
+import { perspectiveDefinitions } from '@/content/config/perspectiveDefinitions';
 import AssetLibrary from '@/core/components/AssetLibrary.vue'
 import InspectorPane from '@/core/components/InspectorPane.vue'
 import CommitDialog from '@/core/components/dialogs/CommitDialog.vue'
@@ -254,6 +273,29 @@ const router = useRouter()
 const assetsStore = useAssetsStore()
 const workspaceStore = useWorkspaceStore()
 const uiStore = useUiStore() // Initialize uiStore
+
+// Get ConfigurationHub from app context
+const configHub = inject<ConfigurationHub>('configHub');
+if (!configHub) {
+  console.warn('ConfigurationHub not found in context');
+}
+
+// Perspective switcher logic
+const currentPerspective = computed({
+  get: () => configHub?.currentPerspective.value || 'default',
+  set: (value: string) => {
+    if (configHub) {
+      configHub.setPerspective(value);
+    }
+  }
+});
+
+const availablePerspectives = computed(() => {
+  return Object.entries(perspectiveDefinitions).map(([key, def]) => ({
+    value: key,
+    title: def.displayName
+  }));
+});
 
 // Reactive state
 const showCommitDialog: Ref<boolean> = ref(false)

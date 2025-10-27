@@ -1,12 +1,17 @@
 import { render, screen } from '@testing-library/vue';
 import { createTestingPinia } from '@pinia/testing';
-import { vi, describe, it, expect } from 'vitest';
-import { createVuetify } from 'vuetify'; // <-- ADD THIS IMPORT
+import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { createVuetify } from 'vuetify';
+import { createApp } from 'vue';
+import { createPinia, setActivePinia } from 'pinia';
+import { CorePlugin } from '@/core/plugin';
+import { createMockContentPlugin } from '../../../mock-content/MockContentPlugin';
+import { MockPersistenceAdapter } from '../../../mock-content/MockPersistenceAdapter';
 
 import NodeCard from '@/content/components/editor/NodeCard.vue';
 import { useUiStore, useAssetsStore } from '@/core/stores';
 import { ASSET_TYPES } from '@/content/config/constants';
-import { vDragsource } from '@/core/directives/dragsource'; // <-- ADD THIS IMPORT
+import { vDragsource } from '@/core/directives/dragsource';
 
 // Mock the Vuetify components used in NodeCard
 const vuetifyStubs = {
@@ -22,6 +27,24 @@ const vuetifyStubs = {
 };
 
 describe('NodeCard.vue', () => {
+  let vuetify: any;
+  
+  beforeEach(() => {
+    const app = createApp({});
+    const pinia = createPinia();
+    app.use(pinia);
+    setActivePinia(pinia);
+
+    vuetify = createVuetify();
+    app.use(vuetify);
+
+    const mockAdapter = new MockPersistenceAdapter([]);
+    const mockContentPlugin = createMockContentPlugin(mockAdapter);
+
+    app.use(CorePlugin);
+    app.use(mockContentPlugin);
+  });
+
   const mockNode = {
     id: 'uuid-100',
     assetKey: 'WebServer',
@@ -40,18 +63,16 @@ describe('NodeCard.vue', () => {
 
    // Helper function to render with all necessary globals
    const renderNodeCard = (props: any) => {
-    const pinia = createTestingPinia({ createSpy: vi.fn, stubActions: false });
     const assetsStore = useAssetsStore();
     assetsStore.assets = [mockNode, ...mockPackages];
-    const vuetify = createVuetify();
 
     return render(NodeCard, {
       props,
       global: {
-        plugins: [pinia, vuetify], // <-- PASS PLUGINS
+        plugins: [vuetify],
         stubs: vuetifyStubs,
         directives: {
-          dragsource: vDragsource // <-- PASS DIRECTIVE
+          dragsource: vDragsource
         }
       },
     });

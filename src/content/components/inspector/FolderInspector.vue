@@ -1,7 +1,7 @@
 <template>
   <div class="d-flex flex-column align-center justify-center h-100 pa-4 text-center">
     <v-icon size="64" color="primary" class="mb-4">
-      {{ assetRegistry[asset.unmerged.assetType]?.icon || 'mdi-folder-question' }}
+      {{ getAssetIcon(asset.unmerged.assetType) }}
     </v-icon>
     <h4 class="text-h6 mb-2">{{ asset.unmerged.assetKey }}</h4>
     <p class="text-body-2 text-medium-emphasis">
@@ -20,7 +20,7 @@
 
 <script setup>
 import { useWorkspaceStore } from '@/core/stores';
-import { assetRegistry } from '@/content/config/assetRegistry';
+import { getAssetIcon } from '@/content/utils/assetUtils';
 
 const props = defineProps({
   asset: { type: Object, required: true }

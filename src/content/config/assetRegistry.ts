@@ -1,152 +1,22 @@
 // File: src/config/assetRegistry.ts
+// This file provides dynamic access to the asset registry via ConfigurationHub
+// All helper functions read from the perspective-aware effective registry
 
-import type { Asset, UnmergedAsset, AssetDefinition, CloneMap, ValidationRules } from '@/core/types';
-import type { Component } from 'vue';
-import { findNearestFunctionalParent } from '@/content/utils/assetUtils';
+import type { Asset, AssetDefinition } from '@/core/types';
+import { globalConfigHub } from '@/core/stores/config';
 import { ASSET_TYPES } from '@/content/config/constants';
-import { VIRTUAL_NODE_KINDS } from '@/content/logic/virtual-folders/kinds';
+import { findNearestFunctionalParent } from '@/content/utils/assetUtils';
 
 /**
- * Define a reusable type for the async component loader
+ * Gets the effective asset registry based on the current perspective.
+ * This function reads from ConfigurationHub which provides perspective-aware data.
  */
-type AsyncComponentLoader = () => Promise<Component>;
-
-
-
-/**
- * A generic post-clone hook to fix templateFqn references.
- * This can be reused by any asset type that has a templateFqn property.
- */
-const fixTemplateFqn: AssetDefinition['postCloneFixup'] = (newlyClonedAsset, originalSourceAsset, cloneMap) => {
-  const originalTemplateFqn = originalSourceAsset.templateFqn;
-
-  // If the original didn't have a template, there's nothing to do.
-  if (!originalTemplateFqn) {
-    return newlyClonedAsset;
+export function getEffectiveRegistry(): Record<string, AssetDefinition> {
+  if (!globalConfigHub) {
+    throw new Error('ConfigurationHub not initialized. Cannot access asset registry.');
   }
-
-  // Check if the original template is part of the assets being cloned.
-  if (cloneMap.has(originalTemplateFqn)) {
-    // It is an internal reference. Rewrite it to point to the new clone.
-    newlyClonedAsset.templateFqn = cloneMap.get(originalTemplateFqn)!;
-  } else {
-    // It's an external, shared template. The reference is already correct, so no change is needed.
-    // The newlyClonedAsset.templateFqn already holds the correct original value.
-  }
-
-  return newlyClonedAsset;
-};
-
-/**
- * The Asset Registry serves as the single source of truth for all
- * business logic, hierarchy rules, and validation related to the asset model.
- */
-export const assetRegistry: Record<string, AssetDefinition> = {
-  [ASSET_TYPES.ROOT]: {
-    label: 'Root',
-    validChildren: [ASSET_TYPES.ENVIRONMENT, ASSET_TYPES.NODE, ASSET_TYPES.OPTION, ASSET_TYPES.PACKAGE, ASSET_TYPES.NAMESPACE_FOLDER],
-    icon: 'mdi-file-tree',
-    color: 'grey',
-    inspectorComponent: () => import('@/content/components/inspector/GenericAssetInspector.vue'),
-    isCreatableAtRoot: false,
-    creationModes: [],
-    isRenameable: false,
-    isDeletable: false,
-    isStructuralFolder: true,
-    sortOrder: 0,
-  },
-  [ASSET_TYPES.ENVIRONMENT]: {
-    label: 'Environment',
-    validChildren: [ASSET_TYPES.NODE, ASSET_TYPES.OPTION, ASSET_TYPES.PACKAGE, ASSET_TYPES.NAMESPACE_FOLDER],
-    icon: 'mdi-earth',
-    color: 'success',
-    inspectorComponent: () => import('@/content/components/inspector/EnvironmentInspector.vue'),
-    isCreatableAtRoot: true,
-    creationModes: ['simple', 'full'],
-    isRenameable: true,
-    isDeletable: true,
-    isStructuralFolder: false,
-    postCloneFixup: fixTemplateFqn,
-    virtualFolderProviders: [VIRTUAL_NODE_KINDS.GENERIC_MERGED_VIEW],
-    sortOrder: 10,
-    isShownInStats: true,
-  },
-  [ASSET_TYPES.NODE]: {
-    label: 'Node',
-    validChildren: [ASSET_TYPES.PACKAGE_KEY, ASSET_TYPES.NAMESPACE_FOLDER],
-    icon: 'mdi-server',
-    color: 'info',
-    inspectorComponent: () => import('@/content/components/inspector/GenericAssetInspector.vue'),
-    isCreatableAtRoot: true,
-    creationModes: ['simple', 'full'],
-    isRenameable: true,
-    isDeletable: true,
-    // Node is not a structural folder. Virtual folders are UI-level only.
-    isStructuralFolder: false,
-    postCloneFixup: fixTemplateFqn,
-    virtualFolderProviders: [VIRTUAL_NODE_KINDS.GENERIC_MERGED_VIEW],
-    sortOrder: 20,
-    isShownInStats: true,
-  },
-  [ASSET_TYPES.PACKAGE]: {
-    label: 'Package',
-    validChildren: [],
-    icon: 'mdi-package-variant',
-    color: 'warning',
-    inspectorComponent: () => import('@/content/components/inspector/GenericAssetInspector.vue'),
-    isCreatableAtRoot: true,
-    creationModes: ['simple'],
-    isRenameable: true,
-    isDeletable: true,
-    isStructuralFolder: false,
-    initialOverrides: { Files: {} },
-    postCloneFixup: fixTemplateFqn,
-    sortOrder: 40,
-    isShownInStats: true,
-  },
-  [ASSET_TYPES.PACKAGE_KEY]: {
-    label: 'Package Requirement',
-    validChildren: [],
-    icon: 'mdi-link-variant',
-    color: 'deep-purple',
-    inspectorComponent: () => import('@/content/components/inspector/PackageKeyInspector.vue'),
-    isCreatableAtRoot: false,
-    creationModes: ['simple'],
-    isRenameable: true,
-    isDeletable: true,
-    isStructuralFolder: false,
-    sortOrder: 50,
-    isShownInStats: false,
-  },
-  [ASSET_TYPES.OPTION]: {
-    label: 'Option',
-    validChildren: [ASSET_TYPES.PACKAGE],
-    icon: 'mdi-cog',
-    color: 'purple',
-    inspectorComponent: () => import('@/content/components/inspector/GenericAssetInspector.vue'),
-    isCreatableAtRoot: true,
-    creationModes: ['simple'],
-    isRenameable: true,
-    isDeletable: true,
-    isStructuralFolder: false,
-    postCloneFixup: fixTemplateFqn,
-    sortOrder: 30,
-    isShownInStats: true,
-  },
-  [ASSET_TYPES.NAMESPACE_FOLDER]: {
-    label: 'Namespace Folder',
-    validChildren: [],
-    icon: 'mdi-folder',
-    color: 'primary',
-    inspectorComponent: () => import('@/content/components/inspector/FolderInspector.vue'),
-    isCreatableAtRoot: true,
-    creationModes: ['simple'],
-    isRenameable: true,
-    isDeletable: true,
-    isStructuralFolder: true,
-    sortOrder: 99,
-  },
-};
+  return globalConfigHub.effectiveAssetRegistry.value;
+}
 
 /**
  * Retrieves the asset registration for a given asset type.
@@ -155,7 +25,8 @@ export const assetRegistry: Record<string, AssetDefinition> = {
  */
 export function getAssetRegistration(assetType: string | null | undefined): AssetDefinition | null {
   if (!assetType) return null;
-  return assetRegistry[assetType] || null;
+  const registry = getEffectiveRegistry();
+  return registry[assetType] || null;
 }
 
 /**
@@ -165,7 +36,8 @@ export function getAssetRegistration(assetType: string | null | undefined): Asse
  */
 export function getValidChildTypes(assetType: string | null | undefined): string[] {
   if (!assetType) return [];
-  return assetRegistry[assetType]?.validChildren || [];
+  const registry = getEffectiveRegistry();
+  return registry[assetType]?.validChildren || [];
 }
 
 /**
@@ -175,7 +47,8 @@ export function getValidChildTypes(assetType: string | null | undefined): string
  * @returns An array of strings representing valid child types.
  */
 export function getValidChildrenForFolder(folderAsset: Asset): string[] {
-    const isStructural = assetRegistry[folderAsset.assetType!]?.isStructuralFolder === true;
+    const registry = getEffectiveRegistry();
+    const isStructural = registry[folderAsset.assetType!]?.isStructuralFolder === true;
     const parentType = isStructural
       ? (findNearestFunctionalParent(folderAsset)?.assetType || ASSET_TYPES.ROOT)
       : folderAsset.assetType;
@@ -186,6 +59,31 @@ export function getValidChildrenForFolder(folderAsset: Asset): string[] {
         children.push(ASSET_TYPES.NAMESPACE_FOLDER);
     }
     return children;
+}
+
+/**
+ * Returns all asset type keys from the effective registry.
+ */
+export function getAllAssetTypes(): string[] {
+  return Object.keys(getEffectiveRegistry());
+}
+
+/**
+ * Checks if an asset type is a structural folder.
+ */
+export function isStructuralFolder(type: string | null | undefined): boolean {
+  if (!type) return false;
+  const registry = getEffectiveRegistry();
+  return registry[type]?.isStructuralFolder ?? false;
+}
+
+/**
+ * Checks if an asset type can be created at the root level.
+ */
+export function isCreatableAtRoot(type: string | null | undefined): boolean {
+  if (!type) return false;
+  const registry = getEffectiveRegistry();
+  return registry[type]?.isCreatableAtRoot ?? false;
 }
 
 

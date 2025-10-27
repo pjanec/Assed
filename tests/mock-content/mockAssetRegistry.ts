@@ -35,12 +35,13 @@ export const MOCK_ASSET_TYPES = {
 
 export const mockAssetRegistry: Record<string, AssetDefinition> = {
   [MOCK_ASSET_TYPES.WIDGET]: {
-    label: 'Widget',
+    label: { default: 'Widget' },
     validChildren: [],
-    icon: 'mdi-toy-brick',
-    color: 'blue',
-    // --- Properties added to satisfy the AssetDefinition type ---
-    inspectorComponent: () => import('@/core/components/InspectorPane.vue'), // A placeholder component
+    icon: { default: 'mdi-toy-brick' },
+    color: { default: 'blue' },
+    inspectorComponent: { 
+      default: () => import('@/core/components/InspectorPane.vue')
+    },
     isCreatableAtRoot: true,
     creationModes: ['simple'],
     isRenameable: true,
@@ -49,15 +50,17 @@ export const mockAssetRegistry: Record<string, AssetDefinition> = {
     postCloneFixup: fixTemplateFqn,
     sortOrder: 20,
     isShownInStats: true,
+    isVisibleInExplorer: { default: true },
   },
   [MOCK_ASSET_TYPES.CONTAINER]: {
-    label: 'Container',
+    label: { default: 'Container' },
     validChildren: [MOCK_ASSET_TYPES.WIDGET],
-    icon: 'mdi-archive',
-    color: 'green',
+    icon: { default: 'mdi-archive' },
+    color: { default: 'green' },
     isStructuralFolder: true,
-    // --- Properties added to satisfy the AssetDefinition type ---
-    inspectorComponent: () => import('@/core/components/InspectorPane.vue'), // A placeholder component
+    inspectorComponent: { 
+      default: () => import('@/core/components/InspectorPane.vue')
+    },
     isCreatableAtRoot: true,
     creationModes: ['simple'],
     isRenameable: true,
@@ -65,15 +68,17 @@ export const mockAssetRegistry: Record<string, AssetDefinition> = {
     postCloneFixup: fixTemplateFqn,
     sortOrder: 10,
     isShownInStats: true,
-    // Provide synthetic aggregator via virtual folder provider
     virtualFolderProviders: ['AGGREGATED_VIEW'],
+    isVisibleInExplorer: { default: true },
   },
   [MOCK_ASSET_TYPES.AGGREGATOR]: {
-    label: 'Aggregator',
+    label: { default: 'Aggregator' },
     validChildren: [],
-    icon: 'mdi-chart-donut',
-    color: 'teal',
-    inspectorComponent: () => import('@/core/components/InspectorPane.vue'),
+    icon: { default: 'mdi-chart-donut' },
+    color: { default: 'teal' },
+    inspectorComponent: { 
+      default: () => import('@/core/components/InspectorPane.vue')
+    },
     isCreatableAtRoot: false,
     creationModes: [],
     isRenameable: false,
@@ -81,15 +86,17 @@ export const mockAssetRegistry: Record<string, AssetDefinition> = {
     isStructuralFolder: false,
     sortOrder: 50,
     isShownInStats: false,
-    // Critical: mark as synthetic
     isSynthetic: true,
+    isVisibleInExplorer: { default: false },
   },
   [MOCK_ASSET_TYPES.ENVIRONMENT]: {
-    label: 'Environment',
+    label: { default: 'Environment' },
     validChildren: [MOCK_ASSET_TYPES.NODE],
-    icon: 'mdi-earth',
-    color: 'success',
-    inspectorComponent: () => import('@/core/components/InspectorPane.vue'),
+    icon: { default: 'mdi-earth' },
+    color: { default: 'success' },
+    inspectorComponent: { 
+      default: () => import('@/core/components/InspectorPane.vue')
+    },
     isCreatableAtRoot: true,
     creationModes: ['simple'],
     isRenameable: true,
@@ -99,13 +106,16 @@ export const mockAssetRegistry: Record<string, AssetDefinition> = {
     virtualFolderProviders: ['GENERIC_MERGED_VIEW'],
     sortOrder: 10,
     isShownInStats: true,
+    isVisibleInExplorer: { default: true },
   },
   [MOCK_ASSET_TYPES.NODE]: {
-    label: 'Node',
+    label: { default: 'Node' },
     validChildren: [MOCK_ASSET_TYPES.PACKAGE],
-    icon: 'mdi-server',
-    color: 'info',
-    inspectorComponent: () => import('@/core/components/InspectorPane.vue'),
+    icon: { default: 'mdi-server' },
+    color: { default: 'info' },
+    inspectorComponent: { 
+      default: () => import('@/core/components/InspectorPane.vue')
+    },
     isCreatableAtRoot: true,
     creationModes: ['simple'],
     isRenameable: true,
@@ -114,13 +124,16 @@ export const mockAssetRegistry: Record<string, AssetDefinition> = {
     postCloneFixup: fixTemplateFqn,
     sortOrder: 20,
     isShownInStats: true,
+    isVisibleInExplorer: { default: true },
   },
   [MOCK_ASSET_TYPES.PACKAGE]: {
-    label: 'Package',
+    label: { default: 'Package' },
     validChildren: [],
-    icon: 'mdi-package-variant',
-    color: 'warning',
-    inspectorComponent: () => import('@/core/components/InspectorPane.vue'),
+    icon: { default: 'mdi-package-variant' },
+    color: { default: 'warning' },
+    inspectorComponent: { 
+      default: () => import('@/core/components/InspectorPane.vue')
+    },
     isCreatableAtRoot: true,
     creationModes: ['simple'],
     isRenameable: true,
@@ -129,5 +142,6 @@ export const mockAssetRegistry: Record<string, AssetDefinition> = {
     postCloneFixup: fixTemplateFqn,
     sortOrder: 40,
     isShownInStats: true,
+    isVisibleInExplorer: { default: true },
   },
 };

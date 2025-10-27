@@ -85,7 +85,7 @@
 <script setup lang="ts">
 import { computed, ref, type Ref } from 'vue'
 // --- IMPORTS FOR STORES ---
-import { useAssetsStore, useWorkspaceStore, useUiStore } from '@/core/stores/index';
+import { useAssetsStore, useWorkspaceStore, useUiStore, useCoreConfigStore } from '@/core/stores/index';
 import { CreateFolderCommand, CloneAssetCommand, DeriveAssetCommand } from '@/core/stores/workspace'
 import { storeToRefs } from 'pinia'
 import AssetTreeNode from './AssetTreeNode.vue'
@@ -156,18 +156,29 @@ const dialogTitle = computed(() => {
 
 
 // Computed properties
+const coreConfig = useCoreConfigStore();
+
 const filteredAssets = computed((): Asset[] => {
+  const effectiveRegistry = coreConfig.effectiveAssetRegistry;
+  
+  // Apply perspective-based filtering using isVisibleInExplorer
+  const perspectiveFiltered = assetsStore.assets.filter((asset: Asset) => {
+    const def = effectiveRegistry[asset.assetType];
+    if (!def) return false;
+    const isVisible = def.isVisibleInExplorer as any;
+    return isVisible !== false;
+  });
+  
+  // Then apply search filter if active (search only by assetKey for intuitive UX)
   if (!searchQuery.value) {
-    return assetsStore.assets
+    return perspectiveFiltered;
   }
   
-  const query = searchQuery.value.toLowerCase()
-  return assetsStore.assets.filter((asset: Asset) => 
-    asset.assetKey.toLowerCase().includes(query) ||
-    asset.fqn.toLowerCase().includes(query) ||
-    asset.assetType.toLowerCase().includes(query)
-  )
-})
+  const query = searchQuery.value.toLowerCase();
+  return perspectiveFiltered.filter((asset: Asset) => 
+    asset.assetKey.toLowerCase().includes(query)
+  );
+});
 
 const rootNamespaces = computed(() => {
   if (searchQuery.value) {

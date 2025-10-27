@@ -3,9 +3,10 @@ import { ASSET_TREE_NODE_TYPES } from '@/core/config/constants';
 import { virtualFolderDefinitions } from './definitions';
 import { VIRTUAL_NODE_KINDS, type VirtualNodeKind } from './kinds';
 import { calculateMergedAsset } from '@/core/utils/mergeUtils';
-import { assetRegistry } from '@/content/config/assetRegistry';
+import { getEffectiveRegistry } from '@/content/config/assetRegistry';
 import { resolveInheritedCollection } from '@/core/utils/inheritanceUtils';
 import { ASSET_TYPES } from '@/content/config/constants';
+import { useCoreConfigStore } from '@/core/stores/config';
 
 /**
  * Calculates the final "merged" state of all child packages for a Node.
@@ -70,10 +71,11 @@ export function resolveGenericMergedView(
   allAssets: UnmergedAsset[]
 ): AssetTreeNode[] {
   const allAssetsMap = new Map(allAssets.map(a => [a.id, a]));
+  const registry = getEffectiveRegistry();
 
   // Candidate child types: registry-defined children plus common functional types
   const potentialChildTypes = new Set<string>([
-    ...(assetRegistry[sourceAsset.assetType]?.validChildren || []),
+    ...(registry[sourceAsset.assetType]?.validChildren || []),
     ASSET_TYPES.PACKAGE,
     ASSET_TYPES.OPTION,
   ]);
@@ -86,20 +88,21 @@ export function resolveGenericMergedView(
 
     // Start with children directly under the source asset according to structural inheritance
     const byKey = new Map<string, UnmergedAsset>();
-    resolveInheritedCollection(sourceAsset, assetType, allAssets, assetRegistry)
+    const coreConfig = useCoreConfigStore();
+    resolveInheritedCollection(sourceAsset, assetType, allAssets, coreConfig.effectiveAssetRegistry)
       .forEach(a => byKey.set(a.assetKey, a));
 
     // If this child type commonly sits under functional intermediaries (e.g., Packages under Nodes),
     // walk one functional hop through those intermediaries and include their children unless overridden locally.
-    const directFunctionalChildren = (assetRegistry[sourceAsset.assetType]?.validChildren || [])
-      .filter(t => !assetRegistry[t]?.isStructuralFolder);
+    const directFunctionalChildren = (registry[sourceAsset.assetType]?.validChildren || [])
+      .filter((t: string) => !registry[t]?.isStructuralFolder);
 
-    const intermediaryTypes = directFunctionalChildren.filter(t => (assetRegistry[t]?.validChildren || []).includes(assetType));
+    const intermediaryTypes = directFunctionalChildren.filter((t: string) => (registry[t]?.validChildren || []).includes(assetType));
 
     intermediaryTypes.forEach(intermediaryType => {
-      const intermediaries = resolveInheritedCollection(sourceAsset, intermediaryType, allAssets, assetRegistry);
+      const intermediaries = resolveInheritedCollection(sourceAsset, intermediaryType, allAssets, coreConfig.effectiveAssetRegistry);
       intermediaries.forEach(interAsset => {
-        resolveInheritedCollection(interAsset as UnmergedAsset, assetType, allAssets, assetRegistry)
+        resolveInheritedCollection(interAsset as UnmergedAsset, assetType, allAssets, coreConfig.effectiveAssetRegistry)
           .forEach(child => {
             if (!byKey.has(child.assetKey)) {
               byKey.set(child.assetKey, child);

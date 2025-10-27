@@ -1,7 +1,7 @@
 // src/utils/assetUtils.js
 import type { Asset } from '@/core/types';
 import { useAssetsStore } from '@/core/stores/assets';
-import { assetRegistry } from '@/content/config/assetRegistry';
+import { getEffectiveRegistry } from '@/content/config/assetRegistry';
 import { isAncestorOf } from '@/core/utils/inheritanceUtils';
 
 /**
@@ -10,7 +10,12 @@ import { isAncestorOf } from '@/core/utils/inheritanceUtils';
  * @returns {string} The MDI icon name.
  */
 export const getAssetIcon = (assetType: Asset['assetType']): string => {
-  return assetRegistry[assetType]?.icon || 'mdi-file-question-outline';
+  const registry = getEffectiveRegistry();
+  const def = registry[assetType];
+  if (!def) return 'mdi-file-question-outline';
+  // ConfigurationHub already returns unwrapped plain string values
+  const icon = def.icon as any;
+  return icon || 'mdi-file-question-outline';
 };
 
 /**
@@ -19,7 +24,12 @@ export const getAssetIcon = (assetType: Asset['assetType']): string => {
  * @returns {string} The Vuetify color name.
  */
 export const getAssetTypeColor = (assetType: Asset['assetType']): string => {
-  return assetRegistry[assetType]?.color || 'grey';
+  const registry = getEffectiveRegistry();
+  const def = registry[assetType];
+  if (!def) return 'grey';
+  // ConfigurationHub already returns unwrapped plain string values
+  const color = def.color as any;
+  return color || 'grey';
 };
 
 /**
@@ -40,8 +50,11 @@ export function findNearestFunctionalParent(asset: Asset): Asset | null {
     }
 
     const parent = assetsMap.get(parentFqn);
-    if (parent && !assetRegistry[parent.assetType]?.isStructuralFolder) {
-      return parent;
+    if (parent) {
+      const registry = getEffectiveRegistry();
+      if (!registry[parent.assetType]?.isStructuralFolder) {
+        return parent;
+      }
     }
     current = parent || null;
   }

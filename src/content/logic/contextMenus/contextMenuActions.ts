@@ -6,7 +6,7 @@ import { ContextMenuRegistryKey } from '@/core/registries/contextMenuRegistryKey
 import { useUiStore } from '@/core/stores/ui';
 import type { ContextMenuAction, ContextMenuKind } from '@/core/types/ui';
 import type { AssetTreeNode, Asset } from '@/core/types';
-import { getValidChildrenForFolder, getValidChildTypes, assetRegistry } from '@/content/config/assetRegistry';
+import { getValidChildrenForFolder, getValidChildTypes, getEffectiveRegistry, isStructuralFolder } from '@/content/config/assetRegistry';
 import { ASSET_TYPES } from '@/content/config/constants';
 import { ROOT_ID } from '@/core/config/constants';
 import { createTreeNodeFromAssetId } from '@/core/utils/assetTreeUtils';
@@ -74,7 +74,8 @@ export function useContextMenuActionsRegistration() {
 
       // Rename action (only for renameable assets)
       if (node.assetType) {
-        const definition = assetRegistry[node.assetType];
+        const registry = getEffectiveRegistry();
+        const definition = registry[node.assetType];
         if (definition?.isRenameable ?? false) {
           actions.push({
             id: 'rename',
@@ -116,22 +117,32 @@ export function useContextMenuActionsRegistration() {
       const submenuItems: ContextMenuAction[] = [];
 
       validChildren.forEach(childType => {
-        const definition = assetRegistry[childType];
+        const registry = getEffectiveRegistry();
+        const definition = registry[childType];
         if (!definition || !definition.creationModes) return;
+
+        // Filter by perspective support: check if this type is supported in current perspective
+        if ((definition as any)._isSupportedInCurrentPerspective === false) {
+          return; // Skip this type if not supported in current perspective
+        }
+
+        // Unwrap PerspectiveOverrides for label and icon
+        const label = typeof definition.label === 'string' ? definition.label : definition.label.default;
+        const icon = typeof definition.icon === 'string' ? definition.icon : definition.icon.default;
 
         // Simple creation mode
         if (definition.creationModes.includes('simple')) {
           submenuItems.push({
             id: `add-simple-${childType}`,
-            label: `${definition.label}...`,
-            icon: definition.icon,
+            label: `${label}...`,
+            icon: icon,
             execute: () => {
               if (childType === ASSET_TYPES.NAMESPACE_FOLDER) {
                 const parentFqn = (effectiveNodeForChildren.id === ROOT_ID) ? null : (effectiveNodeForChildren as AssetTreeNode).path;
                 workspaceStore.openNewFolderDialog(parentFqn);
               } else {
                 const parentAsset = (effectiveNodeForChildren.id !== ROOT_ID) ? (effectiveNodeForChildren as Asset) : null;
-                const namespace = (assetRegistry[effectiveNodeForChildren.assetType!]?.isStructuralFolder || effectiveNodeForChildren.id === ROOT_ID) ? (effectiveNodeForChildren as AssetTreeNode).path : null;
+                const namespace = (effectiveNodeForChildren.assetType && isStructuralFolder(effectiveNodeForChildren.assetType) || effectiveNodeForChildren.id === ROOT_ID) ? (effectiveNodeForChildren as AssetTreeNode).path : null;
                 workspaceStore.openNewAssetDialog({ parentAsset, childType, namespace });
               }
               uiStore.hideContextMenu();
@@ -143,11 +154,11 @@ export function useContextMenuActionsRegistration() {
         if (definition.creationModes.includes('full')) {
           submenuItems.push({
             id: `add-full-${childType}`,
-            label: `${definition.label} from Template...`,
-            icon: definition.icon,
+            label: `${label} from Template...`,
+            icon: icon,
             execute: () => {
               const parentAsset = (effectiveNodeForChildren.id !== ROOT_ID) ? (effectiveNodeForChildren as Asset) : null;
-              const namespace = (assetRegistry[effectiveNodeForChildren.assetType!]?.isStructuralFolder || effectiveNodeForChildren.id === ROOT_ID) ? (effectiveNodeForChildren as AssetTreeNode).path : null;
+              const namespace = (effectiveNodeForChildren.assetType && isStructuralFolder(effectiveNodeForChildren.assetType) || effectiveNodeForChildren.id === ROOT_ID) ? (effectiveNodeForChildren as AssetTreeNode).path : null;
               workspaceStore.openNewAssetDialog({ parentAsset, childType, namespace });
               uiStore.hideContextMenu();
             }
@@ -178,14 +189,16 @@ export function useContextMenuActionsRegistration() {
     const assetType = node.assetType;
 
     if (node.id === ROOT_ID) {
-      return Object.entries(assetRegistry)
+      const registry = getEffectiveRegistry();
+      return Object.entries(registry)
         .filter(([, definition]) => definition.isCreatableAtRoot)
         .map(([type]) => type);
     }
     
     if (!assetType) return [];
     
-    const definition = assetRegistry[assetType];
+    const registry = getEffectiveRegistry();
+    const definition = registry[assetType];
     if (definition?.isStructuralFolder) {
       return getValidChildrenForFolder(node as Asset);
     }

@@ -2,6 +2,7 @@
 import { defineStore } from 'pinia'
 import { useCoreConfigStore } from './config'
 import { cloneDeep } from 'lodash-es';
+import { inject, computed, type ComputedRef } from 'vue';
 import type { 
   Asset, 
   AssetDetails, 
@@ -13,6 +14,7 @@ import type {
 } from '@/core/types'
 import { virtualFolderDefinitions } from '@/content/logic/virtual-folders/definitions';
 import { ASSET_TREE_NODE_TYPES } from '@/core/config/constants';
+import type { ConfigurationHub } from './ConfigurationHub';
 
 export interface ProjectStat {
   count: number;
@@ -137,15 +139,23 @@ export const useAssetsStore = defineStore('assets', {
       const coreConfig = useCoreConfigStore();
       const stats: Record<string, ProjectStat> = {};
 
+      // Get effective registry from ConfigurationHub
+      const assetRegistry = coreConfig.effectiveAssetRegistry;
+
       // 1. Dynamically initialize stats object from the injected registry
-      for (const assetType in coreConfig.assetRegistry) {
-        const definition = coreConfig.assetRegistry[assetType];
+      for (const assetType in assetRegistry) {
+        const definition = assetRegistry[assetType];
         if (definition && definition.isShownInStats) {
+          // Unwrap PerspectiveOverrides
+          const label = typeof definition.label === 'string' ? definition.label : definition.label.default;
+          const icon = typeof definition.icon === 'string' ? definition.icon : definition.icon.default;
+          const color = typeof definition.color === 'string' ? definition.color : definition.color.default;
+          
           stats[assetType] = {
-            label: definition.label + 's', // simple pluralization
+            label: label + 's', // simple pluralization
             count: 0,
-            icon: definition.icon,
-            color: definition.color,
+            icon: icon,
+            color: color,
           };
         }
       }
@@ -199,8 +209,17 @@ export const useAssetsStore = defineStore('assets', {
         
         const nodeMap = new Map<string, AssetTreeNode>();
         const coreConfig = useCoreConfigStore();
+        const effectiveRegistry = coreConfig.effectiveAssetRegistry;
+        
+        // Filter assets by isVisibleInExplorer based on current perspective
+        const visibleAssets = assetsToDisplay.filter(asset => {
+            const def = effectiveRegistry[asset.assetType];
+            if (!def) return false;
+            const isVisible = def.isVisibleInExplorer as any;
+            return isVisible !== false;
+        });
 
-        assetsToDisplay.forEach(asset => { // Use the live data
+        visibleAssets.forEach(asset => { // Use only visible assets
         nodeMap.set(asset.fqn, {
             ...asset,
             path: asset.fqn,
@@ -427,7 +446,10 @@ export const useAssetsStore = defineStore('assets', {
       }
       
       const registration = coreConfig.getAssetDefinition(assetType);
-      return registration ? registration.inspectorComponent : null;
+      if (!registration) return null;
+      // Unwrap PerspectiveOverrides
+      const inspector = registration.inspectorComponent;
+      return typeof inspector === 'function' ? inspector : inspector.default;
     }
 
   },

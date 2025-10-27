@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, beforeEach } from 'vitest';
 import { cleanup, render } from '@testing-library/vue';
 import AssetTreeNode from '@/core/components/AssetTreeNode.vue';
 import type { AssetTreeNode as AssetTreeNodeType } from '@/core/types';
@@ -9,8 +9,7 @@ import { createPinia, setActivePinia } from 'pinia';
 import { CorePlugin } from '@/core/plugin';
 import { createMockContentPlugin } from '../../mock-content/MockContentPlugin';
 import { MockPersistenceAdapter } from '../../mock-content/MockPersistenceAdapter';
-import { MOCK_ASSET_TYPES, mockAssetRegistry } from '../../mock-content/mockAssetRegistry';
-import { useCoreConfigStore } from '@/core/stores/config';
+import { MOCK_ASSET_TYPES } from '../../mock-content/mockAssetRegistry';
 
 afterEach(() => {
   cleanup();
@@ -31,11 +30,7 @@ function setup() {
   app.use(CorePlugin);
   app.use(mockContentPlugin);
 
-  // Ensure asset registry is populated for icon lookups
-  const coreConfig = useCoreConfigStore();
-  coreConfig.registerAssetRegistry(mockAssetRegistry);
-
-  return { vuetify };
+  return { vuetify, pinia };
 }
 
 const standaloneAssetNode: AssetTreeNodeType = {
@@ -71,11 +66,19 @@ const overrideAssetNode: AssetTreeNodeType = {
 };
 
 describe('AssetTreeNode Inheritance Icons', () => {
+  let vuetify: any;
+  let pinia: any;
+
+  beforeEach(() => {
+    const { vuetify: v, pinia: p } = setup();
+    vuetify = v;
+    pinia = p;
+  });
+
   it('renders only the base icon for a standalone asset', async () => {
-    const { vuetify } = setup();
     const { getByTestId, queryByTestId } = render(AssetTreeNode, {
       props: { node: standaloneAssetNode, viewType: 'default' },
-      global: { plugins: [vuetify] },
+      global: { plugins: [pinia, vuetify] },
     });
 
     const baseIcon = getByTestId('base-icon');
@@ -85,10 +88,9 @@ describe('AssetTreeNode Inheritance Icons', () => {
   });
 
   it('renders a link overlay for a pure link asset', async () => {
-    const { vuetify } = setup();
     const { getByTestId } = render(AssetTreeNode, {
       props: { node: pureLinkAssetNode, viewType: 'default' },
-      global: { plugins: [vuetify] },
+      global: { plugins: [pinia, vuetify] },
     });
 
     const overlay = getByTestId('inheritance-overlay');
@@ -97,10 +99,9 @@ describe('AssetTreeNode Inheritance Icons', () => {
   });
 
   it('renders a pencil overlay for an override asset', async () => {
-    const { vuetify } = setup();
     const { getByTestId } = render(AssetTreeNode, {
       props: { node: overrideAssetNode, viewType: 'default' },
-      global: { plugins: [vuetify] },
+      global: { plugins: [pinia, vuetify] },
     });
 
     const overlay = getByTestId('inheritance-overlay');

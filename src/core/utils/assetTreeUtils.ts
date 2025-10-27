@@ -97,6 +97,19 @@ export function isDraggable(node: AssetTreeNode | null | undefined): boolean {
   const coreConfig = useCoreConfigStore();
   const definition = node?.assetType ? coreConfig.getAssetDefinition(node.assetType) : null;
     
-  // Draggable if it's NOT synthetic.
-  return !definition?.isSynthetic;
+  // Draggable if it's NOT synthetic AND supported in current perspective
+  if (!definition) return false;
+  
+  // Check if asset type is synthetic
+  if (definition.isSynthetic) return false;
+  
+  // Check if asset type is supported in current perspective
+  if (!node?.assetType) return false;
+  
+  const effectiveRegistry = coreConfig.effectiveAssetRegistry;
+  const effectiveDef = effectiveRegistry[node.assetType];
+  if (!effectiveDef) return false;
+  
+  // Only draggable if supported in current perspective
+  return (effectiveDef as any)._isSupportedInCurrentPerspective !== false;
 }

@@ -228,18 +228,31 @@ export interface DeleteBlockedDialogState {
 
 export type CloneMap = Map<string, string>;
 
+export type PerspectiveName = string; // Now runtime-configurable
+
+export type PerspectiveOverrides<T> = { 
+  default: T  // 'default' is required
+} & Record<string, T>; // Support any string key for runtime-configurable perspectives
+
+export interface PerspectiveDefinition {
+  name: string; // No longer constrained to specific values
+  displayName: string;
+  icon?: string;
+  supportedAssetTypes?: string[]; // Computed from asset isSupported flags (auto-generated, optional override)
+}
+
 export interface ValidationRules {
   requiredProperties?: string[];
   mustHaveChildOfType?: string[];
 }
 
 export interface AssetDefinition {
-  label: string;
+  label: PerspectiveOverrides<string>;
   validChildren: string[];
   validationRules?: ValidationRules;
-  icon: string;
-  color: string;
-  inspectorComponent: () => Promise<import('vue').Component>;
+  icon: PerspectiveOverrides<string>;
+  color: PerspectiveOverrides<string>;
+  inspectorComponent: PerspectiveOverrides<() => Promise<import('vue').Component>>;
   isCreatableAtRoot: boolean;
   creationModes: ('simple' | 'full')[];
   isRenameable?: boolean;
@@ -255,6 +268,8 @@ export interface AssetDefinition {
   ) => UnmergedAsset;
   virtualFolderProviders?: VirtualNodeKind[];
   isSynthetic?: boolean;
+  isVisibleInExplorer?: PerspectiveOverrides<boolean>;
+  isSupported?: PerspectiveOverrides<boolean>; // Which perspectives support this asset type (defaults to true)
 }
 
 

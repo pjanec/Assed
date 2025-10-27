@@ -237,7 +237,10 @@ const asyncComponent = computed(() => {
   const assetType = viewModel.value.unmerged.assetType as any;
   if (!assetType) return null as any;
   const registration = coreConfig.getAssetDefinition(assetType);
-  const loader = registration ? registration.inspectorComponent : null;
+  if (!registration) return null as any;
+  // Unwrap PerspectiveOverrides
+  const inspectorComp = registration.inspectorComponent;
+  const loader = typeof inspectorComp === 'function' ? inspectorComp : inspectorComp.default;
   if (!loader) return null as any;
   return defineAsyncComponent({ loader, delay: 200 });
 });

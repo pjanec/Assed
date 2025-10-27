@@ -247,7 +247,7 @@ export const useWorkspaceStore = defineStore('workspace', {
       }
 
       // Import the hook from the content layer
-      const { crossEnvironmentCloneHook } = await import('@/content/logic/interactions/packageAssignmentInteractions');
+      const { crossEnvironmentCloneHook } = await import('@/content/config/interactions/packageAssignmentInteractions');
       const { ASSET_TYPES } = await import('@/content/config/constants');
 
       // This is the core logic that executes on confirmation
