@@ -7,9 +7,9 @@ export const mockPerspectiveDefinitions: Record<string, PerspectiveDefinition> =
     icon: 'mdi-pencil',
     // No supportedAssetTypes - all types supported
   },
-  environment: {
-    name: 'environment',
-    displayName: 'Environment View',
+  distro: {
+    name: 'distro',
+    displayName: 'Distro Config',
     icon: 'mdi-earth',
     supportedAssetTypes: ['Container', 'Widget'] // Aggregator not supported
   },

@@ -28,7 +28,7 @@ export const MOCK_ASSET_TYPES = {
   WIDGET: 'Widget',
   CONTAINER: 'Container',
   AGGREGATOR: 'Aggregator',
-  ENVIRONMENT: 'Environment',
+  DISTRO: 'Distro',
   NODE: 'Node',
   PACKAGE: 'Package',
 } as const;
@@ -89,8 +89,8 @@ export const mockAssetRegistry: Record<string, AssetDefinition> = {
     isSynthetic: true,
     isVisibleInExplorer: { default: false },
   },
-  [MOCK_ASSET_TYPES.ENVIRONMENT]: {
-    label: { default: 'Environment' },
+  [MOCK_ASSET_TYPES.DISTRO]: {
+    label: { default: 'Distro' },
     validChildren: [MOCK_ASSET_TYPES.NODE],
     icon: { default: 'mdi-earth' },
     color: { default: 'success' },

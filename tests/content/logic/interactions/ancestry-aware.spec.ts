@@ -5,17 +5,17 @@ import { ASSET_TYPES } from '@/content/config/constants';
 import type { UnmergedAsset, DragPayload, DropTarget } from '@/core/types';
 import { getAvailableActions } from '@/core/registries/interactionRegistry';
 import { isAncestorOf } from '@/core/utils/inheritanceUtils';
-import { isSameOrAncestorEnvironment, getSharedTemplateIfPureDerivative, getAssetEnvironmentFqn } from '@/content/utils/assetUtils';
+import { isSameOrAncestorDistro, getSharedTemplateIfPureDerivative, getAssetDistroFqn } from '@/content/utils/assetUtils';
 
 describe('Ancestry-Aware Drag and Drop', () => {
   let assetsStore: ReturnType<typeof useAssetsStore>;
   let uiStore: ReturnType<typeof useUiStore>;
 
   const testData: UnmergedAsset[] = [
-    { id: 'base-env', fqn: 'BaseEnv', assetType: ASSET_TYPES.ENVIRONMENT, assetKey: 'BaseEnv', templateFqn: null, overrides: {} },
-    { id: 'base-pkg', fqn: 'BaseEnv::BasePackage', assetType: ASSET_TYPES.PACKAGE, assetKey: 'BasePackage', templateFqn: null, overrides: { version: '1.0' } },
-    { id: 'prod-env', fqn: 'ProdEnv', assetType: ASSET_TYPES.ENVIRONMENT, assetKey: 'ProdEnv', templateFqn: 'BaseEnv', overrides: {} },
-    { id: 'prod-node', fqn: 'ProdEnv::ProdNode', assetType: ASSET_TYPES.NODE, assetKey: 'ProdNode', templateFqn: null, overrides: {} },
+    { id: 'base-distro', fqn: 'BaseDistro', assetType: ASSET_TYPES.DISTRO, assetKey: 'BaseDistro', templateFqn: null, overrides: {} },
+    { id: 'base-pkg', fqn: 'BaseDistro::BasePackage', assetType: ASSET_TYPES.PACKAGE, assetKey: 'BasePackage', templateFqn: null, overrides: { version: '1.0' } },
+    { id: 'prod-distro', fqn: 'ProdDistro', assetType: ASSET_TYPES.DISTRO, assetKey: 'ProdDistro', templateFqn: 'BaseDistro', overrides: {} },
+    { id: 'prod-node', fqn: 'ProdDistro::ProdNode', assetType: ASSET_TYPES.NODE, assetKey: 'ProdNode', templateFqn: null, overrides: {} },
   ];
 
   beforeEach(async () => {
@@ -27,28 +27,28 @@ describe('Ancestry-Aware Drag and Drop', () => {
 
   it('should correctly identify ancestor relationships', () => {
     // Test the core isAncestorOf function directly
-    expect(isAncestorOf('ProdEnv', 'BaseEnv', assetsStore.unmergedAssets)).toBe(true);
-    expect(isAncestorOf('BaseEnv', 'ProdEnv', assetsStore.unmergedAssets)).toBe(false);
-    expect(isAncestorOf('BaseEnv', 'BaseEnv', assetsStore.unmergedAssets)).toBe(false);
+    expect(isAncestorOf('ProdDistro', 'BaseDistro', assetsStore.unmergedAssets)).toBe(true);
+    expect(isAncestorOf('BaseDistro', 'ProdDistro', assetsStore.unmergedAssets)).toBe(false);
+    expect(isAncestorOf('BaseDistro', 'BaseDistro', assetsStore.unmergedAssets)).toBe(false);
   });
 
-  it('should correctly identify same or ancestor environment relationships', () => {
-    // Test the new isSameOrAncestorEnvironment utility function
-    expect(isSameOrAncestorEnvironment('ProdEnv', 'BaseEnv', assetsStore.unmergedAssets)).toBe(true);
-    expect(isSameOrAncestorEnvironment('BaseEnv', 'ProdEnv', assetsStore.unmergedAssets)).toBe(false);
-    expect(isSameOrAncestorEnvironment('BaseEnv', 'BaseEnv', assetsStore.unmergedAssets)).toBe(true);
-    expect(isSameOrAncestorEnvironment('ProdEnv', 'ProdEnv', assetsStore.unmergedAssets)).toBe(true);
-    expect(isSameOrAncestorEnvironment(null, 'BaseEnv', assetsStore.unmergedAssets)).toBe(false);
-    expect(isSameOrAncestorEnvironment('ProdEnv', null, assetsStore.unmergedAssets)).toBe(false);
+  it('should correctly identify same or ancestor distro relationships', () => {
+    // Test the new isSameOrAncestorDistro utility function
+    expect(isSameOrAncestorDistro('ProdDistro', 'BaseDistro', assetsStore.unmergedAssets)).toBe(true);
+    expect(isSameOrAncestorDistro('BaseDistro', 'ProdDistro', assetsStore.unmergedAssets)).toBe(false);
+    expect(isSameOrAncestorDistro('BaseDistro', 'BaseDistro', assetsStore.unmergedAssets)).toBe(true);
+    expect(isSameOrAncestorDistro('ProdDistro', 'ProdDistro', assetsStore.unmergedAssets)).toBe(true);
+    expect(isSameOrAncestorDistro(null, 'BaseDistro', assetsStore.unmergedAssets)).toBe(false);
+    expect(isSameOrAncestorDistro('ProdDistro', null, assetsStore.unmergedAssets)).toBe(false);
   });
 
   it('should correctly identify pure derivatives of shared templates', async () => {
     // Test the new getSharedTemplateIfPureDerivative utility function
     
-    // Test with a shared template (must be at root level, not under any environment)
+    // Test with a shared template (must be at root level, not under any distro)
     const sharedTemplateAsset: UnmergedAsset = {
       id: 'shared-template',
-      fqn: 'SharedTemplate', // Root level FQN (no environment prefix)
+      fqn: 'SharedTemplate', // Root level FQN (no distro prefix)
       assetType: ASSET_TYPES.PACKAGE,
       assetKey: 'SharedTemplate',
       templateFqn: null,
@@ -57,7 +57,7 @@ describe('Ancestry-Aware Drag and Drop', () => {
 
     const pureDerivativeOfShared: UnmergedAsset = {
       id: 'pure-derivative-shared',
-      fqn: 'ProdEnv::PureDerivativeOfShared',
+      fqn: 'ProdDistro::PureDerivativeOfShared',
       assetType: ASSET_TYPES.PACKAGE,
       assetKey: 'PureDerivativeOfShared',
       templateFqn: 'SharedTemplate',
@@ -68,7 +68,7 @@ describe('Ancestry-Aware Drag and Drop', () => {
     const testDataWithShared = [...testData, sharedTemplateAsset, pureDerivativeOfShared];
     const env = createTestEnvironment(testDataWithShared);
     const testAssetsStore = env.assetsStore;
-    await testAssetsStore.loadAssets(); // Load the assets into the fresh environment
+    await testAssetsStore.loadAssets(); // Load the assets into the fresh test environment
 
     const sharedTemplateResult = getSharedTemplateIfPureDerivative(pureDerivativeOfShared, testAssetsStore.unmergedAssets);
     expect(sharedTemplateResult).not.toBeNull();
@@ -77,7 +77,7 @@ describe('Ancestry-Aware Drag and Drop', () => {
     // Test with overrides (should not be pure)
     const modifiedDerivative: UnmergedAsset = {
       id: 'modified-derivative',
-      fqn: 'ProdEnv::ModifiedDerivative',
+      fqn: 'ProdDistro::ModifiedDerivative',
       assetType: ASSET_TYPES.PACKAGE,
       assetKey: 'ModifiedDerivative',
       templateFqn: 'SharedTemplate',
@@ -88,8 +88,8 @@ describe('Ancestry-Aware Drag and Drop', () => {
     expect(modifiedResult).toBeNull(); // Should be null because it has overrides
   });
 
-  it('should treat ancestor environment drops as same-environment', () => {
-    // ARRANGE: Drop Package from BaseEnv onto Node in ProdEnv (ancestor -> descendant)
+  it('should treat ancestor distro drops as same-distro', () => {
+    // ARRANGE: Drop Package from BaseDistro onto Node in ProdDistro (ancestor -> descendant)
     const dragPayload: DragPayload = { assetId: 'base-pkg', sourceContext: 'AssetTreeNode' };
     const dropTarget: DropTarget = { id: 'prod-node', type: 'asset' };
 
@@ -102,8 +102,8 @@ describe('Ancestry-Aware Drag and Drop', () => {
     console.log('[TEST DEBUG] Ancestry-aware actions:', actions.length);
     console.log('[TEST DEBUG] Ancestry-aware actions:', actions);
 
-    // ASSERT 1: Should find the assign-requirement action (treated as same-environment)
-    // This should NOT trigger cross-environment dialog because BaseEnv is an ancestor of ProdEnv
+    // ASSERT 1: Should find the assign-requirement action (treated as same-distro)
+    // This should NOT trigger cross-distro dialog because BaseDistro is an ancestor of ProdDistro
     expect(actions.length).toBe(1);
     expect(actions[0].id).toBe('assign-requirement');
     expect(actions[0].label).toBe('Assign Requirement');
@@ -111,7 +111,7 @@ describe('Ancestry-Aware Drag and Drop', () => {
     // ACT 2: Execute the action to test dialog behavior
     actions[0].execute(dragPayload, dropTarget);
 
-    // ASSERT 2: Should NOT trigger cross-environment dialog because BaseEnv is an ancestor of ProdEnv
+    // ASSERT 2: Should NOT trigger cross-distro dialog because BaseDistro is an ancestor of ProdDistro
     // This verifies the ancestry-aware behavior prevents unnecessary dialogs
     expect(uiStore.genericConfirmationState.show).toBe(false);
   });
@@ -133,7 +133,7 @@ describe('Ancestry-Aware Drag and Drop', () => {
     // Create a pure derivative with a different name (this is what we'll drag)
     const pureDerivative: UnmergedAsset = {
       id: 'prod-web-server',
-      fqn: 'ProdEnv::WebServer', // Different name - this is what should be preserved
+      fqn: 'ProdDistro::WebServer', // Different name - this is what should be preserved
       assetType: ASSET_TYPES.PACKAGE,
       assetKey: 'WebServer', // This IS what should be used
       templateFqn: 'SharedWebServer',

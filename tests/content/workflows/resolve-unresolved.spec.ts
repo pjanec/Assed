@@ -4,7 +4,7 @@ import { useAssetsStore, useWorkspaceStore, useUiStore } from '@/core/stores';
 import { ASSET_TYPES } from '@/content/config/constants';
 import type { UnmergedAsset, Asset } from '@/core/types';
 import { ApplyRefactoringCommand } from '@/core/stores/workspace';
-import { getAssetEnvironmentFqn } from '@/content/utils/assetUtils';
+import { getAssetDistroFqn } from '@/content/utils/assetUtils';
 
 describe('Stage 8 Workflow: Resolve Unresolved Requirement', () => {
   let assetsStore: ReturnType<typeof useAssetsStore>;
@@ -13,27 +13,27 @@ describe('Stage 8 Workflow: Resolve Unresolved Requirement', () => {
 
   // SCENARIO: An environment contains a broken PackageKey and a valid Package that can fix it.
   const initialData: UnmergedAsset[] = [
-    { id: 'env-a', fqn: 'EnvA', assetType: ASSET_TYPES.ENVIRONMENT, assetKey: 'EnvA', overrides: {} },
-    { id: 'node-a', fqn: 'EnvA::MyNode', assetType: ASSET_TYPES.NODE, assetKey: 'MyNode', overrides: {} },
+    { id: 'distro-a', fqn: 'DistroA', assetType: ASSET_TYPES.DISTRO, assetKey: 'DistroA', overrides: {} },
+    { id: 'node-a', fqn: 'DistroA::MyNode', assetType: ASSET_TYPES.NODE, assetKey: 'MyNode', overrides: {} },
     {
       id: 'broken-key',
-      fqn: 'EnvA::MyNode::BrokenPackage', // This key is broken
+      fqn: 'DistroA::MyNode::BrokenPackage', // This key is broken
       assetType: ASSET_TYPES.PACKAGE_KEY,
       assetKey: 'BrokenPackage',
       overrides: {},
     },
     { // This is the package that will be used to fix the link
       id: 'correct-pkg',
-      fqn: 'EnvA::CorrectPackage',
+      fqn: 'DistroA::CorrectPackage',
       assetType: ASSET_TYPES.PACKAGE,
       assetKey: 'CorrectPackage',
       overrides: {},
     },
-    { // This package is in another environment and should NOT be offered as a solution
-      id: 'env-b', fqn: 'EnvB', assetType: ASSET_TYPES.ENVIRONMENT, assetKey: 'EnvB', overrides: {} },
+    { // This package is in another distro and should NOT be offered as a solution
+      id: 'distro-b', fqn: 'DistroB', assetType: ASSET_TYPES.DISTRO, assetKey: 'DistroB', overrides: {} },
     {
       id: 'wrong-env-pkg',
-      fqn: 'EnvB::AnotherPackage',
+      fqn: 'DistroB::AnotherPackage',
       assetType: ASSET_TYPES.PACKAGE,
       assetKey: 'AnotherPackage',
       overrides: {},
@@ -43,11 +43,11 @@ describe('Stage 8 Workflow: Resolve Unresolved Requirement', () => {
   // Helper function to simulate the logic from PackageKeyInspector.vue
   const simulateResolveClick = async (assetToFix: UnmergedAsset) => {
     const allAssets = assetsStore.unmergedAssets;
-    const envFqn = getAssetEnvironmentFqn(assetToFix.fqn, allAssets);
+    const distroFqn = getAssetDistroFqn(assetToFix.fqn, allAssets);
 
     const validPackages = allAssets.filter(a =>
       a.assetType === ASSET_TYPES.PACKAGE &&
-      getAssetEnvironmentFqn(a.fqn, allAssets) === envFqn
+      getAssetDistroFqn(a.fqn, allAssets) === distroFqn
     );
 
     // This returns a promise, just like the real implementation
@@ -110,7 +110,7 @@ describe('Stage 8 Workflow: Resolve Unresolved Requirement', () => {
     expect(workspaceStore.pendingChanges.upserted.has('broken-key')).toBe(true);
     const updatedKey = workspaceStore.pendingChanges.upserted.get('broken-key');
     expect(updatedKey?.assetKey).toBe('CorrectPackage');
-    expect(updatedKey?.fqn).toBe('EnvA::MyNode::CorrectPackage');
+    expect(updatedKey?.fqn).toBe('DistroA::MyNode::CorrectPackage');
   });
 
   it('should clear the validation issue after the link is successfully resolved', async () => {

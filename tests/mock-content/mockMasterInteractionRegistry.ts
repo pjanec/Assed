@@ -12,7 +12,7 @@ export const mockMasterInteractionRegistry: InteractionRuleEntry[] = [
   {
     draggedType: 'Widget',
     targetType: 'Container',
-    perspectives: ['default', 'environment'],
+    perspectives: ['default', 'distro'],
     rule: {
       actions: [{
         id: 'move-widget',
@@ -54,7 +54,7 @@ export const mockMasterInteractionRegistry: InteractionRuleEntry[] = [
   {
     draggedType: 'Widget',
     targetType: 'Widget',
-    perspectives: ['default', 'environment', 'package'],
+    perspectives: ['default', 'distro', 'package'],
     rule: {
       actions: [{
         id: 'link-widgets',

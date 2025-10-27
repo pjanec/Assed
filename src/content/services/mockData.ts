@@ -93,14 +93,14 @@ export const mockData = {
     {
       id: 'uuid-200',
       fqn: 'DataCenter-minimal',
-  assetType: 'Environment' as const,
+  assetType: 'Distro' as const,
       assetKey: 'DataCenter-minimal',
 
     },
     {
       id: 'uuid-201',
       fqn: 'Dev-Env',
-  assetType: 'Environment' as const,
+  assetType: 'Distro' as const,
       assetKey: 'Dev-Env',
 
     },
@@ -278,7 +278,7 @@ export const mockData = {
     'uuid-200': {
       id: 'uuid-200',
       fqn: 'DataCenter-minimal',
-  assetType: 'Environment' as const,
+  assetType: 'Distro' as const,
       assetKey: 'DataCenter-minimal', 
 
       templateFqn: null,

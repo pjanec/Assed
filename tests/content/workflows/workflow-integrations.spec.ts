@@ -9,12 +9,12 @@ import { getAvailableActions } from '@/core/registries/interactionRegistry';
 
 // Mock the content-layer actions since we will call them directly to simulate dialog confirmation
 vi.mock('@/content/logic/workspaceExtendedActions', () => ({
-  executeCrossEnvCopy: vi.fn(),
+  executeCrossDistroCopy: vi.fn(),
   executeResolveAndCopy: vi.fn(),
 }));
 
 // Import the mocked functions
-import { executeCrossEnvCopy, executeResolveAndCopy } from '@/content/logic/workspaceExtendedActions';
+import { executeCrossDistroCopy, executeResolveAndCopy } from '@/content/logic/workspaceExtendedActions';
 
 describe('Stage 5 Workflow Integrations', () => {
   let assetsStore: ReturnType<typeof useAssetsStore>;
@@ -23,13 +23,13 @@ describe('Stage 5 Workflow Integrations', () => {
 
   const initialData: UnmergedAsset[] = [
     { id: 'shared-base', fqn: 'SharedBase', assetType: ASSET_TYPES.PACKAGE, assetKey: 'SharedBase', templateFqn: null, overrides: { logging: 'json' } },
-    { id: 'env-a', fqn: 'EnvA', assetType: ASSET_TYPES.ENVIRONMENT, assetKey: 'EnvA', templateFqn: null, overrides: {} },
-    { id: 'env-a-template', fqn: 'EnvA::EnvA_Template', assetType: ASSET_TYPES.PACKAGE, assetKey: 'EnvA_Template', templateFqn: 'SharedBase', overrides: { region: 'us-east-1' } },
-    { id: 'webserver-pkg-a', fqn: 'EnvA::WebServer', assetType: ASSET_TYPES.PACKAGE, assetKey: 'WebServer', templateFqn: 'EnvA::EnvA_Template', overrides: { port: 8080 } },
-    { id: 'node-a', fqn: 'EnvA::NodeA', assetType: ASSET_TYPES.NODE, assetKey: 'NodeA', templateFqn: null, overrides: {} },
-    { id: 'key-a', fqn: 'EnvA::NodeA::WebServer', assetType: ASSET_TYPES.PACKAGE_KEY, assetKey: 'WebServer', templateFqn: null, overrides: {} },
-    { id: 'env-b', fqn: 'EnvB', assetType: ASSET_TYPES.ENVIRONMENT, assetKey: 'EnvB', templateFqn: null, overrides: {} },
-    { id: 'node-b', fqn: 'EnvB::NodeB', assetType: ASSET_TYPES.NODE, assetKey: 'NodeB', templateFqn: null, overrides: {} },
+    { id: 'distro-a', fqn: 'DistroA', assetType: ASSET_TYPES.DISTRO, assetKey: 'DistroA', templateFqn: null, overrides: {} },
+    { id: 'distro-a-template', fqn: 'DistroA::DistroA_Template', assetType: ASSET_TYPES.PACKAGE, assetKey: 'DistroA_Template', templateFqn: 'SharedBase', overrides: { region: 'us-east-1' } },
+    { id: 'webserver-pkg-a', fqn: 'DistroA::WebServer', assetType: ASSET_TYPES.PACKAGE, assetKey: 'WebServer', templateFqn: 'DistroA::DistroA_Template', overrides: { port: 8080 } },
+    { id: 'node-a', fqn: 'DistroA::NodeA', assetType: ASSET_TYPES.NODE, assetKey: 'NodeA', templateFqn: null, overrides: {} },
+    { id: 'key-a', fqn: 'DistroA::NodeA::WebServer', assetType: ASSET_TYPES.PACKAGE_KEY, assetKey: 'WebServer', templateFqn: null, overrides: {} },
+    { id: 'distro-b', fqn: 'DistroB', assetType: ASSET_TYPES.DISTRO, assetKey: 'DistroB', templateFqn: null, overrides: {} },
+    { id: 'node-b', fqn: 'DistroB::NodeB', assetType: ASSET_TYPES.NODE, assetKey: 'NodeB', templateFqn: null, overrides: {} },
   ];
 
   beforeEach(async () => {
@@ -93,24 +93,24 @@ describe('Stage 5 Workflow Integrations', () => {
 
     // ASSERT 1: The GENERIC core uiStore should be ready to show a dialog
     expect(uiStore.genericConfirmationState.show).toBe(true);
-    expect(uiStore.genericConfirmationState.dialogType).toBe('cross-environment-copy');
+    expect(uiStore.genericConfirmationState.dialogType).toBe('cross-distro-copy');
       
     // Check that the CONTENT layer provided the correct SPECIFIC data
     const payload = uiStore.genericConfirmationState.payload;
-    expect(payload?.type).toBe('CrossEnvironmentCopy');
+    expect(payload?.type).toBe('CrossDistroCopy');
     expect(payload?.inheritanceComparison).toBeDefined();
     expect(payload?.inheritanceComparison?.before).toBeDefined();
     expect(payload?.inheritanceComparison?.after).toBeDefined();
 
     // ACT 2: Simulate the user confirming the dialog
-    executeCrossEnvCopy(dragPayload, dropTarget);
+    executeCrossDistroCopy(dragPayload, dropTarget);
 
     // ASSERT 2: Verify our mocked content action was called correctly
-    expect(executeCrossEnvCopy).toHaveBeenCalledOnce();
-    expect(executeCrossEnvCopy).toHaveBeenCalledWith(dragPayload, dropTarget);
+    expect(executeCrossDistroCopy).toHaveBeenCalledOnce();
+    expect(executeCrossDistroCopy).toHaveBeenCalledWith(dragPayload, dropTarget);
   });
 
-  it('should validate cross-environment Package -> Node interaction correctly', () => {
+  it('should validate cross-distro Package -> Node interaction correctly', () => {
     // ARRANGE
     const dragPayload: DragPayload = { assetId: 'webserver-pkg-a', sourceContext: 'AssetTreeNode' };
     const dropTarget: DropTarget = { id: 'node-b', type: 'asset' };
@@ -118,7 +118,7 @@ describe('Stage 5 Workflow Integrations', () => {
     // Set up drag state
     uiStore.startDrag(dragPayload);
 
-    // ACT: Get available actions for cross-environment drop
+    // ACT: Get available actions for cross-distro drop
     const actions = getAvailableActions(dragPayload.assetId, dropTarget);
 
     // ASSERT: Should find the assign-requirement action
@@ -127,7 +127,7 @@ describe('Stage 5 Workflow Integrations', () => {
     expect(actions[0].label).toBe('Assign Requirement');
   });
 
-  it('should validate cross-environment PackageKey -> Node interaction correctly', () => {
+  it('should validate cross-distro PackageKey -> Node interaction correctly', () => {
     // ARRANGE
     const dragPayload: DragPayload = { assetId: 'key-a', sourceContext: 'AssetTreeNode' };
     const dropTarget: DropTarget = { id: 'node-b', type: 'asset' };
@@ -135,7 +135,7 @@ describe('Stage 5 Workflow Integrations', () => {
     // Set up drag state
     uiStore.startDrag(dragPayload);
 
-    // ACT: Get available actions for cross-environment drop
+    // ACT: Get available actions for cross-distro drop
     const actions = getAvailableActions(dragPayload.assetId, dropTarget);
 
     // ASSERT: Should find the proactive-resolve-requirement action

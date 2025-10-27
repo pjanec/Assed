@@ -40,9 +40,9 @@ describe('Stage 2: ConfigurationHub Asset Registry', () => {
     });
 
     it('should apply environment perspective label overrides', () => {
-      hub.setPerspective('environment');
+      hub.setPerspective('distro');
       const registry = hub.effectiveAssetRegistry.value;
-      expect(registry['Container'].label).toBe('Environment');
+      expect(registry['Container'].label).toBe('Distro');
       expect(registry['Widget'].label).toBe('Widget'); // No override
     });
 
@@ -68,7 +68,7 @@ describe('Stage 2: ConfigurationHub Asset Registry', () => {
     });
 
     it('should use defaults when no override exists', () => {
-      hub.setPerspective('environment');
+      hub.setPerspective('distro');
       const registry = hub.effectiveAssetRegistry.value;
       expect(registry['Widget'].icon).toBe('mdi-toy-brick');
       expect(registry['Widget'].color).toBe('blue');
@@ -77,7 +77,7 @@ describe('Stage 2: ConfigurationHub Asset Registry', () => {
 
   describe('Visibility Filtering', () => {
     it('should filter assets by supportedAssetTypes in environment perspective', () => {
-      hub.setPerspective('environment');
+      hub.setPerspective('distro');
       const registry = hub.effectiveAssetRegistry.value;
       expect(registry['Container']).toBeDefined();
       expect(registry['Widget']).toBeDefined();
@@ -123,14 +123,14 @@ describe('Stage 2: ConfigurationHub Asset Registry', () => {
       const initialRegistry = hub.effectiveAssetRegistry.value;
       expect(initialRegistry['Container'].label).toBe('Container');
 
-      hub.setPerspective('environment');
+      hub.setPerspective('distro');
       const updatedRegistry = hub.effectiveAssetRegistry.value;
-      expect(updatedRegistry['Container'].label).toBe('Environment');
+      expect(updatedRegistry['Container'].label).toBe('Distro');
     });
 
     it('should handle multiple perspective switches', () => {
-      hub.setPerspective('environment');
-      expect(hub.effectiveAssetRegistry.value['Container'].label).toBe('Environment');
+      hub.setPerspective('distro');
+      expect(hub.effectiveAssetRegistry.value['Container'].label).toBe('Distro');
 
       hub.setPerspective('lab');
       expect(hub.effectiveAssetRegistry.value['Container'].label).toBe('Lab Setup');

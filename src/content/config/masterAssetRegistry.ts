@@ -33,7 +33,7 @@ export const masterAssetRegistry: Record<string, AssetDefinition> = {
     inspectorComponent: { 
       default: () => import('@/content/components/inspector/GenericAssetInspector.vue')
     },
-    validChildren: [ASSET_TYPES.ENVIRONMENT, ASSET_TYPES.NODE, ASSET_TYPES.OPTION, ASSET_TYPES.PACKAGE, ASSET_TYPES.NAMESPACE_FOLDER],
+    validChildren: [ASSET_TYPES.DISTRO, ASSET_TYPES.NODE, ASSET_TYPES.OPTION, ASSET_TYPES.PACKAGE, ASSET_TYPES.NAMESPACE_FOLDER],
     isCreatableAtRoot: false,
     creationModes: [],
     isRenameable: false,
@@ -41,8 +41,8 @@ export const masterAssetRegistry: Record<string, AssetDefinition> = {
     isStructuralFolder: true,
     sortOrder: 0,
   },
-  [ASSET_TYPES.ENVIRONMENT]: {
-    label: { default: 'Environment' },
+  [ASSET_TYPES.DISTRO]: {
+    label: { default: 'Distro' },
     icon: { default: 'mdi-earth' },
     color: { default: 'success' },
     isVisibleInExplorer: { 
@@ -51,12 +51,12 @@ export const masterAssetRegistry: Record<string, AssetDefinition> = {
     },
     isSupported: {
       default: true,
-      environment: true,
+      distro: true,
       package: false, // NOT supported in package perspective
       lab: true
     },
     inspectorComponent: { 
-      default: () => import('@/content/components/inspector/EnvironmentInspector.vue')
+      default: () => import('@/content/components/inspector/DistroInspector.vue')
     },
     validChildren: [ASSET_TYPES.NODE, ASSET_TYPES.OPTION, ASSET_TYPES.PACKAGE, ASSET_TYPES.NAMESPACE_FOLDER],
     isCreatableAtRoot: true,

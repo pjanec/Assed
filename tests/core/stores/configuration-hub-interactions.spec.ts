@@ -36,7 +36,7 @@ describe('Stage 3: ConfigurationHub Interaction Rules', () => {
 
   describe('Environment Perspective Rules', () => {
     it('should filter rules for environment perspective', () => {
-      hub.setPerspective('environment');
+      hub.setPerspective('distro');
       const rules = hub.effectiveInteractionRules.value;
       
       expect(rules.has('Widget->Container')).toBe(true); // Included
@@ -46,7 +46,7 @@ describe('Stage 3: ConfigurationHub Interaction Rules', () => {
     });
 
     it('should have correct rule count in environment perspective', () => {
-      hub.setPerspective('environment');
+      hub.setPerspective('distro');
       const rules = hub.effectiveInteractionRules.value;
       expect(rules.size).toBe(2);
     });
@@ -109,7 +109,7 @@ describe('Stage 3: ConfigurationHub Interaction Rules', () => {
       expect(containerRule).toBeDefined();
       expect(containerRule?.actions[0].id).toBe('nest-container');
 
-      hub.setPerspective('environment');
+      hub.setPerspective('distro');
       rules = hub.effectiveInteractionRules.value;
       const widgetRule = rules.get('Widget->Container');
       expect(widgetRule).toBeDefined();

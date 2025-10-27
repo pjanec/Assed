@@ -6,7 +6,7 @@ import { useAssetsStore, useUiStore } from '@/core/stores';
 import { DeriveAssetCommand, CloneAssetCommand } from '@/core/stores/workspace';
 import type { UnmergedAsset } from '@/core/types';
 import { DROP_ACTION_IDS, DROP_TARGET_TYPES } from '@/core/config/constants';
-import { areInSameEnvironment, isSharedAsset, getAssetEnvironmentFqn } from '@/content/utils/assetUtils';
+import { areInSameDistro, isSharedAsset, getAssetDistroFqn } from '@/content/utils/assetUtils';
 
 const MOVE_PACKAGE: DropAction = {
   id: DROP_ACTION_IDS.MOVE,
@@ -90,16 +90,16 @@ export function getPackageDropAction(draggedAsset: any, targetAsset: any, dragPa
     if (isSharedAsset(draggedAsset, allAssets)) {
       return [DERIVE_PACKAGE];
     } else {
-      const draggedEnv = getAssetEnvironmentFqn(draggedAsset.fqn, allAssets);
-      const targetEnv = getAssetEnvironmentFqn(targetAsset.fqn, allAssets);
-      return draggedEnv !== targetEnv ? [COPY_PACKAGE] : [MOVE_PACKAGE];
+      const draggedDistro = getAssetDistroFqn(draggedAsset.fqn, allAssets);
+      const targetDistro = getAssetDistroFqn(targetAsset.fqn, allAssets);
+      return draggedDistro !== targetDistro ? [COPY_PACKAGE] : [MOVE_PACKAGE];
     }
   }
 
   const sourceParentAsset = allAssets.find(a => a.id === sourceParentId);
   if (!sourceParentAsset) return [];
 
-  return areInSameEnvironment(sourceParentAsset, targetAsset, allAssets) ? [MOVE_PACKAGE] : [COPY_PACKAGE];
+  return areInSameDistro(sourceParentAsset, targetAsset, allAssets) ? [MOVE_PACKAGE] : [COPY_PACKAGE];
 }
 
 const packageToNodeRule: InteractionRule = {

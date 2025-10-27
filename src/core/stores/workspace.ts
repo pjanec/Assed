@@ -235,19 +235,19 @@ export const useWorkspaceStore = defineStore('workspace', {
       uiStore.promptForNewFolder(parentFqn);
     },
 
-    // Execute cross-environment copy with "Flatten and Rebase" logic
-    async executeCrossEnvCopy(dragPayload: any, dropTarget: any) {
+    // Execute cross-distro copy with "Flatten and Rebase" logic
+    async executeCrossDistroCopy(dragPayload: any, dropTarget: any) {
       const assetsStore = useAssetsStore();
       const sourcePackage = assetsStore.unmergedAssets.find(a => a.id === dragPayload.assetId);
       const targetNode = assetsStore.unmergedAssets.find(a => a.id === dropTarget.id);
 
       if (!sourcePackage || !targetNode) {
-        console.error("Cannot execute cross-env copy: source or target not found.");
+        console.error("Cannot execute cross-distro copy: source or target not found.");
         return;
       }
 
       // Import the hook from the content layer
-      const { crossEnvironmentCloneHook } = await import('@/content/config/interactions/packageAssignmentInteractions');
+      const { crossDistroCloneHook } = await import('@/content/config/interactions/packageAssignmentInteractions');
       const { ASSET_TYPES } = await import('@/content/config/constants');
 
       // This is the core logic that executes on confirmation
@@ -258,7 +258,7 @@ export const useWorkspaceStore = defineStore('workspace', {
         sourcePackage.id,
         targetNode.fqn,
         sourcePackage.assetKey,
-        crossEnvironmentCloneHook // The injectable hook is passed here
+        crossDistroCloneHook // The injectable hook is passed here
       );
       commands.push(cloneCommand);
 

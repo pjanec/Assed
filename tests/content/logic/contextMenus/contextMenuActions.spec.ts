@@ -55,7 +55,7 @@ describe('ContextMenuActions - Perspective-Based Filtering', () => {
     });
 
     it('should show all supported child types in environment perspective', () => {
-      hub.setPerspective('environment');
+      hub.setPerspective('distro');
       
       const effectiveRegistry = coreConfig.effectiveAssetRegistry;
       

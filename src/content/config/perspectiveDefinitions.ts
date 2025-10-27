@@ -8,9 +8,9 @@ export const perspectiveDefinitions: Record<string, PerspectiveDefinition> = {
     displayName: 'Asset Editor',
     icon: 'mdi-pencil',
   },
-  // Environment perspective: focuses on environments and nodes
-  environment: {
-    name: 'environment',
+  // Distro perspective: focuses on distros and nodes
+  distro: {
+    name: 'distro',
     displayName: 'Environment Config',
     icon: 'mdi-earth',
   },

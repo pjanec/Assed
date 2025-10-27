@@ -10,18 +10,18 @@ describe('Package Assignment Interactions', () => {
   let uiStore: any;
 
   // Test data setup
-  const environment: UnmergedAsset = {
-    id: 'env-1',
-    fqn: 'TestEnv',
-    assetType: ASSET_TYPES.ENVIRONMENT,
-    assetKey: 'TestEnv',
+  const distro: UnmergedAsset = {
+    id: 'distro-1',
+    fqn: 'TestDistro',
+    assetType: ASSET_TYPES.DISTRO,
+    assetKey: 'TestDistro',
     templateFqn: null,
     overrides: {}
   };
 
   const sourceNode: UnmergedAsset = {
     id: 'node-1',
-    fqn: 'TestEnv::SourceNode',
+    fqn: 'TestDistro::SourceNode',
     assetType: ASSET_TYPES.NODE,
     assetKey: 'SourceNode',
     templateFqn: null,
@@ -30,7 +30,7 @@ describe('Package Assignment Interactions', () => {
 
   const targetNode: UnmergedAsset = {
     id: 'node-2',
-    fqn: 'TestEnv::TargetNode',
+    fqn: 'TestDistro::TargetNode',
     assetType: ASSET_TYPES.NODE,
     assetKey: 'TargetNode',
     templateFqn: null,
@@ -39,7 +39,7 @@ describe('Package Assignment Interactions', () => {
 
   const packageKey: UnmergedAsset = {
     id: 'pkg-key-1',
-    fqn: 'TestEnv::SourceNode::react',
+    fqn: 'TestDistro::SourceNode::react',
     assetType: ASSET_TYPES.PACKAGE_KEY,
     assetKey: 'react',
     templateFqn: null,
@@ -47,7 +47,7 @@ describe('Package Assignment Interactions', () => {
   };
 
   const initialData: UnmergedAsset[] = [
-    environment,
+    distro,
     sourceNode,
     targetNode,
     packageKey
@@ -141,7 +141,7 @@ describe('Package Assignment Interactions', () => {
     // First, create a PackageKey under the target node
     const existingPackageKey: UnmergedAsset = {
       id: 'pkg-key-2',
-      fqn: 'TestEnv::TargetNode::react',
+      fqn: 'TestDistro::TargetNode::react',
       assetType: ASSET_TYPES.PACKAGE_KEY,
       assetKey: 'react',
       templateFqn: null,

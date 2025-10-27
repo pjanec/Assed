@@ -131,8 +131,8 @@ describe('Core Operations: Derive Operation Integrity', () => {
       assetKey: 'SharedTemplate', templateFqn: null, overrides: {},
     },
     {
-      id: 'env-a', fqn: 'EnvA', assetType: MOCK_ASSET_TYPES.ENVIRONMENT as any,
-      assetKey: 'EnvA', templateFqn: null, overrides: {},
+      id: 'distro-a', fqn: 'DistroA', assetType: MOCK_ASSET_TYPES.DISTRO as any,
+      assetKey: 'DistroA', templateFqn: null, overrides: {},
     },
   ];
 

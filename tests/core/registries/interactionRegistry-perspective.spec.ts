@@ -123,7 +123,7 @@ describe('Interaction Registry - Perspective-Based Drag & Drop Filtering', () =>
     });
 
     it('should allow drop actions when both dragged and target are supported', () => {
-      hub.setPerspective('environment');
+      hub.setPerspective('distro');
       
       // Both Widget and Container are supported in environment perspective
       const dropTarget: DropTarget = {

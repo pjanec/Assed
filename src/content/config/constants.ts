@@ -3,7 +3,7 @@
 export const ASSET_TYPES = {
   ROOT: 'Root',
   NAMESPACE_FOLDER: 'NamespaceFolder',
-  ENVIRONMENT: 'Environment',
+  DISTRO: 'Distro',
   NODE: 'Node',
   PACKAGE: 'Package',
   PACKAGE_KEY: 'PackageKey',

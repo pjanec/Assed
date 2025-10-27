@@ -13,7 +13,7 @@
 import { computed } from 'vue';
 import { useUiStore } from '@/core/stores';
 import NodeCloneConfirmationDialog from './NodeCloneConfirmationDialog.vue';
-import CrossEnvCopyDialog from './CrossEnvCopyDialog.vue';
+import CrossDistroCopyDialog from './CrossDistroCopyDialog.vue';
 import ResolveAndCopyDialog from './ResolveAndCopyDialog.vue';
 
 const uiStore = useUiStore();
@@ -23,8 +23,8 @@ const currentDialogComponent = computed(() => {
   switch (dialogState.value.dialogType) {
     case 'node-clone-confirmation':
       return NodeCloneConfirmationDialog;
-    case 'cross-environment-copy':
-      return CrossEnvCopyDialog;
+    case 'cross-distro-copy':
+      return CrossDistroCopyDialog;
     case 'proactive-resolution':
       return ResolveAndCopyDialog;
     default:

@@ -7,18 +7,18 @@ import type { UnmergedAsset } from '../../../../src/core/types';
 describe('Virtual Folder Resolvers - Generic Merged View', () => {
   let assetsStore: any;
 
-  const templateEnv: UnmergedAsset = {
+  const templateDistro: UnmergedAsset = {
     id: 'template-1',
-    fqn: 'BaseEnv',
-    assetType: ASSET_TYPES.ENVIRONMENT,
-    assetKey: 'BaseEnv',
+    fqn: 'BaseDistro',
+    assetType: ASSET_TYPES.DISTRO,
+    assetKey: 'BaseDistro',
     templateFqn: null,
     overrides: {}
   };
 
   const inheritedPackage: UnmergedAsset = {
     id: 'pkg-1-inherited',
-    fqn: 'BaseEnv::BaseWebServer',
+    fqn: 'BaseDistro::BaseWebServer',
     assetType: ASSET_TYPES.PACKAGE,
     assetKey: 'BaseWebServer',
     templateFqn: null,
@@ -26,17 +26,17 @@ describe('Virtual Folder Resolvers - Generic Merged View', () => {
   };
 
   const startAsset: UnmergedAsset = {
-    id: 'env-1-start',
-    fqn: 'ProdEnv',
-    assetType: ASSET_TYPES.ENVIRONMENT,
-    assetKey: 'ProdEnv',
-    templateFqn: 'BaseEnv',
+    id: 'distro-1-start',
+    fqn: 'ProdDistro',
+    assetType: ASSET_TYPES.DISTRO,
+    assetKey: 'ProdDistro',
+    templateFqn: 'BaseDistro',
     overrides: {}
   };
 
   const overridePackage: UnmergedAsset = {
     id: 'pkg-2-override',
-    fqn: 'ProdEnv::BaseWebServer',
+    fqn: 'ProdDistro::BaseWebServer',
     assetType: ASSET_TYPES.PACKAGE,
     assetKey: 'BaseWebServer',
     templateFqn: null,
@@ -45,7 +45,7 @@ describe('Virtual Folder Resolvers - Generic Merged View', () => {
 
   const localPackage: UnmergedAsset = {
     id: 'pkg-3-local',
-    fqn: 'ProdEnv::APIServer',
+    fqn: 'ProdDistro::APIServer',
     assetType: ASSET_TYPES.PACKAGE,
     assetKey: 'APIServer',
     templateFqn: null,
@@ -53,7 +53,7 @@ describe('Virtual Folder Resolvers - Generic Merged View', () => {
   };
 
   const initialData: UnmergedAsset[] = [
-    templateEnv, inheritedPackage, startAsset, overridePackage, localPackage
+    templateDistro, inheritedPackage, startAsset, overridePackage, localPackage
   ];
 
   beforeEach(async () => {

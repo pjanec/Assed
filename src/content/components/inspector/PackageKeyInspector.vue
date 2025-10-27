@@ -50,7 +50,7 @@
         icon="mdi-alert-circle-outline"
       >
         <div class="font-weight-bold">Unresolved Requirement</div>
-        The package '{{ asset.unmerged.assetKey }}' could not be found in the environment's package pool.
+        The package '{{ asset.unmerged.assetKey }}' could not be found in the distro's package pool.
       </v-alert>
 
       <v-btn
@@ -72,7 +72,7 @@ import { useAssetsStore, useUiStore, useWorkspaceStore } from '@/core/stores';
 import { useCoreConfigStore } from '@/core/stores/config';
 import type { AssetDetails, UnmergedAsset } from '@/core/types';
 import { ASSET_TYPES } from '@/content/config/constants';
-import { getAssetEnvironmentFqn } from '@/content/utils/assetUtils';
+import { getAssetDistroFqn } from '@/content/utils/assetUtils';
 
 interface Props {
   asset: AssetDetails;
@@ -89,17 +89,17 @@ const resolvedPackage = computed<UnmergedAsset | undefined>(() => {
   const packageKey = props.asset.unmerged;
   const allAssets = assetsStore.unmergedAssets;
 
-  // 1. Find the environment this PackageKey belongs to.
-  const envFqn = getAssetEnvironmentFqn(packageKey.fqn, allAssets);
-  if (!envFqn) {
-    return undefined; // A PackageKey must be in an environment to resolve.
+  // 1. Find the distro this PackageKey belongs to.
+  const distroFqn = getAssetDistroFqn(packageKey.fqn, allAssets);
+  if (!distroFqn) {
+    return undefined; // A PackageKey must be in a distro to resolve.
   }
 
-  // 2. Search for a Package within that same environment that has a matching assetKey.
+  // 2. Search for a Package within that same distro that has a matching assetKey.
   return allAssets.find(a =>
     a.assetType === ASSET_TYPES.PACKAGE &&
     a.assetKey === packageKey.assetKey &&
-    getAssetEnvironmentFqn(a.fqn, allAssets) === envFqn
+    getAssetDistroFqn(a.fqn, allAssets) === distroFqn
   );
 });
 
@@ -115,12 +115,12 @@ const inspectPackage = () => {
 // The resolution logic
 const handleResolve = async () => {
   const allAssets = assetsStore.unmergedAssets;
-  const envFqn = getAssetEnvironmentFqn(props.asset.unmerged.fqn, allAssets);
+  const distroFqn = getAssetDistroFqn(props.asset.unmerged.fqn, allAssets);
 
-  // Filter for valid packages within the same environment
+  // Filter for valid packages within the same distro
   const validPackages = allAssets.filter(a =>
     a.assetType === ASSET_TYPES.PACKAGE &&
-    getAssetEnvironmentFqn(a.fqn, allAssets) === envFqn
+    getAssetDistroFqn(a.fqn, allAssets) === distroFqn
   );
 
   try {

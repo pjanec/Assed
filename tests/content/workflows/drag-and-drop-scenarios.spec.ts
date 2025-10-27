@@ -11,33 +11,33 @@ import { CompositeCommand, CreateAssetCommand, DeriveAssetCommand, CloneAssetCom
 // --- Mock Data Tailored for Workflow Testing ---
 // This dataset is specifically designed to cover all our scenarios:
 // - Shared templates (GlobalAPI, GlobalFrontend)
-// - An environment with no template (EnvA)
-// - An environment that inherits from another (ProdEnv -> BaseEnv)
-// - Packages with overrides (EnvA::Nginx)
-// - Packages that are pure derivatives (BaseEnv::APIServer)
+// - A distro with no template (DistroA)
+// - A distro that inherits from another (ProdDistro -> BaseDistro)
+// - Packages with overrides (DistroA::Nginx)
+// - Packages that are pure derivatives (BaseDistro::APIServer)
 const mockAssets: UnmergedAsset[] = [
   // Global Shared Packages
   { id: 'global-api', fqn: 'GlobalAPIPackage', assetType: ASSET_TYPES.PACKAGE, assetKey: 'GlobalAPIPackage', templateFqn: null, overrides: { tier: 'backend' } },
   { id: 'global-frontend', fqn: 'GlobalFrontendPackage', assetType: ASSET_TYPES.PACKAGE, assetKey: 'GlobalFrontendPackage', templateFqn: null, overrides: { framework: 'Vue' } },
 
-  // --- Environment A (Standalone) ---
-  { id: 'env-a', fqn: 'EnvA', assetType: ASSET_TYPES.ENVIRONMENT, assetKey: 'EnvA', templateFqn: null, overrides: {} },
-  { id: 'node-a1', fqn: 'EnvA::WebServer', assetType: ASSET_TYPES.NODE, assetKey: 'WebServer', templateFqn: null, overrides: {} },
-  { id: 'node-a2', fqn: 'EnvA::Database', assetType: ASSET_TYPES.NODE, assetKey: 'Database', templateFqn: null, overrides: {} },
-  // Nginx in EnvA has local overrides, making it a "complex" package
-  { id: 'pkg-a-nginx', fqn: 'EnvA::Nginx', assetType: ASSET_TYPES.PACKAGE, assetKey: 'Nginx', templateFqn: null, overrides: { version: '1.21-alpine', worker_processes: 4 } },
-  { id: 'key-a-nginx', fqn: 'EnvA::WebServer::Nginx', assetType: ASSET_TYPES.PACKAGE_KEY, assetKey: 'Nginx', templateFqn: null, overrides: {} },
+  // --- Distro A (Standalone) ---
+  { id: 'distro-a', fqn: 'DistroA', assetType: ASSET_TYPES.DISTRO, assetKey: 'DistroA', templateFqn: null, overrides: {} },
+  { id: 'node-a1', fqn: 'DistroA::WebServer', assetType: ASSET_TYPES.NODE, assetKey: 'WebServer', templateFqn: null, overrides: {} },
+  { id: 'node-a2', fqn: 'DistroA::Database', assetType: ASSET_TYPES.NODE, assetKey: 'Database', templateFqn: null, overrides: {} },
+  // Nginx in DistroA has local overrides, making it a "complex" package
+  { id: 'pkg-a-nginx', fqn: 'DistroA::Nginx', assetType: ASSET_TYPES.PACKAGE, assetKey: 'Nginx', templateFqn: null, overrides: { version: '1.21-alpine', worker_processes: 4 } },
+  { id: 'key-a-nginx', fqn: 'DistroA::WebServer::Nginx', assetType: ASSET_TYPES.PACKAGE_KEY, assetKey: 'Nginx', templateFqn: null, overrides: {} },
 
-  // --- Environment Base & Prod (Inheritance Chain) ---
-  { id: 'env-base', fqn: 'BaseEnv', assetType: ASSET_TYPES.ENVIRONMENT, assetKey: 'BaseEnv', templateFqn: null, overrides: {} },
-  // APIServer in BaseEnv is a pure derivative of the global package
-  { id: 'pkg-base-api', fqn: 'BaseEnv::APIServer', assetType: ASSET_TYPES.PACKAGE, assetKey: 'APIServer', templateFqn: 'GlobalAPIPackage', overrides: {} },
-  { id: 'node-base-main', fqn: 'BaseEnv::MainNode', assetType: ASSET_TYPES.NODE, assetKey: 'MainNode', templateFqn: null, overrides: {} },
-  { id: 'key-base-api', fqn: 'BaseEnv::MainNode::APIServer', assetType: ASSET_TYPES.PACKAGE_KEY, assetKey: 'APIServer', templateFqn: null, overrides: {} },
+  // --- Distro Base & Prod (Inheritance Chain) ---
+  { id: 'distro-base', fqn: 'BaseDistro', assetType: ASSET_TYPES.DISTRO, assetKey: 'BaseDistro', templateFqn: null, overrides: {} },
+  // APIServer in BaseDistro is a pure derivative of the global package
+  { id: 'pkg-base-api', fqn: 'BaseDistro::APIServer', assetType: ASSET_TYPES.PACKAGE, assetKey: 'APIServer', templateFqn: 'GlobalAPIPackage', overrides: {} },
+  { id: 'node-base-main', fqn: 'BaseDistro::MainNode', assetType: ASSET_TYPES.NODE, assetKey: 'MainNode', templateFqn: null, overrides: {} },
+  { id: 'key-base-api', fqn: 'BaseDistro::MainNode::APIServer', assetType: ASSET_TYPES.PACKAGE_KEY, assetKey: 'APIServer', templateFqn: null, overrides: {} },
     
-  // ProdEnv inherits from BaseEnv
-  { id: 'env-prod', fqn: 'ProdEnv', assetType: ASSET_TYPES.ENVIRONMENT, assetKey: 'ProdEnv', templateFqn: 'BaseEnv', overrides: {} },
-  { id: 'node-prod-main', fqn: 'ProdEnv::MainNode', assetType: ASSET_TYPES.NODE, assetKey: 'MainNode', templateFqn: null, overrides: {} },
+  // ProdDistro inherits from BaseDistro
+  { id: 'distro-prod', fqn: 'ProdDistro', assetType: ASSET_TYPES.DISTRO, assetKey: 'ProdDistro', templateFqn: 'BaseDistro', overrides: {} },
+  { id: 'node-prod-main', fqn: 'ProdDistro::MainNode', assetType: ASSET_TYPES.NODE, assetKey: 'MainNode', templateFqn: null, overrides: {} },
 ];
 
 describe('Content Workflows: Drag-and-Drop Scenarios', () => {
@@ -60,8 +60,8 @@ describe('Content Workflows: Drag-and-Drop Scenarios', () => {
 
     it('Scenario 1.1 (Smart Derive): Should create a derived package and key when dragging a shared package', () => {
       // GOAL: Drag a shared package (GlobalFrontend) to a node (NodeA1) in an environment that doesn't have it yet.
-      // EXPECTATION: The system should create a NEW package 'EnvA::GlobalFrontendPackage' that derives from the shared one,
-      // AND create the 'EnvA::WebServer::GlobalFrontendPackage' key, all in one immediate, atomic action.
+      // EXPECTATION: The system should create a NEW package 'DistroA::GlobalFrontendPackage' that derives from the shared one,
+      // AND create the 'DistroA::WebServer::GlobalFrontendPackage' key, all in one immediate, atomic action.
         
       // ARRANGE
       const dragPayload: DragPayload = { assetId: 'global-frontend', sourceContext: 'AssetTreeNode' };
@@ -81,16 +81,16 @@ describe('Content Workflows: Drag-and-Drop Scenarios', () => {
       const createCommand = command.commands.find(c => c instanceof CreateAssetCommand) as CreateAssetCommand;
 
       expect(deriveCommand).toBeDefined();
-      expect(deriveCommand.derivedAsset.fqn).toBe('EnvA::GlobalFrontendPackage');
+      expect(deriveCommand.derivedAsset.fqn).toBe('DistroA::GlobalFrontendPackage');
       expect(deriveCommand.derivedAsset.templateFqn).toBe('GlobalFrontendPackage');
 
       expect(createCommand).toBeDefined();
-      expect(createCommand.newAsset.fqn).toBe('EnvA::WebServer::GlobalFrontendPackage');
+      expect(createCommand.newAsset.fqn).toBe('DistroA::WebServer::GlobalFrontendPackage');
       expect(createCommand.newAsset.assetType).toBe(ASSET_TYPES.PACKAGE_KEY);
     });
 
     it('Scenario 1.2 (Ancestor Environment): Should treat a drop from an ancestor env as a "same-environment" action', () => {
-      // GOAL: Drag a package ('APIServer') from a template environment ('BaseEnv') to a node ('MainNode') in a child environment ('ProdEnv').
+      // GOAL: Drag a package ('APIServer') from a template distro ('BaseDistro') to a node ('MainNode') in a child distro ('ProdDistro').
       // EXPECTATION: This should be treated as a simple, immediate action. It should ONLY create the new PackageKey,
       // because the package is already available via structural inheritance. No dialog should appear.
         
@@ -109,12 +109,12 @@ describe('Content Workflows: Drag-and-Drop Scenarios', () => {
       expect(command.commands).toHaveLength(1); // Should ONLY contain the CreateAssetCommand
 
       const createCommand = command.commands[0] as CreateAssetCommand;
-      expect(createCommand.newAsset.fqn).toBe('ProdEnv::MainNode::APIServer');
+      expect(createCommand.newAsset.fqn).toBe('ProdDistro::MainNode::APIServer');
       expect(createCommand.newAsset.assetType).toBe(ASSET_TYPES.PACKAGE_KEY);
     });
 
     it('Scenario 1.3 (Cross-Environment with Overrides): Should trigger confirmation dialog for complex packages', async () => {
-      // GOAL: Drag a package WITH local overrides ('Nginx' from 'EnvA') to a node in an unrelated environment ('ProdEnv').
+      // GOAL: Drag a package WITH local overrides ('Nginx' from 'DistroA') to a node in an unrelated distro ('ProdDistro').
       // EXPECTATION: The system must pause and ask for user confirmation by calling the generic prompt.
         
       // ARRANGE
@@ -132,7 +132,7 @@ describe('Content Workflows: Drag-and-Drop Scenarios', () => {
 
       // ASSERT
       expect(mockPromptForGenericConfirmation).toHaveBeenCalledOnce();
-      expect(mockPromptForGenericConfirmation).toHaveBeenCalledWith('cross-environment-copy', expect.any(Object));
+      expect(mockPromptForGenericConfirmation).toHaveBeenCalledWith('cross-distro-copy', expect.any(Object));
     });
   });
 
@@ -142,12 +142,12 @@ describe('Content Workflows: Drag-and-Drop Scenarios', () => {
   describe('2. Package -> Environment Pool Population', () => {
 
     it('Scenario 2.1 (Path-Aware Drop): Should create intermediate folders when dragging a nested package', () => {
-      // GOAL: Drag a nested package 'EnvA::WebServer::Nginx' and drop it on the 'ProdEnv' environment.
-      // EXPECTATION: The system must create the missing 'ProdEnv::WebServer' folder AND then create the 'Nginx' package inside it.
+      // GOAL: Drag a nested package 'DistroA::WebServer::Nginx' and drop it on the 'ProdDistro' distro.
+      // EXPECTATION: The system must create the missing 'ProdDistro::WebServer' folder AND then create the 'Nginx' package inside it.
         
       // ARRANGE
       const dragPayload: DragPayload = { assetId: 'pkg-a-nginx', sourceContext: 'AssetTreeNode' }; // This is a complex package
-      const dropTarget: DropTarget = { id: 'env-prod', type: 'asset' };
+      const dropTarget: DropTarget = { id: 'distro-prod', type: 'asset' };
       uiStore.startDrag(dragPayload);
       
       // Mock the confirmation to resolve immediately
@@ -175,13 +175,13 @@ describe('Content Workflows: Drag-and-Drop Scenarios', () => {
   describe('3. Node -> Environment Cloning', () => {
       
     it('Scenario 3.1: Should trigger a single confirmation dialog with a comprehensive plan and execute it', async () => {
-      // GOAL: Drag 'WebServer' from 'EnvA' (which requires 'Nginx') and drop it on 'BaseEnv'.
+      // GOAL: Drag 'WebServer' from 'DistroA' (which requires 'Nginx') and drop it on 'BaseDistro'.
       // EXPECTATION: The system should analyze the operation, present a confirmation dialog,
       // and upon confirmation, execute a composite command to perform all necessary actions.
         
       // ARRANGE
-      const dragPayload: DragPayload = { assetId: 'node-a1', sourceContext: 'AssetTreeNode' }; // 'EnvA::WebServer'
-      const dropTarget: DropTarget = { id: 'env-base', type: 'asset' }; // 'BaseEnv'
+      const dragPayload: DragPayload = { assetId: 'node-a1', sourceContext: 'AssetTreeNode' }; // 'DistroA::WebServer'
+      const dropTarget: DropTarget = { id: 'distro-base', type: 'asset' }; // 'BaseDistro'
       uiStore.startDrag(dragPayload);
         
       // Mock the UI confirmation to automatically resolve true
@@ -236,18 +236,18 @@ describe('Content Workflows: Drag-and-Drop Scenarios', () => {
       
       // Verify the node cloning command
       expect(cloneNodeCmd.sourceAssetId).toBe('node-a1');
-      expect(cloneNodeCmd.newParentFqn).toBe('BaseEnv');
+      expect(cloneNodeCmd.newParentFqn).toBe('BaseDistro');
       expect(cloneNodeCmd.newAssetKey).toBe('WebServer');
       
       // Verify the package cloning command
       expect(clonePackageCmd.sourceAssetId).toBe('pkg-a-nginx');
-      expect(clonePackageCmd.newParentFqn).toBe('BaseEnv');
+      expect(clonePackageCmd.newParentFqn).toBe('BaseDistro');
       expect(clonePackageCmd.newAssetKey).toBe('Nginx');
       
       // Verify the key creation command
       expect(createKeyCmd.newAsset.assetType).toBe(ASSET_TYPES.PACKAGE_KEY);
       expect(createKeyCmd.newAsset.assetKey).toBe('Nginx');
-      expect(createKeyCmd.newAsset.fqn).toBe('BaseEnv::WebServer::Nginx');
+      expect(createKeyCmd.newAsset.fqn).toBe('BaseDistro::WebServer::Nginx');
     });
   });
 });

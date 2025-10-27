@@ -53,7 +53,7 @@ describe('NewAssetDialog - Perspective-Based Filtering', () => {
 
   describe('Environment Perspective', () => {
     it('should filter asset types based on supportedAssetTypes', () => {
-      hub.setPerspective('environment');
+      hub.setPerspective('distro');
       
       const effectiveRegistry = coreConfig.effectiveAssetRegistry;
       

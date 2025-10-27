@@ -32,4 +32,4 @@ export const masterInteractionRegistry: InteractionRuleEntry[] = [
 
 // Re-export for use in plugin.ts
 export { FOLDER_LIKE_INTERACTION_RULE } from './interactions/folderInteractions';
-export { crossEnvironmentCloneHook } from './interactions/packageAssignmentInteractions';
+export { crossDistroCloneHook } from './interactions/packageAssignmentInteractions';

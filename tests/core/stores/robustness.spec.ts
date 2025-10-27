@@ -10,7 +10,7 @@ import { registerValidationRule } from '@/core/registries/validationRegistry';
 
 // Create separate mock asset types for robustness tests
 const ROBUSTNESS_ASSET_TYPES = {
-  ENVIRONMENT: MOCK_ASSET_TYPES.ENVIRONMENT,
+  DISTRO: MOCK_ASSET_TYPES.DISTRO,
   NODE: MOCK_ASSET_TYPES.NODE,
   PACKAGE: MOCK_ASSET_TYPES.PACKAGE,
 } as const;

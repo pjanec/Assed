@@ -8,16 +8,16 @@
     <v-card v-if="comparison">
       <v-card-title class="d-flex align-center">
         <v-icon class="me-2" color="warning">mdi-alert-circle-outline</v-icon>
-        Cross-Environment Copy
+        Cross-Distro Copy
       </v-card-title>
 
       <v-card-text>
         <div class="mb-4">
           <p class="text-body-1 mb-2">
-            You are about to copy an asset from one environment to another. This will change the asset's inheritance chain.
+            You are about to copy an asset from one distro to another. This will change the asset's inheritance chain.
           </p>
           <p class="text-body-2 text-medium-emphasis">
-            The asset will be "flattened" and "rebased" to the target environment, which may affect its properties and behavior.
+            The asset will be "flattened" and "rebased" to the target distro, which may affect its properties and behavior.
           </p>
         </div>
 
@@ -93,7 +93,7 @@ const emit = defineEmits(['update:model-value', 'confirm', 'cancel']);
 const coreConfig = useCoreConfigStore();
 
 const comparison = computed(() => {
-  if (props.payload?.type === 'CrossEnvironmentCopy') {
+  if (props.payload?.type === 'CrossDistroCopy') {
     return props.payload.inheritanceComparison;
   }
   return null;

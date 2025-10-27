@@ -5,7 +5,7 @@ export const mockMasterAssetRegistry: Record<string, AssetDefinition> = {
   [MOCK_ASSET_TYPES.CONTAINER]: {
     label: { 
       default: 'Container',
-      environment: 'Environment',
+      distro: 'Distro',
       lab: 'Lab Setup'
     },
     icon: { 

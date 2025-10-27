@@ -114,7 +114,7 @@ onUnmounted(() => {
 });
 
 const availableEnvironments = computed(() => {
-    return assetsStore.assets.filter(a => a.assetType === ASSET_TYPES.ENVIRONMENT);
+    return assetsStore.assets.filter(a => a.assetType === ASSET_TYPES.DISTRO);
 });
 
 const buildStats = computed(() => ({

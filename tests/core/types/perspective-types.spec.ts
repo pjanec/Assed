@@ -8,10 +8,10 @@ describe('Stage 1: Type System and Mock Data', () => {
     it('should have valid PerspectiveOverrides structure', () => {
       const testOverride: PerspectiveOverrides<string> = {
         default: 'Default Value',
-        environment: 'Environment Value'
+        distro: 'Distro Value'
       };
       expect(testOverride.default).toBe('Default Value');
-      expect(testOverride.environment).toBe('Environment Value');
+      expect(testOverride.distro).toBe('Distro Value');
     });
 
     it('should allow optional perspective-specific values', () => {
@@ -21,7 +21,7 @@ describe('Stage 1: Type System and Mock Data', () => {
       };
       expect(testOverride.default).toBe(10);
       expect(testOverride.lab).toBe(20);
-      expect(testOverride.environment).toBeUndefined();
+      expect(testOverride.distro).toBeUndefined();
       expect(testOverride.package).toBeUndefined();
     });
   });
@@ -29,28 +29,28 @@ describe('Stage 1: Type System and Mock Data', () => {
   describe('Mock Perspective Definitions', () => {
     it('should have all required perspectives', () => {
       expect(mockPerspectiveDefinitions.default).toBeDefined();
-      expect(mockPerspectiveDefinitions.environment).toBeDefined();
+      expect(mockPerspectiveDefinitions.distro).toBeDefined();
       expect(mockPerspectiveDefinitions.package).toBeDefined();
       expect(mockPerspectiveDefinitions.lab).toBeDefined();
     });
 
     it('should have display names for all perspectives', () => {
       expect(mockPerspectiveDefinitions.default.displayName).toBe('Full Editor');
-      expect(mockPerspectiveDefinitions.environment.displayName).toBe('Environment View');
+      expect(mockPerspectiveDefinitions.distro.displayName).toBe('Distro Config');
       expect(mockPerspectiveDefinitions.package.displayName).toBe('Package View');
       expect(mockPerspectiveDefinitions.lab.displayName).toBe('Lab View');
     });
 
     it('should have icons for all perspectives', () => {
       expect(mockPerspectiveDefinitions.default.icon).toBe('mdi-pencil');
-      expect(mockPerspectiveDefinitions.environment.icon).toBe('mdi-earth');
+      expect(mockPerspectiveDefinitions.distro.icon).toBe('mdi-earth');
       expect(mockPerspectiveDefinitions.package.icon).toBe('mdi-package');
       expect(mockPerspectiveDefinitions.lab.icon).toBe('mdi-flask');
     });
 
     it('should have supportedAssetTypes filters', () => {
       expect(mockPerspectiveDefinitions.default.supportedAssetTypes).toBeUndefined();
-      expect(mockPerspectiveDefinitions.environment.supportedAssetTypes).toEqual(['Container', 'Widget']);
+      expect(mockPerspectiveDefinitions.distro.supportedAssetTypes).toEqual(['Container', 'Widget']);
       expect(mockPerspectiveDefinitions.package.supportedAssetTypes).toEqual(['Aggregator', 'Widget']);
       expect(mockPerspectiveDefinitions.lab.supportedAssetTypes).toEqual(['Container']);
     });
@@ -60,7 +60,7 @@ describe('Stage 1: Type System and Mock Data', () => {
     it('should have perspective-aware properties in mock registry', () => {
       const containerDef = mockMasterAssetRegistry['Container'];
       expect(containerDef.label.default).toBe('Container');
-      expect(containerDef.label.environment).toBe('Environment');
+      expect(containerDef.label.distro).toBe('Distro');
       expect(containerDef.label.lab).toBe('Lab Setup');
     });
 
@@ -129,12 +129,12 @@ describe('Stage 1: Type System and Mock Data', () => {
     it('should allow all perspective properties', () => {
       const complete: PerspectiveOverrides<string> = {
         default: 'default',
-        environment: 'env',
+        distro: 'distro',
         package: 'pkg',
         lab: 'lab'
       };
       expect(complete.default).toBe('default');
-      expect(complete.environment).toBe('env');
+      expect(complete.distro).toBe('distro');
       expect(complete.package).toBe('pkg');
       expect(complete.lab).toBe('lab');
     });

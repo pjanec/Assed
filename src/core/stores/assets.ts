@@ -367,16 +367,16 @@ export const useAssetsStore = defineStore('assets', {
 
       const assetsByFqn = new Map(state.assets.map(a => [a.fqn, a]));
 
-      const environmentFqns = new Set(
+      const distroFqns = new Set(
         state.assets
-          .filter(a => a.assetType === 'Environment' && !a.fqn.includes('::'))
+          .filter(a => a.assetType === 'Distro' && !a.fqn.includes('::'))
           .map(a => a.fqn)
       );
 
-      const getAssetEnvironment = (assetFqn: string): string | null => {
-        for (const envFqn of environmentFqns) {
-          if (assetFqn.startsWith(envFqn + '::')) {
-            return envFqn;
+      const getAssetDistro = (assetFqn: string): string | null => {
+        for (const distroFqn of distroFqns) {
+          if (assetFqn.startsWith(distroFqn + '::')) {
+            return distroFqn;
           }
         }
         return null;
@@ -399,7 +399,7 @@ export const useAssetsStore = defineStore('assets', {
         return false;
       };
 
-      const currentAssetEnv = getAssetEnvironment(fqn);
+      const currentAssetDistro = getAssetDistro(fqn);
 
       return state.assets.filter(potentialTemplate => {
         // Rule 1: Must be the same asset type.
@@ -412,14 +412,14 @@ export const useAssetsStore = defineStore('assets', {
         if (isCircularDependency(potentialTemplate)) return false;
 
         // Rule 4: Enforce inheritance boundaries.
-        const templateEnv = getAssetEnvironment(potentialTemplate.fqn);
+        const templateDistro = getAssetDistro(potentialTemplate.fqn);
 
-        if (currentAssetEnv) {
-          // Case A: The current asset is inside an environment.
-          return templateEnv === null || templateEnv === currentAssetEnv;
+        if (currentAssetDistro) {
+          // Case A: The current asset is inside a distro.
+          return templateDistro === null || templateDistro === currentAssetDistro;
         } else {
           // Case B: The current asset is a shared asset.
-          return templateEnv === null;
+          return templateDistro === null;
         }
       });
     },

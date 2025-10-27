@@ -17,16 +17,16 @@ vi.mock('@/content/logic/workspaceExtendedActions', async (importOriginal) => {
 // Import the mocked function
 import { executePoolCopy } from '@/content/logic/workspaceExtendedActions';
 
-describe('Stage 5 Workflow: Package → Environment Drop', () => {
+describe('Stage 5 Workflow: Package → Distro Drop', () => {
   let assetsStore: ReturnType<typeof useAssetsStore>;
   let workspaceStore: ReturnType<typeof useWorkspaceStore>;
   let uiStore: ReturnType<typeof useUiStore>;
 
   const initialData: UnmergedAsset[] = [
     { id: 'shared-base', fqn: 'SharedBase', assetType: ASSET_TYPES.PACKAGE, assetKey: 'SharedBase', templateFqn: null, overrides: { logging: 'json' } },
-    { id: 'env-a', fqn: 'EnvA', assetType: ASSET_TYPES.ENVIRONMENT, assetKey: 'EnvA', templateFqn: null, overrides: {} },
-    { id: 'webserver-pkg-a', fqn: 'EnvA::WebServer', assetType: ASSET_TYPES.PACKAGE, assetKey: 'WebServer', templateFqn: null, overrides: { port: 8080, customConfig: 'complex' } },
-    { id: 'env-b', fqn: 'EnvB', assetType: ASSET_TYPES.ENVIRONMENT, assetKey: 'EnvB', templateFqn: null, overrides: {} },
+    { id: 'distro-a', fqn: 'DistroA', assetType: ASSET_TYPES.DISTRO, assetKey: 'DistroA', templateFqn: null, overrides: {} },
+    { id: 'webserver-pkg-a', fqn: 'DistroA::WebServer', assetType: ASSET_TYPES.PACKAGE, assetKey: 'WebServer', templateFqn: null, overrides: { port: 8080, customConfig: 'complex' } },
+    { id: 'distro-b', fqn: 'DistroB', assetType: ASSET_TYPES.DISTRO, assetKey: 'DistroB', templateFqn: null, overrides: {} },
   ];
 
   beforeEach(async () => {
@@ -41,7 +41,7 @@ describe('Stage 5 Workflow: Package → Environment Drop', () => {
   it('should prompt for confirmation with the correct inheritance comparison', async () => {
     // ARRANGE: Define the drag payload and drop target
     const dragPayload: DragPayload = { assetId: 'webserver-pkg-a', sourceContext: 'AssetTreeNode' };
-    const dropTarget: DropTarget = { id: 'env-b', type: 'asset' };
+    const dropTarget: DropTarget = { id: 'distro-b', type: 'asset' };
 
     // Mock the confirmation to resolve immediately
     const mockPromptForGenericConfirmation = vi.fn().mockResolvedValue(true);
@@ -54,16 +54,16 @@ describe('Stage 5 Workflow: Package → Environment Drop', () => {
     const actions = getAvailableActions(dragPayload.assetId, dropTarget);
     
     expect(actions.length).toBe(1);
-    const copyAction = actions.find((action: any) => action.id === 'copy-to-environment');
+    const copyAction = actions.find((action: any) => action.id === 'copy-to-distro');
     expect(copyAction).toBeDefined();
     
     await copyAction.execute(dragPayload, dropTarget);
 
     // ASSERT: The generic confirmation should have been called
     expect(mockPromptForGenericConfirmation).toHaveBeenCalledWith(
-      'cross-environment-copy',
+      'cross-distro-copy',
       expect.objectContaining({
-        type: 'CrossEnvironmentCopy',
+        type: 'CrossDistroCopy',
         inheritanceComparison: expect.objectContaining({
           before: expect.any(Array),
           after: expect.any(Array)
@@ -75,9 +75,9 @@ describe('Stage 5 Workflow: Package → Environment Drop', () => {
   it('should call the correct execution action upon dialog confirmation', () => {
     // ARRANGE: Set up the dialog state as if the drop has already happened
     const dragPayload: DragPayload = { assetId: 'webserver-pkg-a', sourceContext: 'AssetTreeNode' };
-    const dropTarget: DropTarget = { id: 'env-b', type: 'asset' };
-    uiStore.promptForGenericConfirmation('cross-environment-copy', {
-      type: 'CrossEnvironmentCopy', 
+    const dropTarget: DropTarget = { id: 'distro-b', type: 'asset' };
+    uiStore.promptForGenericConfirmation('cross-distro-copy', {
+      type: 'CrossDistroCopy', 
       inheritanceComparison: { before: [], after: [] }
     });
 
@@ -93,7 +93,7 @@ describe('Stage 5 Workflow: Package → Environment Drop', () => {
   it('should execute immediately for shared assets without showing dialog', async () => {
     // ARRANGE: Test with a shared asset (should execute immediately, no dialog)
     const dragPayload: DragPayload = { assetId: 'shared-base', sourceContext: 'AssetTreeNode' };
-    const dropTarget: DropTarget = { id: 'env-b', type: 'asset' };
+    const dropTarget: DropTarget = { id: 'distro-b', type: 'asset' };
 
     // Mock the confirmation to ensure it's NOT called
     const mockPromptForGenericConfirmation = vi.fn().mockResolvedValue(true);
@@ -105,7 +105,7 @@ describe('Stage 5 Workflow: Package → Environment Drop', () => {
     // ACT: Simulate the drop
     const actions = getAvailableActions(dragPayload.assetId, dropTarget);
     expect(actions.length).toBe(1);
-    const copyAction = actions.find((action: any) => action.id === 'copy-to-environment');
+    const copyAction = actions.find((action: any) => action.id === 'copy-to-distro');
     
     await copyAction.execute(dragPayload, dropTarget);
 
@@ -120,7 +120,7 @@ describe('Stage 5 Workflow: Package → Environment Drop', () => {
     // ARRANGE: Create a pure derivative (package with templateFqn pointing to shared asset AND no overrides)
     const pureDerivative: UnmergedAsset = {
       id: 'pure-derivative',
-      fqn: 'EnvA::PureDerivative',
+      fqn: 'DistroA::PureDerivative',
       assetType: ASSET_TYPES.PACKAGE,
       assetKey: 'PureDerivative',
       templateFqn: 'SharedBase', // Points to shared asset
@@ -129,7 +129,7 @@ describe('Stage 5 Workflow: Package → Environment Drop', () => {
     assetsStore.unmergedAssets.push(pureDerivative);
 
     const dragPayload: DragPayload = { assetId: 'pure-derivative', sourceContext: 'AssetTreeNode' };
-    const dropTarget: DropTarget = { id: 'env-b', type: 'asset' };
+    const dropTarget: DropTarget = { id: 'distro-b', type: 'asset' };
 
     // Mock the confirmation to ensure it's NOT called
     const mockPromptForGenericConfirmation = vi.fn().mockResolvedValue(true);
@@ -141,7 +141,7 @@ describe('Stage 5 Workflow: Package → Environment Drop', () => {
     // ACT: Simulate the drop
     const actions = getAvailableActions(dragPayload.assetId, dropTarget);
     expect(actions.length).toBe(1);
-    const copyAction = actions.find((action: any) => action.id === 'copy-to-environment');
+    const copyAction = actions.find((action: any) => action.id === 'copy-to-distro');
     
     await copyAction.execute(dragPayload, dropTarget);
 
@@ -152,11 +152,11 @@ describe('Stage 5 Workflow: Package → Environment Drop', () => {
     expect(workspaceStore.undoStack.length).toBeGreaterThan(0);
   });
 
-  it('should prevent duplicate package names in environment pool', () => {
-    // ARRANGE: Add a duplicate package to the target environment
+  it('should prevent duplicate package names in distro pool', () => {
+    // ARRANGE: Add a duplicate package to the target distro
     const duplicatePackage: UnmergedAsset = {
       id: 'webserver-pkg-b',
-      fqn: 'EnvB::WebServer',
+      fqn: 'DistroB::WebServer',
       assetType: ASSET_TYPES.PACKAGE,
       assetKey: 'WebServer',
       templateFqn: null,
@@ -165,7 +165,7 @@ describe('Stage 5 Workflow: Package → Environment Drop', () => {
     assetsStore.unmergedAssets.push(duplicatePackage);
 
     const dragPayload: DragPayload = { assetId: 'webserver-pkg-a', sourceContext: 'AssetTreeNode' };
-    const dropTarget: DropTarget = { id: 'env-b', type: 'asset' };
+    const dropTarget: DropTarget = { id: 'distro-b', type: 'asset' };
 
     // Set up drag state
     uiStore.startDrag(dragPayload);

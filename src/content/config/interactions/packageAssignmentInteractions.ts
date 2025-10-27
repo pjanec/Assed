@@ -3,17 +3,17 @@ import type { InteractionRuleEntry } from '@/core/stores/ConfigurationHub';
 import type { DragPayload, DropTarget } from '@/core/types/drag-drop';
 import type { UnmergedAsset } from '@/core/types';
 import { ASSET_TYPES } from '@/content/config/constants';
-import { areInSameEnvironment, getAssetEnvironmentFqn, isSharedAsset, isSameOrAncestorEnvironment, getSharedTemplateIfPureDerivative } from '@/content/utils/assetUtils';
+import { areInSameDistro, getAssetDistroFqn, isSharedAsset, isSameOrAncestorDistro, getSharedTemplateIfPureDerivative } from '@/content/utils/assetUtils';
 import { getPropertyInheritanceChain, calculateMergedAsset } from '@/core/utils/mergeUtils';
 import { generatePropertiesDiff } from '@/core/utils/diff';
 import { getIntermediatePath, getParentPath, getAssetName } from '@/core/utils/fqnUtils';
 import { ensurePathExists } from '@/core/utils/pathUtils';
-import { executeCrossEnvCopy, executeResolveAndCopy, executePoolCopy } from '@/content/logic/workspaceExtendedActions';
+import { executeCrossDistroCopy, executeResolveAndCopy, executePoolCopy } from '@/content/logic/workspaceExtendedActions';
 import { useAssetsStore, useUiStore } from '@/core/stores';
 import { useWorkspaceStore } from '@/core/stores/workspace';
 import { CloneAssetCommand, DeriveAssetCommand, CreateAssetCommand, CompositeCommand, type PostCloneHook } from '@/core/stores/workspace';
 
-export const crossEnvironmentCloneHook: PostCloneHook = (newlyClonedAsset, originalSourceAsset, cloneMap) => {
+export const crossDistroCloneHook: PostCloneHook = (newlyClonedAsset, originalSourceAsset, cloneMap) => {
   const assetsStore = useAssetsStore();
   const allAssetsMap = new Map<string, UnmergedAsset>();
   assetsStore.assetsWithOverrides.forEach(a => allAssetsMap.set(a.id, a));
@@ -84,20 +84,20 @@ const assignRequirementRule: InteractionRule = {
         const targetNode = assetsStore.unmergedAssets.find(a => a.id === dropTarget.id) as UnmergedAsset;
         if (!sourcePackage || !targetNode) return;
 
-        const sourceEnv = getAssetEnvironmentFqn(sourcePackage.fqn, assetsStore.unmergedAssets);
-        const targetEnv = getAssetEnvironmentFqn(targetNode.fqn, assetsStore.unmergedAssets);
+        const sourceDistro = getAssetDistroFqn(sourcePackage.fqn, assetsStore.unmergedAssets);
+        const targetDistro = getAssetDistroFqn(targetNode.fqn, assetsStore.unmergedAssets);
         const sharedTemplate = getSharedTemplateIfPureDerivative(sourcePackage, assetsStore.unmergedAssets);
 
-        if (isSharedAsset(sourcePackage, assetsStore.unmergedAssets) || isSameOrAncestorEnvironment(targetEnv, sourceEnv, assetsStore.unmergedAssets)) {
+        if (isSharedAsset(sourcePackage, assetsStore.unmergedAssets) || isSameOrAncestorDistro(targetDistro, sourceDistro, assetsStore.unmergedAssets)) {
           const commands: (CreateAssetCommand | DeriveAssetCommand)[] = [];
           if (isSharedAsset(sourcePackage, assetsStore.unmergedAssets)) {
             const existingPackageInPool = assetsStore.unmergedAssets.find(p =>
               p.assetType === ASSET_TYPES.PACKAGE &&
               p.assetKey === sourcePackage.assetKey &&
-              getAssetEnvironmentFqn(p.fqn, assetsStore.unmergedAssets) === targetEnv
+              getAssetDistroFqn(p.fqn, assetsStore.unmergedAssets) === targetDistro
             );
             if (!existingPackageInPool) {
-              commands.push(new DeriveAssetCommand(sourcePackage, targetEnv, sourcePackage.assetKey));
+              commands.push(new DeriveAssetCommand(sourcePackage, targetDistro, sourcePackage.assetKey));
             }
           }
           const keyCreate = new CreateAssetCommand({
@@ -111,7 +111,7 @@ const assignRequirementRule: InteractionRule = {
           workspaceStore.executeCommand(new CompositeCommand(commands));
         } else if (sharedTemplate) {
           const commands: (CreateAssetCommand | DeriveAssetCommand)[] = [];
-          commands.push(new DeriveAssetCommand(sharedTemplate as UnmergedAsset, targetEnv, sourcePackage.assetKey));
+          commands.push(new DeriveAssetCommand(sharedTemplate as UnmergedAsset, targetDistro, sourcePackage.assetKey));
           const keyCreate = new CreateAssetCommand({
             assetType: ASSET_TYPES.PACKAGE_KEY,
             assetKey: sourcePackage.assetKey,
@@ -127,15 +127,15 @@ const assignRequirementRule: InteractionRule = {
           const beforeChain = getPropertyInheritanceChain(sourcePackage, allAssetsMap);
           const afterChain = [{ 
             assetKey: sourcePackage.assetKey, 
-            fqn: `${targetEnv}::${sourcePackage.assetKey}`,
+            fqn: `${targetDistro}::${sourcePackage.assetKey}`,
             assetType: sourcePackage.assetType 
           }];
-          const confirmed = await uiStore.promptForGenericConfirmation('cross-environment-copy', {
-            type: 'CrossEnvironmentCopy',
+          const confirmed = await uiStore.promptForGenericConfirmation('cross-distro-copy', {
+            type: 'CrossDistroCopy',
             inheritanceComparison: { before: beforeChain, after: afterChain }
           });
           if (confirmed) {
-            executeCrossEnvCopy(dragPayload, dropTarget);
+            executeCrossDistroCopy(dragPayload, dropTarget);
           }
         }
       },
@@ -184,11 +184,11 @@ const PROACTIVE_RESOLUTION_ACTION: DropAction = {
     const targetNode = assetsStore.unmergedAssets.find(a => a.id === dropTarget.id) as UnmergedAsset;
     if (!draggedKey || !targetNode) return;
 
-    const targetEnvFqn = getAssetEnvironmentFqn(targetNode.fqn, assetsStore.unmergedAssets);
+    const targetDistroFqn = getAssetDistroFqn(targetNode.fqn, assetsStore.unmergedAssets);
     const requiredPackageExistsInTarget = assetsStore.unmergedAssets.some(p => 
       p.assetType === ASSET_TYPES.PACKAGE && 
       p.assetKey === draggedKey.assetKey && 
-      getAssetEnvironmentFqn(p.fqn, assetsStore.unmergedAssets) === targetEnvFqn
+      getAssetDistroFqn(p.fqn, assetsStore.unmergedAssets) === targetDistroFqn
     );
 
     if (requiredPackageExistsInTarget) {
@@ -235,8 +235,8 @@ export const copyRequirementRule: InteractionRule = {
     const targetNode = assetsStore.unmergedAssets.find(a => a.id === dropTarget.id);
 
     if (!draggedKey || !targetNode) return [];
-    const isSameEnv = areInSameEnvironment(draggedKey, targetNode, assetsStore.unmergedAssets);
-    return isSameEnv ? [MOVE_REQUIREMENT, COPY_REQUIREMENT_SAME_ENV] : [PROACTIVE_RESOLUTION_ACTION];
+    const isSameDistro = areInSameDistro(draggedKey, targetNode, assetsStore.unmergedAssets);
+    return isSameDistro ? [MOVE_REQUIREMENT, COPY_REQUIREMENT_SAME_ENV] : [PROACTIVE_RESOLUTION_ACTION];
   },
 };
 
@@ -244,28 +244,28 @@ export const populatePackagePoolRule: InteractionRule = {
   validate: (dragPayload: DragPayload, dropTarget: DropTarget) => {
     const assetsStore = useAssetsStore();
     const draggedAsset = assetsStore.unmergedAssets.find(a => a.id === dragPayload.assetId);
-    const targetEnv = assetsStore.unmergedAssets.find(a => a.id === dropTarget.id);
+    const targetDistro = assetsStore.unmergedAssets.find(a => a.id === dropTarget.id);
 
-    if (!draggedAsset || !targetEnv || draggedAsset.assetType !== ASSET_TYPES.PACKAGE || targetEnv.assetType !== ASSET_TYPES.ENVIRONMENT) {
+    if (!draggedAsset || !targetDistro || draggedAsset.assetType !== ASSET_TYPES.PACKAGE || targetDistro.assetType !== ASSET_TYPES.DISTRO) {
       return { isValid: false, reason: 'Invalid asset types for this operation.' };
     }
 
     const directChildren = assetsStore.unmergedAssets.filter(
-      a => a.fqn.startsWith(targetEnv.fqn + '::') && a.fqn.split('::').length === targetEnv.fqn.split('::').length + 1
+      a => a.fqn.startsWith(targetDistro.fqn + '::') && a.fqn.split('::').length === targetDistro.fqn.split('::').length + 1
     );
     const isDuplicate = directChildren.some(
       child => child.assetType === ASSET_TYPES.PACKAGE && child.assetKey === draggedAsset.assetKey
     );
     
     if (isDuplicate) {
-      return { isValid: false, reason: `Environment already has a package named '${draggedAsset.assetKey}'.` };
+      return { isValid: false, reason: `Distro already has a package named '${draggedAsset.assetKey}'.` };
     }
     return { isValid: true };
   },
   actions: [
     {
-      id: 'copy-to-environment',
-      label: 'Copy to Environment',
+      id: 'copy-to-distro',
+      label: 'Copy to Distro',
       icon: 'mdi-content-copy',
       cursor: 'copy',
       execute: async (dragPayload: DragPayload, dropTarget: DropTarget) => {
@@ -273,14 +273,14 @@ export const populatePackagePoolRule: InteractionRule = {
         const assetsStore = useAssetsStore();
         const workspaceStore = useWorkspaceStore();
         const sourcePackage = assetsStore.unmergedAssets.find(a => a.id === dragPayload.assetId) as UnmergedAsset;
-        const targetEnv = assetsStore.unmergedAssets.find(a => a.id === dropTarget.id) as UnmergedAsset;
-        if (!sourcePackage || !targetEnv) return;
+        const targetDistro = assetsStore.unmergedAssets.find(a => a.id === dropTarget.id) as UnmergedAsset;
+        if (!sourcePackage || !targetDistro) return;
 
-        const sourceEnvFqn = getAssetEnvironmentFqn(sourcePackage.fqn, assetsStore.unmergedAssets);
-        const intermediatePath = getIntermediatePath(sourcePackage.fqn, sourceEnvFqn);
+        const sourceDistroFqn = getAssetDistroFqn(sourcePackage.fqn, assetsStore.unmergedAssets);
+        const intermediatePath = getIntermediatePath(sourcePackage.fqn, sourceDistroFqn);
         const relativeFolderPath = getParentPath(intermediatePath);
         const finalAssetName = getAssetName(intermediatePath);
-        const finalParentFqn = ensurePathExists(targetEnv.fqn, relativeFolderPath);
+        const finalParentFqn = ensurePathExists(targetDistro.fqn, relativeFolderPath);
         const sharedTemplate = getSharedTemplateIfPureDerivative(sourcePackage, assetsStore.unmergedAssets);
 
         if (isSharedAsset(sourcePackage, assetsStore.unmergedAssets) || sharedTemplate) {
@@ -302,8 +302,8 @@ export const populatePackagePoolRule: InteractionRule = {
             fqn: `${finalParentFqn}::${finalAssetName}`,
             assetType: sourcePackage.assetType 
           }];
-          const confirmed = await uiStore.promptForGenericConfirmation('cross-environment-copy', {
-            type: 'CrossEnvironmentCopy',
+          const confirmed = await uiStore.promptForGenericConfirmation('cross-distro-copy', {
+            type: 'CrossDistroCopy',
             inheritanceComparison: { before: beforeChain, after: afterChain }
           });
           if (confirmed) {
@@ -328,7 +328,7 @@ export const packageAssignmentRules: InteractionRuleEntry[] = [
   },
   {
     draggedType: ASSET_TYPES.PACKAGE,
-    targetType: ASSET_TYPES.ENVIRONMENT,
+    targetType: ASSET_TYPES.DISTRO,
     rule: populatePackagePoolRule
   },
 ];
