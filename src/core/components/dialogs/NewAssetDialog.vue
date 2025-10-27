@@ -27,7 +27,7 @@
 
           <v-text-field
             v-model="form.technicalName"
-            label="Technical Name*"
+            label="Name*"
             variant="outlined"
             density="compact"
             class="mb-4"
@@ -35,25 +35,6 @@
             hint="Allowed characters: a-z, 0-9, _, -, ."
             persistent-hint
             :autofocus="isChildMode"
-          />
-
-          <v-text-field
-            v-model="form.title"
-            label="Title (Optional)"
-            variant="outlined"
-            density="compact"
-            class="mb-4"
-          />
-
-          <v-text-field
-            v-model="form.location"
-            label="Location"
-            variant="outlined"
-            density="compact"
-            class="mb-4"
-            readonly
-            persistent-hint
-            hint="The folder where this asset will be created."
           />
 
           <v-text-field
@@ -148,8 +129,6 @@ const coreConfig = useCoreConfigStore();
 const form = ref({
   assetType: '',
   technicalName: '',
-  title: '',
-  location: '',
   templateFqn: null
 });
 
@@ -178,12 +157,21 @@ const dialogTitle = computed(() => {
   return 'Create New Shared Asset';
 });
 
+const location = computed(() => {
+  if (props.parentAsset && props.childType) {
+    return props.parentAsset.fqn;
+  } else if (props.prefilledOrigin) {
+    return props.prefilledOrigin;
+  }
+  return null;
+});
+
 const generatedFqn = computed(() => {
   if (!form.value.technicalName) {
-    return form.value.location ? `${form.value.location}::` : '';
+    return location.value ? `${location.value}::` : '';
   }
-  return form.value.location 
-    ? `${form.value.location}::${form.value.technicalName}`
+  return location.value 
+    ? `${location.value}::${form.value.technicalName}`
     : form.value.technicalName;
 });
 
@@ -224,10 +212,7 @@ watch(() => props.modelValue, (isOpen: boolean) => {
   if (isOpen) {
     resetForm();
     if (props.parentAsset && props.childType) {
-      form.value.location = props.parentAsset.fqn;
       form.value.assetType = props.childType;
-    } else if (props.prefilledOrigin) {
-      form.value.location = props.prefilledOrigin;
     }
   }
 });
@@ -237,8 +222,6 @@ const resetForm = () => {
   form.value = {
     assetType: '',
     technicalName: '',
-    title: '',
-    location: '',
     templateFqn: null
   };
 };
@@ -253,10 +236,6 @@ const handleCreate = () => {
     templateFqn: form.value.templateFqn,
     overrides: {} as any
   };
-    
-  if (form.value.title) {
-    newAsset.overrides.Title = form.value.title;
-  }
 
   emit('create', newAsset);
   emit('update:model-value', false);
