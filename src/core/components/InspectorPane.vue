@@ -136,6 +136,7 @@
           :is="asyncComponent"
           :asset="viewModel!"
           :is-read-only="viewModel!.isReadOnly"
+          :key="assetId"
         />
       </div>
     </div>
@@ -214,35 +215,48 @@ const goToTemplate = () => {
   assetsStore.updateInspectorContent(props.paneId, templateTargetId.value);
 };
 
+// Memoize component by asset type to prevent recreation
+const componentCache = new Map<string, any>();
+
 // Use defineAsyncComponent to handle loading/error states gracefully
 const asyncComponent = computed(() => {
   const live = assetsStore.getTreeNodeById(props.assetId);
   // Virtual Folder inspector path
   if (live && live.type === 'folder') {
     const kind = live.virtualContext?.kind as any;
-    const loader = async () => {
-      const mod = await import('@/content/logic/virtual-folders/definitions');
-      const provider = kind ? (mod as any).virtualFolderDefinitions[kind] : undefined;
-      if (provider?.inspectorComponent) {
-        const comp = await provider.inspectorComponent();
-        return comp;
-      }
-      const generic = await import('@/core/components/VirtualFolderInspector.vue');
-      return generic.default;
-    };
-    return defineAsyncComponent({ loader, delay: 200 });
+    const cacheKey = `folder-${kind || 'generic'}`;
+    
+    if (!componentCache.has(cacheKey)) {
+      const loader = async () => {
+        const mod = await import('@/content/logic/virtual-folders/definitions');
+        const provider = kind ? (mod as any).virtualFolderDefinitions[kind] : undefined;
+        if (provider?.inspectorComponent) {
+          const comp = await provider.inspectorComponent();
+          return comp;
+        }
+        const generic = await import('@/core/components/VirtualFolderInspector.vue');
+        return generic.default;
+      };
+      componentCache.set(cacheKey, defineAsyncComponent({ loader, delay: 200 }));
+    }
+    return componentCache.get(cacheKey);
   }
 
   if (!viewModel.value) return null as any;
   const assetType = viewModel.value.unmerged.assetType as any;
   if (!assetType) return null as any;
-  const registration = coreConfig.getAssetDefinition(assetType);
-  if (!registration) return null as any;
-  // Unwrap PerspectiveOverrides
-  const inspectorComp = registration.inspectorComponent;
-  const loader = typeof inspectorComp === 'function' ? inspectorComp : inspectorComp.default;
-  if (!loader) return null as any;
-  return defineAsyncComponent({ loader, delay: 200 });
+  
+  const cacheKey = `asset-${assetType}`;
+  if (!componentCache.has(cacheKey)) {
+    const registration = coreConfig.getAssetDefinition(assetType);
+    if (!registration) return null as any;
+    // Unwrap PerspectiveOverrides
+    const inspectorComp = registration.inspectorComponent;
+    const loader = typeof inspectorComp === 'function' ? inspectorComp : inspectorComp.default;
+    if (!loader) return null as any;
+    componentCache.set(cacheKey, defineAsyncComponent({ loader, delay: 200 }));
+  }
+  return componentCache.get(cacheKey);
 });
 
 const closeInspector = () => {

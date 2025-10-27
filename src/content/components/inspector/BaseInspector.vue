@@ -33,7 +33,7 @@
     <!-- Common Window -->
     <v-window v-model="activeTab" class="inspector-window-content flex-1-1">
       <!-- Slot for specific inspector settings -->
-      <v-window-item value="settings" class="h-100">
+      <v-window-item value="settings" :key="`settings-${asset.unmerged.id}`" class="h-100">
         <div class="h-100 pa-2" style="overflow-y: auto;">
           <slot name="settings-panels"></slot>
         </div>
@@ -133,7 +133,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { useUiStore } from '@/core/stores/ui';
 import MonacoEditor from './MonacoEditor.vue';
 import JSONEditor from './JSONEditor.vue';
