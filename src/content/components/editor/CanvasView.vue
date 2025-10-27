@@ -111,7 +111,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAssetsStore, useUiStore } from '@/core/stores'
+import { useAssetsStore, useUiStore, useWorkspaceStore } from '@/core/stores'
 import NodeCard from './NodeCard.vue'
 import type { Asset, UnmergedAsset, AssetTreeNode } from '@/core/types'
 import { ASSET_TYPES } from '@/content/config/constants'
@@ -131,6 +131,7 @@ const props = withDefaults(defineProps<Props>(), {
 const router = useRouter()
 const assetsStore = useAssetsStore()
 const uiStore = useUiStore()
+const workspaceStore = useWorkspaceStore()
 const coreConfig = useCoreConfigStore()
 
 const loading = ref<boolean>(false)
@@ -196,8 +197,14 @@ const selectPackage = (packageId: string): void => {
   }
 }
 
-const addNewNode = (): void => {
-  console.log('Adding new node')
+const addNewNode = async (): Promise<void> => {
+  if (!currentEnvironment.value) return;
+  
+  workspaceStore.openNewAssetDialog({ 
+    parentAsset: currentEnvironment.value, 
+    childType: ASSET_TYPES.NODE, 
+    namespace: null 
+  });
 }
 </script>
 
