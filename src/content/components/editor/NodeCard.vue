@@ -32,6 +32,7 @@
             size="small"
             class="ma-1"
             @click.stop="openRequirement(requirement.id)"
+            @contextmenu.prevent="showRequirementMenu($event, requirement)"
             v-dragsource="{ 
               assetId: requirement.id, 
               parentAssetId: props.node.id, 
@@ -83,8 +84,9 @@ import { CONTENT_DRAG_CONTEXTS, ASSET_TYPES } from '@/content/config/constants';
 import { getAssetDistroFqn, isSharedAsset } from '@/content/utils/assetUtils';
 import type { Asset, UnmergedAsset } from '@/core/types';
 import { useCoreConfigStore } from '@/core/stores/config';
-import { ASSET_TREE_NODE_TYPES } from '@/core/config/constants';
+import { ASSET_TREE_NODE_TYPES, CONTEXT_MENU_KINDS } from '@/core/config/constants';
 import { ensurePackageInDistroPool } from '@/content/logic/workspaceExtendedActions';
+import { createTreeNodeFromAsset } from '@/core/utils/assetTreeUtils';
 
 interface Node {
   id: string;
@@ -215,6 +217,27 @@ const openRequirement = (requirementId: string) => {
   } else {
      assetsStore.openInspectorFor(requirementId, { reuse: true, focus: true });
   }
+}
+
+const showRequirementMenu = (event: MouseEvent, requirement: UnmergedAsset) => {
+  event.preventDefault();
+  
+  let treeNode = assetsStore.getTreeNodeById(requirement.id);
+  
+  if (!treeNode) {
+    treeNode = createTreeNodeFromAsset(requirement);
+  } else if (treeNode.virtualContext) {
+    treeNode = { ...treeNode, virtualContext: undefined };
+  }
+
+  uiStore.showContextMenu({
+    x: event.clientX,
+    y: event.clientY,
+    ctx: {
+      kind: CONTEXT_MENU_KINDS.NODE_ACTIONS,
+      node: treeNode,
+    },
+  });
 }
 </script>
 
