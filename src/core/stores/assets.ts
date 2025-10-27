@@ -367,16 +367,16 @@ export const useAssetsStore = defineStore('assets', {
 
       const assetsByFqn = new Map(state.assets.map(a => [a.fqn, a]));
 
-      const distroFqns = new Set(
+      const topLevelAssets = new Set(
         state.assets
-          .filter(a => a.assetType === 'Distro' && !a.fqn.includes('::'))
+          .filter(a => !a.fqn.includes('::'))
           .map(a => a.fqn)
       );
 
-      const getAssetDistro = (assetFqn: string): string | null => {
-        for (const distroFqn of distroFqns) {
-          if (assetFqn.startsWith(distroFqn + '::')) {
-            return distroFqn;
+      const getAssetTopLevelParent = (assetFqn: string): string | null => {
+        for (const topLevelFqn of topLevelAssets) {
+          if (assetFqn.startsWith(topLevelFqn + '::')) {
+            return topLevelFqn;
           }
         }
         return null;
@@ -399,7 +399,7 @@ export const useAssetsStore = defineStore('assets', {
         return false;
       };
 
-      const currentAssetDistro = getAssetDistro(fqn);
+      const currentAssetTopLevelParent = getAssetTopLevelParent(fqn);
 
       return state.assets.filter(potentialTemplate => {
         // Rule 1: Must be the same asset type.
@@ -412,14 +412,14 @@ export const useAssetsStore = defineStore('assets', {
         if (isCircularDependency(potentialTemplate)) return false;
 
         // Rule 4: Enforce inheritance boundaries.
-        const templateDistro = getAssetDistro(potentialTemplate.fqn);
+        const templateTopLevelParent = getAssetTopLevelParent(potentialTemplate.fqn);
 
-        if (currentAssetDistro) {
-          // Case A: The current asset is inside a distro.
-          return templateDistro === null || templateDistro === currentAssetDistro;
+        if (currentAssetTopLevelParent) {
+          // Case A: The current asset is inside a top-level parent.
+          return templateTopLevelParent === null || templateTopLevelParent === currentAssetTopLevelParent;
         } else {
           // Case B: The current asset is a shared asset.
-          return templateDistro === null;
+          return templateTopLevelParent === null;
         }
       });
     },
