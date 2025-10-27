@@ -191,7 +191,7 @@ export function useContextMenuActionsRegistration() {
     if (node.id === ROOT_ID) {
       const registry = getEffectiveRegistry();
       return Object.entries(registry)
-        .filter(([, definition]) => definition.isCreatableAtRoot)
+        .filter(([, definition]) => definition.isCreatableAtRoot && (definition as any)._isSupportedInCurrentPerspective !== false)
         .map(([type]) => type);
     }
     

@@ -27,8 +27,7 @@
       </div>
     </div>
 
-    <!-- Matrix Content -->
-    <div class="matrix-content flex-1-1 overflow-auto">
+    <div class="matrix-content flex-1-1 overflow-auto" :class="{ 'drag-over-active': isMatrixDraggingOver }" @dragover.prevent="handleDragOver" @dragleave="handleDragLeave" @drop="handleDrop">
       <div v-if="!asset" class="d-flex flex-column justify-center align-center h-100">
         <v-icon size="96" color="grey-lighten-2" class="mb-4">
           mdi-table-large
@@ -38,6 +37,18 @@
         </h4>
         <p class="text-body-1 text-medium-emphasis">
           Select an environment to view the package matrix
+        </p>
+      </div>
+      
+      <div v-else-if="!isNodeSupported || !isPackageSupported" class="pa-8 text-center">
+        <v-icon size="64" color="grey-lighten-2" class="mb-4">
+          mdi-eye-off-outline
+        </v-icon>
+        <h4 class="text-h6 text-medium-emphasis mb-2">
+          Matrix Not Available
+        </h4>
+        <p class="text-body-2 text-medium-emphasis">
+          {{ !isNodeSupported ? 'Node' : 'Package' }} assets are not supported in the current perspective.
         </p>
       </div>
       
@@ -112,7 +123,7 @@
                   :node="node"
                   :assigned="isPackageAssigned(pkg.id, node.id)"
                   @toggle="toggleAssignment"
-                  @click="selectPackage"
+                  @click="selectAssignment"
                 />
               </td>
             </tr>
@@ -125,11 +136,13 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { useAssetsStore, useUiStore } from '@/core/stores'
+import { useAssetsStore, useUiStore, useWorkspaceStore, CreateAssetCommand, DeleteAssetsCommand } from '@/core/stores'
 import MatrixCell from './MatrixCell.vue'
 import type { Asset, AssetTreeNode, UnmergedAsset } from '@/core/types'
 import { ASSET_TYPES } from '@/content/config/constants'
-import { ASSET_TREE_NODE_TYPES } from '@/core/config/constants'
+import { ASSET_TREE_NODE_TYPES, DROP_TARGET_TYPES } from '@/core/config/constants'
+import { useDroppable } from '@/core/composables/useDroppable'
+import { useCoreConfigStore } from '@/core/stores/config'
 
 // Props
 interface Props {
@@ -143,12 +156,33 @@ const props = withDefaults(defineProps<Props>(), {
 
 const assetsStore = useAssetsStore()
 const uiStore = useUiStore()
+const workspaceStore = useWorkspaceStore()
+const coreConfig = useCoreConfigStore()
 
-// Reactive state
 const packageFilter = ref<string>('')
+
+const {
+  isDraggingOver: isMatrixDraggingOver,
+  handleDragOver,
+  handleDragLeave,
+  handleDrop
+} = useDroppable({
+  type: DROP_TARGET_TYPES.ASSET,
+  id: props.asset.id,
+});
 
 // Computed properties
 const currentEnvironment = computed((): Asset | null => props.asset)
+
+const isNodeSupported = computed(() => {
+  const nodeDef = coreConfig.effectiveAssetRegistry[ASSET_TYPES.NODE];
+  return (nodeDef as any)?._isSupportedInCurrentPerspective !== false;
+});
+
+const isPackageSupported = computed(() => {
+  const packageDef = coreConfig.effectiveAssetRegistry[ASSET_TYPES.PACKAGE];
+  return (packageDef as any)?._isSupportedInCurrentPerspective !== false;
+});
 
 interface MatrixData {
   nodes: Asset[]
@@ -188,34 +222,73 @@ const matrixData = computed((): MatrixData => {
   return { nodes, packages }
 })
 
-// Look up *unmerged* assets by id for assignment checks
-const unmergedById = computed((): Map<string, Asset> => {
-  const m = new Map<string, Asset>()
-  for (const a of assetsStore.unmergedAssets) m.set(a.id, a)
-  return m
-})
+const unmergedById = computed((): Map<string, UnmergedAsset> => {
+  const m = new Map<string, UnmergedAsset>();
+  for (const a of assetsStore.unmergedAssets) m.set(a.id, a);
+  return m;
+});
 
 const isPackageAssigned = (packageId: string, nodeId: string): boolean => {
-  const pkg = unmergedById.value.get(packageId)
-  const node = unmergedById.value.get(nodeId)
-  return !!pkg && !!node && pkg.fqn.startsWith(node.fqn + '::')
-}
+  const pkg = unmergedById.value.get(packageId);
+  const node = unmergedById.value.get(nodeId);
+  if (!pkg || !node) return false;
+
+  const expectedKeyFqn = `${node.fqn}::${pkg.assetKey}`;
+  return assetsStore.unmergedAssets.some(
+    a => a.assetType === ASSET_TYPES.PACKAGE_KEY && a.fqn === expectedKeyFqn
+  );
+};
 
 const toggleAssignment = (packageId: string, nodeId: string): void => {
-  console.log('Toggling assignment:', packageId, nodeId)
-}
+  const pkg = unmergedById.value.get(packageId);
+  const node = unmergedById.value.get(nodeId);
+  if (!pkg || !node) return;
 
-const selectPackage = (packageId: string): void => {
-  const asset = assetsStore.unmergedAssets.find(a => a.id === packageId);
-  if (asset) {
-    uiStore.selectNode({
-      id: asset.id,
-      type: ASSET_TREE_NODE_TYPES.ASSET,
-      name: asset.id,
-      path: asset.fqn
+  const expectedKeyFqn = `${node.fqn}::${pkg.assetKey}`;
+  const existingKey = assetsStore.unmergedAssets.find(
+    a => a.assetType === ASSET_TYPES.PACKAGE_KEY && a.fqn === expectedKeyFqn
+  );
+
+  if (existingKey) {
+    const command = new DeleteAssetsCommand([existingKey as UnmergedAsset]);
+    workspaceStore.executeCommand(command);
+  } else {
+    const packageKeyDef = coreConfig.effectiveAssetRegistry[ASSET_TYPES.PACKAGE_KEY];
+    if (!packageKeyDef || (packageKeyDef as any)._isSupportedInCurrentPerspective === false) {
+       console.warn("Cannot add requirement: PackageKey assets are not supported in the current perspective.");
+       return;
+    }
+
+    const command = new CreateAssetCommand({
+      assetType: ASSET_TYPES.PACKAGE_KEY,
+      assetKey: pkg.assetKey,
+      fqn: expectedKeyFqn,
+      templateFqn: null,
+      overrides: {},
     });
+    workspaceStore.executeCommand(command);
   }
-}
+};
+
+const selectAssignment = (packageId: string, nodeId: string): void => {
+  const pkg = unmergedById.value.get(packageId);
+  const node = unmergedById.value.get(nodeId);
+  if (!pkg || !node) return;
+
+  const expectedKeyFqn = `${node.fqn}::${pkg.assetKey}`;
+  const existingKey = assetsStore.unmergedAssets.find(
+    a => a.assetType === ASSET_TYPES.PACKAGE_KEY && a.fqn === expectedKeyFqn
+  );
+
+  if (existingKey) {
+    const keyNode = assetsStore.getTreeNodeById(existingKey.id);
+    if (keyNode) {
+      assetsStore.openInspectorFor(keyNode, { reuse: true, focus: true });
+    } else {
+      assetsStore.openInspectorFor(existingKey.id, { reuse: true, focus: true });
+    }
+  }
+};
 
 const refreshMatrix = (): void => {
   console.log('Refreshing matrix')
@@ -306,6 +379,12 @@ const exportMatrix = (): void => {
   display: flex;
   align-items: center;
   justify-content: flex-start;
+}
+
+.drag-over-active {
+  background-color: rgba(var(--v-theme-primary), 0.04) !important;
+  outline: 1px dashed rgba(var(--v-theme-primary), 0.3);
+  outline-offset: -1px;
 }
 </style>
 

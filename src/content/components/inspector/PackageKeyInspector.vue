@@ -114,10 +114,15 @@ const inspectPackage = () => {
 
 // The resolution logic
 const handleResolve = async () => {
+  const packageDef = coreConfig.effectiveAssetRegistry[ASSET_TYPES.PACKAGE];
+  if ((packageDef as any)?._isSupportedInCurrentPerspective === false) {
+     console.warn("Cannot resolve: Package assets are not supported in the current perspective.");
+     return;
+  }
+
   const allAssets = assetsStore.unmergedAssets;
   const distroFqn = getAssetDistroFqn(props.asset.unmerged.fqn, allAssets);
 
-  // Filter for valid packages within the same distro
   const validPackages = allAssets.filter(a =>
     a.assetType === ASSET_TYPES.PACKAGE &&
     getAssetDistroFqn(a.fqn, allAssets) === distroFqn

@@ -9,7 +9,7 @@ import {
 import type { UnmergedAsset } from '@/core/types';
 import type { DragPayload, DropTarget } from '@/core/types/drag-drop';
 import { ASSET_TYPES } from '@/content/config/constants';
-import { getAssetDistroFqn, isSharedAsset } from '@/content/utils/assetUtils';
+import { getAssetDistroFqn, isSharedAsset, getSharedTemplateIfPureDerivative, isSameOrAncestorDistro } from '@/content/utils/assetUtils';
 import { getPropertyInheritanceChain, calculateMergedAsset } from '@/core/utils/mergeUtils';
 import { generatePropertiesDiff } from '@/core/utils/diff';
 
@@ -164,4 +164,37 @@ export function executePoolCopy(dragPayload: DragPayload, dropTarget: DropTarget
   );
 
   workspaceStore.executeCommand(cloneCommand);
+}
+
+/**
+ * Returns commands needed to ensure a package exists in the target distro's pool.
+ * This is a shared utility used by both drag-drop interactions and manual requirement assignment.
+ */
+export function ensurePackageInDistroPool(sourcePackage: UnmergedAsset, targetDistroFqn: string | null): (DeriveAssetCommand | CreateAssetCommand)[] {
+  if (!targetDistroFqn) {
+    return [];
+  }
+
+  const assetsStore = useAssetsStore();
+  const sourceDistro = getAssetDistroFqn(sourcePackage.fqn, assetsStore.unmergedAssets);
+  const sharedTemplate = getSharedTemplateIfPureDerivative(sourcePackage, assetsStore.unmergedAssets);
+  const commands: (DeriveAssetCommand | CreateAssetCommand)[] = [];
+
+  if (isSharedAsset(sourcePackage, assetsStore.unmergedAssets) || isSameOrAncestorDistro(targetDistroFqn, sourceDistro, assetsStore.unmergedAssets)) {
+    const existingPackageInPool = assetsStore.unmergedAssets.find(p =>
+      p.assetType === ASSET_TYPES.PACKAGE &&
+      p.assetKey === sourcePackage.assetKey &&
+      getAssetDistroFqn(p.fqn, assetsStore.unmergedAssets) === targetDistroFqn
+    );
+    
+    if (!existingPackageInPool) {
+      if (isSharedAsset(sourcePackage, assetsStore.unmergedAssets)) {
+        commands.push(new DeriveAssetCommand(sourcePackage, targetDistroFqn, sourcePackage.assetKey));
+      }
+    }
+  } else if (sharedTemplate) {
+    commands.push(new DeriveAssetCommand(sharedTemplate as UnmergedAsset, targetDistroFqn, sourcePackage.assetKey));
+  }
+
+  return commands;
 }

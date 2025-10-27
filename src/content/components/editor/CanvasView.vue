@@ -53,7 +53,18 @@
         </v-btn>
       </div>
       
-      <!-- Environment Canvas -->
+      <div v-else-if="!isNodeSupported" class="d-flex flex-column justify-center align-center h-100">
+        <v-icon size="96" color="grey-lighten-2" class="mb-4">
+          mdi-eye-off-outline
+        </v-icon>
+        <h4 class="text-h5 text-medium-emphasis mb-2">
+          Nodes Not Available
+        </h4>
+        <p class="text-body-1 text-medium-emphasis text-center">
+          Node assets are not supported in the current perspective.
+        </p>
+      </div>
+
       <div v-else class="environment-canvas">
         <!-- Environment Info Card -->
         <v-card class="mb-4" elevation="2">
@@ -105,6 +116,7 @@ import NodeCard from './NodeCard.vue'
 import type { Asset, UnmergedAsset, AssetTreeNode } from '@/core/types'
 import { ASSET_TYPES } from '@/content/config/constants'
 import { ASSET_TREE_NODE_TYPES } from '@/core/config/constants'
+import { useCoreConfigStore } from '@/core/stores/config'
 
 // Props
 interface Props {
@@ -119,8 +131,8 @@ const props = withDefaults(defineProps<Props>(), {
 const router = useRouter()
 const assetsStore = useAssetsStore()
 const uiStore = useUiStore()
+const coreConfig = useCoreConfigStore()
 
-// State
 const loading = ref<boolean>(false)
 
 // Computed properties
@@ -139,6 +151,11 @@ const environmentNodes = computed((): Asset[] => {
     asset.fqn.startsWith(currentEnvironment.value.fqn + '::')
   )
 })
+
+const isNodeSupported = computed(() => {
+  const nodeDef = coreConfig.effectiveAssetRegistry[ASSET_TYPES.NODE];
+  return (nodeDef as any)?._isSupportedInCurrentPerspective !== false;
+});
 
 // Methods
 const refreshView = (): void => {

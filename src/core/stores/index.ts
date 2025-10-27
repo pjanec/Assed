@@ -4,6 +4,7 @@ export { useWorkspaceStore } from './workspace'
 export { useBuildsStore } from './builds'
 export { useUiStore } from './ui'
 export { useCoreConfigStore } from './config'
+export { CreateAssetCommand, DeleteAssetsCommand, CompositeCommand } from './workspace'
 
 
 

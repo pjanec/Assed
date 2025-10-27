@@ -8,7 +8,7 @@ import { getPropertyInheritanceChain, calculateMergedAsset } from '@/core/utils/
 import { generatePropertiesDiff } from '@/core/utils/diff';
 import { getIntermediatePath, getParentPath, getAssetName } from '@/core/utils/fqnUtils';
 import { ensurePathExists } from '@/core/utils/pathUtils';
-import { executeCrossDistroCopy, executeResolveAndCopy, executePoolCopy } from '@/content/logic/workspaceExtendedActions';
+import { executeCrossDistroCopy, executeResolveAndCopy, executePoolCopy, ensurePackageInDistroPool } from '@/content/logic/workspaceExtendedActions';
 import { useAssetsStore, useUiStore } from '@/core/stores';
 import { useWorkspaceStore } from '@/core/stores/workspace';
 import { CloneAssetCommand, DeriveAssetCommand, CreateAssetCommand, CompositeCommand, type PostCloneHook } from '@/core/stores/workspace';
@@ -84,22 +84,16 @@ const assignRequirementRule: InteractionRule = {
         const targetNode = assetsStore.unmergedAssets.find(a => a.id === dropTarget.id) as UnmergedAsset;
         if (!sourcePackage || !targetNode) return;
 
-        const sourceDistro = getAssetDistroFqn(sourcePackage.fqn, assetsStore.unmergedAssets);
         const targetDistro = getAssetDistroFqn(targetNode.fqn, assetsStore.unmergedAssets);
+        const sourceDistro = getAssetDistroFqn(sourcePackage.fqn, assetsStore.unmergedAssets);
         const sharedTemplate = getSharedTemplateIfPureDerivative(sourcePackage, assetsStore.unmergedAssets);
 
-        if (isSharedAsset(sourcePackage, assetsStore.unmergedAssets) || isSameOrAncestorDistro(targetDistro, sourceDistro, assetsStore.unmergedAssets)) {
+        if (isSharedAsset(sourcePackage, assetsStore.unmergedAssets) || isSameOrAncestorDistro(targetDistro, sourceDistro, assetsStore.unmergedAssets) || sharedTemplate) {
           const commands: (CreateAssetCommand | DeriveAssetCommand)[] = [];
-          if (isSharedAsset(sourcePackage, assetsStore.unmergedAssets)) {
-            const existingPackageInPool = assetsStore.unmergedAssets.find(p =>
-              p.assetType === ASSET_TYPES.PACKAGE &&
-              p.assetKey === sourcePackage.assetKey &&
-              getAssetDistroFqn(p.fqn, assetsStore.unmergedAssets) === targetDistro
-            );
-            if (!existingPackageInPool) {
-              commands.push(new DeriveAssetCommand(sourcePackage, targetDistro, sourcePackage.assetKey));
-            }
-          }
+          
+          const poolCommands = ensurePackageInDistroPool(sourcePackage, targetDistro);
+          commands.push(...poolCommands);
+
           const keyCreate = new CreateAssetCommand({
             assetType: ASSET_TYPES.PACKAGE_KEY,
             assetKey: sourcePackage.assetKey,
@@ -108,18 +102,7 @@ const assignRequirementRule: InteractionRule = {
             overrides: {},
           });
           commands.push(keyCreate);
-          workspaceStore.executeCommand(new CompositeCommand(commands));
-        } else if (sharedTemplate) {
-          const commands: (CreateAssetCommand | DeriveAssetCommand)[] = [];
-          commands.push(new DeriveAssetCommand(sharedTemplate as UnmergedAsset, targetDistro, sourcePackage.assetKey));
-          const keyCreate = new CreateAssetCommand({
-            assetType: ASSET_TYPES.PACKAGE_KEY,
-            assetKey: sourcePackage.assetKey,
-            fqn: `${targetNode.fqn}::${sourcePackage.assetKey}`,
-            templateFqn: null,
-            overrides: {},
-          });
-          commands.push(keyCreate);
+
           workspaceStore.executeCommand(new CompositeCommand(commands));
         } else {
           const allAssetsMap = new Map<string, UnmergedAsset>();

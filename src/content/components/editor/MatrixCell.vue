@@ -42,10 +42,9 @@ const props = withDefaults(defineProps<Props>(), {
   assigned: false
 })
 
-// Emits
 const emit = defineEmits<{
   (e: 'toggle', packageId: string, nodeId: string): void;
-  (e: 'click', packageId: string): void;
+  (e: 'click', packageId: string, nodeId: string): void;
 }>();
 
 // Computed properties
@@ -62,7 +61,7 @@ const handleToggle = () => {
 }
 
 const handleClick = () => {
-  emit('click', props.package.id)
+  emit('click', props.package.id, props.node.id)
 }
 </script>
 
