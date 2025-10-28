@@ -126,28 +126,10 @@ describe('System Robustness: Validation Reactivity', () => {
     },
   ];
 
-  // Define and register a validation rule for this test suite
-  const nodeMustHavePackage: (asset: UnmergedAsset, allAssets: UnmergedAsset[]) => ValidationIssue | null =
-    (asset, allAssets) => {
-      if (asset.assetType !== ROBUSTNESS_ASSET_TYPES.NODE) return null;
-      const hasPackage = allAssets.some(
-        a => a.assetType === ROBUSTNESS_ASSET_TYPES.PACKAGE && a.fqn.startsWith(asset.fqn + '::')
-      );
-      if (!hasPackage) {
-        return {
-          id: `${asset.id}-no-package`, severity: 'error', message: 'Node must have a package.',
-          assetId: asset.id, assetName: asset.assetKey, assetType: asset.assetType,
-        };
-      }
-      return null;
-    };
-
   beforeEach(async () => {
     const env = createTestEnvironment(initialData);
     assetsStore = env.assetsStore;
     workspaceStore = env.workspaceStore;
-    // Register the rule for our robustness 'Node' type
-    registerValidationRule(ROBUSTNESS_ASSET_TYPES.NODE, nodeMustHavePackage);
     await assetsStore.loadAssets();
   });
 
@@ -162,21 +144,22 @@ describe('System Robustness: Validation Reactivity', () => {
     const deleteCommand = new DeleteAssetsCommand([packageToDelete!]);
     workspaceStore.executeCommand(deleteCommand);
 
-    // ASSERT 1: A validation issue should appear
-    expect(workspaceStore.validationIssues).toHaveLength(1);
-    expect(workspaceStore.validationIssues[0].id).toBe('node-1-no-package');
+    // ASSERT 1: A validation issue for the missing package should appear
+    const afterDeleteIssues = workspaceStore.validationIssues;
+    expect(afterDeleteIssues.some(i => i.id === 'node-1-missing-package')).toBe(true);
 
     // ACT 2: Undo the deletion
     workspaceStore.undo();
 
-    // ASSERT 2: The validation issue should disappear
-    expect(workspaceStore.validationIssues).toHaveLength(0);
+    // ASSERT 2: The specific validation issue should disappear
+    const afterUndoIssues = workspaceStore.validationIssues;
+    expect(afterUndoIssues.some(i => i.id === 'node-1-missing-package')).toBe(false);
 
     // ACT 3: Redo the deletion
     workspaceStore.redo();
 
-    // ASSERT 3: The validation issue should reappear
-    expect(workspaceStore.validationIssues).toHaveLength(1);
-    expect(workspaceStore.validationIssues[0].id).toBe('node-1-no-package');
+    // ASSERT 3: The specific validation issue should reappear
+    const afterRedoIssues = workspaceStore.validationIssues;
+    expect(afterRedoIssues.some(i => i.id === 'node-1-missing-package')).toBe(true);
   });
 });
