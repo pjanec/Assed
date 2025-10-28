@@ -51,7 +51,7 @@ describe('NewAssetDialog - Perspective-Based Filtering', () => {
     });
   });
 
-  describe('Environment Perspective', () => {
+  describe('Distro Perspective', () => {
     it('should filter asset types based on supportedAssetTypes', () => {
       hub.setPerspective('distro');
       
@@ -68,7 +68,7 @@ describe('NewAssetDialog - Perspective-Based Filtering', () => {
         return (def as any)._isSupportedInCurrentPerspective !== false;
       });
       
-      // Environment perspective supports: Container, Widget (from mockPerspectiveDefinitions)
+      // Distro perspective supports: Container, Widget (from mockPerspectiveDefinitions)
       // Aggregator is NOT supported
       
       const containerSupported = shownTypes.includes('Container');

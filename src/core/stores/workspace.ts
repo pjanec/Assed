@@ -597,7 +597,7 @@ export const useWorkspaceStore = defineStore('workspace', {
         }
       });
       
-      // --- 5. Group by Environment and Cache the Result ---
+      // --- 5. Group by Distro and Cache the Result ---
       const groupedByEnv = new Map<string, ChangeItem[]>();
       rippleDiffs.forEach(item => {
         const fqnParts = item.newState.fqn.split('::');

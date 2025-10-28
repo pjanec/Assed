@@ -9,7 +9,7 @@ This directory contains **domain-specific interaction rules** for drag-and-drop 
 - `folderInteractions.ts` - Generic folder-like drag-and-drop interactions
 - `packageInteractions.ts` - Package-to-Node/Option interactions  
 - `packageAssignmentInteractions.ts` - Package assignment workflows
-- `nodeInteractions.ts` - Node-to-Environment cloning interactions
+- `nodeInteractions.ts` - Node-to-Distro cloning interactions
 
 ## Architecture Flow
 
@@ -47,7 +47,7 @@ Perspective support is defined using a **hybrid approach**:
      PACKAGE: {
        isSupported: { 
          default: true,     // Supported in default
-         environment: false, // NOT supported in environment perspective
+         distro: false, // NOT supported in distro perspective
          package: true,      // IS supported in package perspective
          lab: true
        }
@@ -81,7 +81,7 @@ To restrict a rule to specific perspectives:
 {
   draggedType: ASSET_TYPES.PACKAGE,
   targetType: ASSET_TYPES.NODE,
-  perspectives: ['default', 'environment'], // Only applies to these
+  perspectives: ['default', 'distro'], // Only applies to these
   rule: someRule
 }
 ```

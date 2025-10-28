@@ -41,7 +41,7 @@ describe('Stage 5 Workflow Integrations', () => {
     await assetsStore.loadAssets();
   });
 
-  it('Proactive Resolution: dragging a PackageKey across environments should prompt the correct generic dialog', () => {
+  it('Proactive Resolution: dragging a PackageKey across distros should prompt the correct generic dialog', () => {
     // ARRANGE
     const dragPayload: DragPayload = { assetId: 'key-a', sourceContext: 'AssetTreeNode' };
     const dropTarget: DropTarget = { id: 'node-b', type: 'asset' };
@@ -74,7 +74,7 @@ describe('Stage 5 Workflow Integrations', () => {
     expect(executeResolveAndCopy).toHaveBeenCalledWith(dragPayload, dropTarget);
   });
 
-  it('Flatten and Rebase: dragging a Package across environments should prompt the correct generic dialog', () => {
+  it('Flatten and Rebase: dragging a Package across distros should prompt the correct generic dialog', () => {
     // ARRANGE
     const dragPayload: DragPayload = { assetId: 'webserver-pkg-a', sourceContext: 'AssetTreeNode' };
     const dropTarget: DropTarget = { id: 'node-b', type: 'asset' };
@@ -144,10 +144,10 @@ describe('Stage 5 Workflow Integrations', () => {
     expect(actions[0].label).toBe('Copy Requirement');
   });
 
-  it('should prevent same-environment PackageKey -> Node interaction (self-drop)', () => {
+  it('should prevent same-distro PackageKey -> Node interaction (self-drop)', () => {
     // ARRANGE: Try to drop PackageKey on its own parent node
     const dragPayload: DragPayload = { assetId: 'key-a', sourceContext: 'AssetTreeNode' };
-    const dropTarget: DropTarget = { id: 'node-a', type: 'asset' }; // Same environment
+    const dropTarget: DropTarget = { id: 'node-a', type: 'asset' }; // Same distro
 
     // Set up drag state
     uiStore.startDrag(dragPayload);
@@ -159,11 +159,11 @@ describe('Stage 5 Workflow Integrations', () => {
     expect(actions.length).toBe(0);
   });
 
-  it('should allow same-environment Package -> Node interaction', () => {
-    // ARRANGE: Try to drop Package on Node in same environment
+  it('should allow same-distro Package -> Node interaction', () => {
+    // ARRANGE: Try to drop Package on Node in same distro
     // Use a different node that doesn't already have the WebServer key
     const dragPayload: DragPayload = { assetId: 'webserver-pkg-a', sourceContext: 'AssetTreeNode' };
-    const dropTarget: DropTarget = { id: 'node-b', type: 'asset' }; // Different environment, but should still work
+    const dropTarget: DropTarget = { id: 'node-b', type: 'asset' }; // Different distro, but should still work
 
     // Set up drag state
     uiStore.startDrag(dragPayload);

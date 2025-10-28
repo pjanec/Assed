@@ -54,12 +54,12 @@ describe('ContextMenuActions - Perspective-Based Filtering', () => {
       expect((containerDef as any)._isSupportedInCurrentPerspective).toBe(false);
     });
 
-    it('should show all supported child types in environment perspective', () => {
+    it('should show all supported child types in distro perspective', () => {
       hub.setPerspective('distro');
       
       const effectiveRegistry = coreConfig.effectiveAssetRegistry;
       
-      // In environment perspective, both Container and Widget are supported
+      // In distro perspective, both Container and Widget are supported
       const containerDef = effectiveRegistry['Container'];
       const widgetDef = effectiveRegistry['Widget'];
       

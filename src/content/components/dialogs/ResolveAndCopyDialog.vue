@@ -15,7 +15,7 @@
           You are copying the requirement for '<strong>{{ sourcePackageName }}</strong>'.
         </p>
         <p>
-          This package does not exist in the target environment yet. To resolve this, a new, functionally identical copy of the package will be created in the environment's package pool.
+          This package does not exist in the target distro yet. To resolve this, a new, functionally identical copy of the package will be created in the distro's package pool.
         </p>
       </v-card-text>
       <v-card-actions class="px-6 pb-4 pt-2">

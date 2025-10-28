@@ -12,7 +12,7 @@
       </v-card-title>
       <v-card-text class="pt-4" style="max-height: 70vh; overflow-y: auto;">
         <p class="mb-4">
-          Cloning node '<strong>{{ payload.sourceNode.assetKey }}</strong>' into environment '<strong>{{ payload.targetEnv.assetKey }}</strong>' will perform the following actions. Please review.
+          Cloning node '<strong>{{ payload.sourceNode.assetKey }}</strong>' into distro '<strong>{{ payload.targetEnv.assetKey }}</strong>' will perform the following actions. Please review.
         </p>
           
         <AffectedAssetsViewer

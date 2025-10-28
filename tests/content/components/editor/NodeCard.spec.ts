@@ -52,19 +52,19 @@ describe('NodeCard.vue', () => {
     assetType: ASSET_TYPES.NODE,
   } as const;
 
-  const mockPackages = [
+  const mockRequirements = [
     {
       id: 'uuid-102',
       assetKey: 'Nginx',
       fqn: 'DataCenter-minimal::WebServer::Nginx',
-      assetType: ASSET_TYPES.PACKAGE,
+      assetType: ASSET_TYPES.PACKAGE_KEY,
     },
   ] as const;
 
    // Helper function to render with all necessary globals
    const renderNodeCard = (props: any) => {
     const assetsStore = useAssetsStore();
-    assetsStore.assets = [mockNode, ...mockPackages];
+    assetsStore.assets = [mockNode, ...mockRequirements];
 
     return render(NodeCard, {
       props,
@@ -85,10 +85,10 @@ describe('NodeCard.vue', () => {
     expect(screen.getByText('DataCenter-minimal::WebServer')).toBeInTheDocument();
   });
 
-  it('displays a list of assigned packages', () => {
+  it('displays a list of assigned requirements', () => {
     renderNodeCard({ node: mockNode });
 
-    expect(screen.getByText('Packages (1)')).toBeInTheDocument();
+    expect(screen.getByText('Requirements (1)')).toBeInTheDocument();
     expect(screen.getByText('Nginx')).toBeInTheDocument();
   });
 
@@ -96,7 +96,7 @@ describe('NodeCard.vue', () => {
     // Setup the selected node BEFORE rendering
     const pinia = createTestingPinia({ createSpy: vi.fn, stubActions: false });
     const assetsStore = useAssetsStore();
-    assetsStore.assets = [mockNode, ...mockPackages];
+    assetsStore.assets = [mockNode, ...mockRequirements];
     const uiStore = useUiStore();
     uiStore.selectedNode = { id: 'uuid-100', type: 'asset', name: 'WebServer', path: '...' };
 

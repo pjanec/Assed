@@ -11,7 +11,7 @@ describe('Stage 8 Workflow: Resolve Unresolved Requirement', () => {
   let workspaceStore: ReturnType<typeof useWorkspaceStore>;
   let uiStore: ReturnType<typeof useUiStore>;
 
-  // SCENARIO: An environment contains a broken PackageKey and a valid Package that can fix it.
+  // SCENARIO: An distro contains a broken PackageKey and a valid Package that can fix it.
   const initialData: UnmergedAsset[] = [
     { id: 'distro-a', fqn: 'DistroA', assetType: ASSET_TYPES.DISTRO, assetKey: 'DistroA', overrides: {} },
     { id: 'node-a', fqn: 'DistroA::MyNode', assetType: ASSET_TYPES.NODE, assetKey: 'MyNode', overrides: {} },
@@ -65,7 +65,7 @@ describe('Stage 8 Workflow: Resolve Unresolved Requirement', () => {
     await assetsStore.loadAssets();
   });
 
-  it('should prompt the user with a list of valid packages from the correct environment', async () => {
+  it('should prompt the user with a list of valid packages from the correct distro', async () => {
     // ARRANGE: Get the broken asset
     const assetToFix = assetsStore.unmergedAssets.find(a => a.id === 'broken-key')!;
       
@@ -77,7 +77,7 @@ describe('Stage 8 Workflow: Resolve Unresolved Requirement', () => {
     expect(uiStore.assetPickerDialog.show).toBe(true);
     expect(uiStore.assetPickerDialog.title).toContain('Resolve Requirement');
       
-    // Verify that only the package from the correct environment is listed
+    // Verify that only the package from the correct distro is listed
     const offeredItems = uiStore.assetPickerDialog.items;
     expect(offeredItems).toHaveLength(1);
     expect(offeredItems[0].id).toBe('correct-pkg');

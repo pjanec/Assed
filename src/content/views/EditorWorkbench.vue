@@ -8,7 +8,7 @@
       />
       
       <v-app-bar-title>
-        Environment Editor
+        Distro Editor
       </v-app-bar-title>
 
       <v-spacer />

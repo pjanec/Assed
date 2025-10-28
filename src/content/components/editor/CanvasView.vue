@@ -5,10 +5,10 @@
       <div class="d-flex align-center justify-between">
         <div>
           <h3 class="text-h6 mb-1">
-            {{ environmentName || 'Environment Editor' }}
+            {{ distroName || 'Distro Editor' }}
           </h3>
           <p class="text-body-2 text-medium-emphasis mb-0">
-            Drag and drop to modify the environment configuration
+            Drag and drop to modify the distro configuration
           </p>
         </div>
         
@@ -38,11 +38,11 @@
           mdi-earth-plus
         </v-icon>
         <h4 class="text-h5 text-medium-emphasis mb-2">
-          No Environment Selected
+          No Distro Selected
         </h4>
         <p class="text-body-1 text-medium-emphasis text-center mb-4">
-          Select an environment from the Explorer to start editing,<br>
-          or create a new environment from the home page.
+          Select an distro from the Explorer to start editing,<br>
+          or create a new distro from the home page.
         </p>
         <v-btn
           color="primary"
@@ -65,22 +65,22 @@
         </p>
       </div>
 
-      <div v-else class="environment-canvas">
-        <!-- Environment Info Card -->
+      <div v-else class="distro-canvas">
+        <!-- Distro Info Card -->
         <v-card class="mb-4" elevation="2">
           <v-card-title class="d-flex align-center">
             <v-icon class="me-2" color="success">mdi-earth</v-icon>
             {{ asset.assetKey }}
           </v-card-title>
           <v-card-subtitle>
-            {{ asset.overrides?.description || 'Environment configuration' }}
+            {{ asset.overrides?.description || 'Distro configuration' }}
           </v-card-subtitle>
         </v-card>
 
         <!-- Nodes Grid -->
         <div class="nodes-grid">
           <NodeCard
-            v-for="node in environmentNodes"
+            v-for="node in distroNodes"
             :key="node.id"
             :node="node"
             @click="selectNode"
@@ -137,19 +137,19 @@ const coreConfig = useCoreConfigStore()
 const loading = ref<boolean>(false)
 
 // Computed properties
-const currentEnvironment = computed((): UnmergedAsset => props.asset)
+const currentDistro = computed((): UnmergedAsset => props.asset)
 
-const environmentName = computed((): string | undefined => {
-  return currentEnvironment.value?.assetKey
+const distroName = computed((): string | undefined => {
+  return currentDistro.value?.assetKey
 })
 
-const environmentNodes = computed((): Asset[] => {
-  if (!currentEnvironment.value) return []
+const distroNodes = computed((): Asset[] => {
+  if (!currentDistro.value) return []
   
-  // Find all nodes that belong to this environment
+  // Find all nodes that belong to this distro
   return assetsStore.unmergedAssets.filter((asset: Asset) =>
     asset.assetType === ASSET_TYPES.NODE && 
-    asset.fqn.startsWith(currentEnvironment.value.fqn + '::')
+    asset.fqn.startsWith(currentDistro.value.fqn + '::')
   )
 })
 
@@ -198,10 +198,10 @@ const selectPackage = (packageId: string): void => {
 }
 
 const addNewNode = async (): Promise<void> => {
-  if (!currentEnvironment.value) return;
+  if (!currentDistro.value) return;
   
   workspaceStore.openNewAssetDialog({ 
-    parentAsset: currentEnvironment.value, 
+    parentAsset: currentDistro.value, 
     childType: ASSET_TYPES.NODE, 
     namespace: null 
   });
@@ -218,7 +218,7 @@ const addNewNode = async (): Promise<void> => {
   border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
 }
 
-.environment-canvas {
+.distro-canvas {
   max-width: 1200px;
   margin: 0 auto;
 }

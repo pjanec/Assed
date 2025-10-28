@@ -248,23 +248,23 @@ class ApiService {
   }
   
   async startBuild(request: { 
-    environmentId: string, 
+    distroId: string, 
     commitMessage: string, 
     triggeredBy?: string 
   }) {
     await this.delay(200);
     const history = this._getBuildHistory();
     const db = this._getDb();
-    const environment = db[request.environmentId];
+    const distro = db[request.distroId];
 
-    if (!environment) {
-        throw new Error(`Environment with ID ${request.environmentId} not found.`);
+    if (!distro) {
+        throw new Error(`Distro with ID ${request.distroId} not found.`);
     }
 
     const newBuild = {
       id: `build-${Date.now()}`,
-      environment: environment.assetKey,
-      environmentId: request.environmentId,
+      distro: distro.assetKey,
+      distroId: request.distroId,
       status: 'Queued',
       commit: request.commitMessage,
       triggeredBy: request.triggeredBy || 'local.user@asseted.com',
@@ -299,7 +299,7 @@ class ApiService {
     };
     
     setTimeout(() => updateBuild('Running', 'Starting build process...'), 2000);
-    setTimeout(() => updateBuild('Running', 'Validating environment configuration...'), 4000);
+    setTimeout(() => updateBuild('Running', 'Validating distro configuration...'), 4000);
     setTimeout(() => updateBuild('Running', 'Fetching resources for 5 packages...'), 7000);
     setTimeout(() => updateBuild('Running', 'Compiling assets...'), 11000);
 

@@ -27,7 +27,7 @@
                 <v-list>
                     <v-list-item v-for="build in builds" :key="build.id" @click="viewBuildDetails(build)" class="border-b">
                         <template #prepend><v-avatar :color="getBuildStatusColor(build.status)" size="32"><v-icon :icon="getBuildStatusIcon(build.status)" /></v-avatar></template>
-                        <v-list-item-title class="font-weight-medium">{{ build.environment }}</v-list-item-title>
+                        <v-list-item-title class="font-weight-medium">{{ build.distro }}</v-list-item-title>
                         <v-list-item-subtitle>#{{ build.id.split('-')[1] }} triggered by {{ build.triggeredBy }}</v-list-item-subtitle>
                         <template #append>
                             <div class="d-flex align-center ga-4" style="width: 300px;">
@@ -48,7 +48,7 @@
     <!-- Dialogs -->
     <v-dialog v-model="showBuildDetails" max-width="800px">
       <v-card v-if="selectedBuild">
-        <v-card-title>Build Details: {{ selectedBuild.environment }}</v-card-title>
+        <v-card-title>Build Details: {{ selectedBuild.distro }}</v-card-title>
         <v-card-text>
             <v-list density="compact">
                 <v-list-item title="Build ID" :subtitle="selectedBuild.id" />
@@ -67,13 +67,13 @@
       <v-card>
         <v-card-title>Start New Build</v-card-title>
         <v-card-text>
-          <v-select v-model="newBuildForm.environmentId" :items="availableEnvironments" item-title="assetKey" item-value="id" label="Environment" hint="Select the environment to build" persistent-hint />
+          <v-select v-model="newBuildForm.distroId" :items="availableDistros" item-title="assetKey" item-value="id" label="Distro" hint="Select the distro to build" persistent-hint />
           <v-textarea v-model="newBuildForm.commitMessage" label="Commit Message / Description" class="mt-4" rows="3" />
         </v-card-text>
         <v-card-actions>
           <v-spacer />
           <v-btn @click="showNewBuildDialog = false">Cancel</v-btn>
-          <v-btn color="primary" @click="handleStartBuild" :disabled="!newBuildForm.environmentId">Start Build</v-btn>
+          <v-btn color="primary" @click="handleStartBuild" :disabled="!newBuildForm.distroId">Start Build</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -98,7 +98,7 @@ const showBuildDetails = ref(false);
 const selectedBuild = ref(null);
 const showNewBuildDialog = ref(false);
 const newBuildForm = ref({
-  environmentId: null,
+  distroId: null,
   commitMessage: 'Manual build from UI',
 });
 
@@ -113,7 +113,7 @@ onUnmounted(() => {
   buildsStore.stopPolling();
 });
 
-const availableEnvironments = computed(() => {
+const availableDistros = computed(() => {
     return assetsStore.assets.filter(a => a.assetType === ASSET_TYPES.DISTRO);
 });
 
@@ -128,10 +128,10 @@ const goHome = () => router.push('/');
 const openNewBuildDialog = () => showNewBuildDialog.value = true;
 
 const handleStartBuild = async () => {
-  if (!newBuildForm.value.environmentId) return;
+  if (!newBuildForm.value.distroId) return;
   await buildsStore.startNewBuild(newBuildForm.value);
   showNewBuildDialog.value = false;
-  newBuildForm.value = { environmentId: null, commitMessage: 'Manual build from UI' };
+  newBuildForm.value = { distroId: null, commitMessage: 'Manual build from UI' };
 };
 
 const viewBuildDetails = (build) => {

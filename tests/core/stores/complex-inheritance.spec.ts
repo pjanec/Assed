@@ -28,7 +28,7 @@ const initialData: UnmergedAsset[] = [
     overrides: { version: '1.0' },
   },
 
-  // --- LEVEL 2 (Environment Template, which inherits from LEVEL 3) ---
+  // --- LEVEL 2 (Distro Template, which inherits from LEVEL 3) ---
   {
     id: 'env-template-e1',
     fqn: 'E1',

@@ -34,8 +34,8 @@ describe('Stage 3: ConfigurationHub Interaction Rules', () => {
     });
   });
 
-  describe('Environment Perspective Rules', () => {
-    it('should filter rules for environment perspective', () => {
+  describe('Distro Perspective Rules', () => {
+    it('should filter rules for distro perspective', () => {
       hub.setPerspective('distro');
       const rules = hub.effectiveInteractionRules.value;
       
@@ -45,7 +45,7 @@ describe('Stage 3: ConfigurationHub Interaction Rules', () => {
       expect(rules.has('Container->Container')).toBe(false); // Excluded
     });
 
-    it('should have correct rule count in environment perspective', () => {
+    it('should have correct rule count in distro perspective', () => {
       hub.setPerspective('distro');
       const rules = hub.effectiveInteractionRules.value;
       expect(rules.size).toBe(2);

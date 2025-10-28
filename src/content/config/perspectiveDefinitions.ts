@@ -11,7 +11,7 @@ export const perspectiveDefinitions: Record<string, PerspectiveDefinition> = {
   // Distro perspective: focuses on distros and nodes
   distro: {
     name: 'distro',
-    displayName: 'Environment Config',
+    displayName: 'Distro Config',
     icon: 'mdi-earth',
   },
   // Package perspective: focuses on packages and their management

@@ -33,10 +33,10 @@
           mdi-table-large
         </v-icon>
         <h4 class="text-h5 text-medium-emphasis mb-2">
-          No Environment Selected
+          No Distro Selected
         </h4>
         <p class="text-body-1 text-medium-emphasis">
-          Select an environment to view the package matrix
+          Select an distro to view the package matrix
         </p>
       </div>
       
@@ -60,7 +60,7 @@
           No Data Available
         </h4>
         <p class="text-body-2 text-medium-emphasis">
-          This environment has no nodes or packages to display in the matrix
+          This distro has no nodes or packages to display in the matrix
         </p>
       </div>
       
@@ -172,7 +172,7 @@ const {
 });
 
 // Computed properties
-const currentEnvironment = computed((): Asset | null => props.asset)
+const currentDistro = computed((): Asset | null => props.asset)
 
 const isNodeSupported = computed(() => {
   const nodeDef = coreConfig.effectiveAssetRegistry[ASSET_TYPES.NODE];
@@ -190,22 +190,22 @@ interface MatrixData {
 }
 
 const matrixData = computed((): MatrixData => {
-  if (!currentEnvironment.value) {
+  if (!currentDistro.value) {
     return { nodes: [], packages: [] }
   }
   
-  const envFqn = currentEnvironment.value.fqn
+  const envFqn = currentDistro.value.fqn
   
-  // Get nodes for this environment
+  // Get nodes for this distro
   const nodes = assetsStore.unmergedAssets.filter((asset: Asset) => 
     asset.assetType === ASSET_TYPES.NODE && 
     asset.fqn.startsWith(envFqn + '::')
   )
   
-  // Get all packages in the environment (both node-specific and generic)
+  // Get all packages in the distro (both node-specific and generic)
   let packages = assetsStore.unmergedAssets.filter((asset: Asset) => 
     asset.assetType === ASSET_TYPES.PACKAGE && (
-      asset.fqn.startsWith(envFqn + '::') || // Environment-specific packages
+      asset.fqn.startsWith(envFqn + '::') || // Distro-specific packages
       !asset.fqn.includes('::') // Generic packages
     )
   )

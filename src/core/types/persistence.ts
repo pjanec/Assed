@@ -18,7 +18,7 @@ export interface PersistenceAdapter {
   // Build-related methods
   loadBuilds(): Promise<Build[]>;
   startBuild(request: {
-    environmentId: string;
+    distroId: string;
     commitMessage: string;
     triggeredBy?: string;
   }): Promise<{ buildId: string }>;

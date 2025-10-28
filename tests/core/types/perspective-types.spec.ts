@@ -122,7 +122,7 @@ describe('Stage 1: Type System and Mock Data', () => {
   describe('Type Safety', () => {
     it('should enforce default value requirement', () => {
       // @ts-expect-error - testing type safety
-      const invalid: PerspectiveOverrides<string> = { environment: 'test' };
+      const invalid: PerspectiveOverrides<string> = { distro: 'test' };
       // This should cause a TypeScript error but we're in runtime now
     });
 

@@ -153,7 +153,7 @@ An NginxPackage inherits from a LinuxService template, which in turn inherits fr
 
 ### **1\. What is Structural Inheritance?**
 
-Structural Inheritance is a mechanism that allows a parent asset (like an Environment) to inherit an entire **collection of child assets** from a designated template.
+Structural Inheritance is a mechanism that allows a parent asset (like an Distro) to inherit an entire **collection of child assets** from a designated template.
 
 It answers the question: **"What is the default layout or composition of this asset?"**
 
@@ -164,7 +164,7 @@ Instead of inheriting simple property values (like colors or numbers), the asset
 
 ### **2\. How It Works: The Resolution Engine**
 
-The magic behind Structural Inheritance is the **Resolution Engine** (the resolveInheritedCollection function). When you ask for the final list of children for a specific asset (e.g., all Node assets within ProductionEnv), the engine performs a hierarchical merge.
+The magic behind Structural Inheritance is the **Resolution Engine** (the resolveInheritedCollection function). When you ask for the final list of children for a specific asset (e.g., all Node assets within ProductionDistro), the engine performs a hierarchical merge.
 
 The engine follows three simple but powerful rules, in order:
 
@@ -180,16 +180,16 @@ Let's explore the three main scenarios using diagrams.
 
 #### **Scenario 1: Basic Inheritance**
 
-An empty environment (StagingEnv) inherits the complete structure from a template (BaseEnv).
+An empty distro (StagingDistro) inherits the complete structure from a template (BaseDistro).
 
 **Setup:**
 
-* A template BaseEnv contains two children: WebServer (Node) and Database (Node).  
-* A new, empty StagingEnv sets its templateFqn to 'BaseEnv'.
+* A template BaseDistro contains two children: WebServer (Node) and Database (Node).  
+* A new, empty StagingDistro sets its templateFqn to 'BaseDistro'.
 
     (Template)  
 \+------------------+  
-|     BaseEnv      |  
+|     BaseDistro      |  
 \+--------+---------+  
          |  
          |-- (has child) \--\> \+-------------+  
@@ -202,43 +202,43 @@ An empty environment (StagingEnv) inherits the complete structure from a templat
 
      (Instance)  
 \+------------------+  
-|    StagingEnv    |  
+|    StagingDistro    |  
 | (templateFqn:    |  \<-- Inherits Structure  
-|    'BaseEnv')    |  
+|    'BaseDistro')    |  
 \+------------------+
 
 **Resolution Engine's Logic:**
 
-1. **Local Assets:** The engine looks for nodes under StagingEnv. It finds none.  
-2. **Inherited Assets:** It moves to the template BaseEnv. It finds WebServer and Database. Since no local assets are blocking them, it adds both to the final collection.
+1. **Local Assets:** The engine looks for nodes under StagingDistro. It finds none.  
+2. **Inherited Assets:** It moves to the template BaseDistro. It finds WebServer and Database. Since no local assets are blocking them, it adds both to the final collection.
 
-**Result:** The "Merged View" for StagingEnv will contain both WebServer and Database.
+**Result:** The "Merged View" for StagingDistro will contain both WebServer and Database.
 
 #### **Scenario 2: Explicit Override**
 
-A ProductionEnv inherits from BaseEnv but provides its own, more powerful version of the Database.
+A ProductionDistro inherits from BaseDistro but provides its own, more powerful version of the Database.
 
 **Setup:**
 
-* BaseEnv contains WebServer and a standard Database (Node).  
-* ProductionEnv sets its templateFqn to 'BaseEnv'.  
-* Crucially, a **real Node asset** is created with the FQN ProductionEnv::Database. This is the override.
+* BaseDistro contains WebServer and a standard Database (Node).  
+* ProductionDistro sets its templateFqn to 'BaseDistro'.  
+* Crucially, a **real Node asset** is created with the FQN ProductionDistro::Database. This is the override.
 
 ##### **The Shadowing Mechanism: assetKey is the Key**
 
 The override works because the Resolution Engine prioritizes local assets. It uses the **assetKey** to identify which inherited assets have been "shadowed" or replaced.
 
-Resolution for 'ProductionEnv':
+Resolution for 'ProductionDistro':
 
 1\. Find local children:  
-   \- Found one: \`ProductionEnv::Database\`  
+   \- Found one: \`ProductionDistro::Database\`  
    \- Its \`assetKey\` is "Database".
 
 2\. Add to final collection map:  
-   \- collection\['Database'\] \= \`ProductionEnv::Database\`
+   \- collection\['Database'\] \= \`ProductionDistro::Database\`
 
-3\. Look at template \`BaseEnv\`:  
-   \- Find inherited child: \`BaseEnv::Database\`  
+3\. Look at template \`BaseDistro\`:  
+   \- Find inherited child: \`BaseDistro::Database\`  
    \- Its \`assetKey\` is "Database".
 
 4\. Check collection map:  
@@ -249,7 +249,7 @@ Resolution for 'ProductionEnv':
 | Inherited Asset            |      | Local Override             |  
 |----------------------------|      |----------------------------|  
 | assetKey: "Database"       |      | assetKey: "Database"       |  
-| from: \`BaseEnv\`            |      | from: \`ProductionEnv\`      |  
+| from: \`BaseDistro\`            |      | from: \`ProductionDistro\`      |  
 \+----------------------------+      \+----------------------------+  
                |                               |  
                \`-----------\> BLOCKED \<---------\`  
@@ -257,28 +257,28 @@ Resolution for 'ProductionEnv':
 
 **Resolution Engine's Logic (in practice):**
 
-1. **Local Assets:** The engine scans ProductionEnv first. It finds the local ProductionEnv::Database. It adds this asset to the final collection under the key Database. **This slot is now filled.**  
-2. **Inherited Assets:** It moves to the template BaseEnv and finds the inherited WebServer and Database.  
+1. **Local Assets:** The engine scans ProductionDistro first. It finds the local ProductionDistro::Database. It adds this asset to the final collection under the key Database. **This slot is now filled.**  
+2. **Inherited Assets:** It moves to the template BaseDistro and finds the inherited WebServer and Database.  
    * It checks WebServer: the 'WebServer' slot is empty. It **adds** the inherited WebServer.  
    * It checks Database: the 'Database' slot is **already taken**. It **discards** the inherited Database.
 
-**Result:** The "Merged View" for ProductionEnv will contain the **inherited WebServer** and the **local, overriding Database**.
+**Result:** The "Merged View" for ProductionDistro will contain the **inherited WebServer** and the **local, overriding Database**.
 
 #### **Scenario 3: Explicit Suppression**
 
-A DevEnv inherits from BaseEnv but needs to completely remove the Database.
+A DevDistro inherits from BaseDistro but needs to completely remove the Database.
 
 **Setup:**
 
-* BaseEnv contains WebServer and Database.  
-* DevEnv sets its templateFqn to 'BaseEnv'.  
-* An asset of type **InheritanceSuppressor** is created with the FQN DevEnv::Database.
+* BaseDistro contains WebServer and Database.  
+* DevDistro sets its templateFqn to 'BaseDistro'.  
+* An asset of type **InheritanceSuppressor** is created with the FQN DevDistro::Database.
 
     (Template)                                (Instance)  
 \+------------------+                      \+------------------+  
-|     BaseEnv      |                      |      DevEnv      |  
+|     BaseDistro      |                      |      DevDistro      |  
 \+--------+---------+                      | (templateFqn:    |  
-         |                                |    'BaseEnv')    |  
+         |                                |    'BaseDistro')    |  
          |-- (has child) \--\> \+----------+  \+--------+---------+  
          |                   | WebServer|           |  
          |                   \+----------+           |-- (has child) \--\> \+----------------+  
@@ -296,11 +296,11 @@ Status: Implemented
 
 ### **1\. The Challenge: Removing Inherited Structure**
 
-In a system that uses **structural inheritance**, a parent asset (e.g., ProductionEnv) can inherit a collection of child assets (e.g., WebServer, Database) from a template (e.g., BaseEnv). This is incredibly powerful for establishing consistent patterns and reducing duplication.
+In a system that uses **structural inheritance**, a parent asset (e.g., ProductionDistro) can inherit a collection of child assets (e.g., WebServer, Database) from a template (e.g., BaseDistro). This is incredibly powerful for establishing consistent patterns and reducing duplication.
 
 However, this raises a critical question: **How** do you safely **and clearly state that a specific child asset from the template should *not* exist in the inheriting asset?**
 
-For example, if BaseEnv provides a WebServer and a Database, how do we create a DatabaseOnlyEnv that inherits the Database but explicitly *removes* the WebServer?
+For example, if BaseDistro provides a WebServer and a Database, how do we create a DatabaseOnlyDistro that inherits the Database but explicitly *removes* the WebServer?
 
 Initial ideas, such as using an "empty override" (a local asset with no configuration), proved to be unsafe. Their meaning was implicit and context-dependent. If the template changed, an empty asset intended to suppress inheritance could silently transform into a "marker" asset, creating unexpected behavior. This violates the principle of predictable and stable configuration.
 
@@ -327,12 +327,12 @@ This prevents silent, unintended changes in behavior and makes the system far mo
 
 #### **3.3. Discoverability and Self-Documentation**
 
-By being a real, visible asset in the main Explorer Tree, the InheritanceSuppressor serves as its own documentation. When a developer looks at the structure of DatabaseOnlyEnv, they will see:
+By being a real, visible asset in the main Explorer Tree, the InheritanceSuppressor serves as its own documentation. When a developer looks at the structure of DatabaseOnlyDistro, they will see:
 
-* DatabaseOnlyEnv  
+* DatabaseOnlyDistro  
   * WebServer (Inheritance Suppressor)
 
-This immediately tells them, "This environment is based on a template, but the WebServer has been explicitly removed." There is no need to cross-reference templates to understand why a component is missing from the final merged view. The override logic is visible at a glance.
+This immediately tells them, "This distro is based on a template, but the WebServer has been explicitly removed." There is no need to cross-reference templates to understand why a component is missing from the final merged view. The override logic is visible at a glance.
 
 ### **4\. How It Works**
 
@@ -340,9 +340,9 @@ The implementation is a clean separation of user action and engine logic.
 
 #### **4.1. The User's Action**
 
-To remove an inherited asset (e.g., WebServer from BaseEnv), the user performs a single, explicit action:
+To remove an inherited asset (e.g., WebServer from BaseDistro), the user performs a single, explicit action:
 
-1. They create a **new asset** as a child of their environment (e.g., DatabaseOnlyEnv).  
+1. They create a **new asset** as a child of their distro (e.g., DatabaseOnlyDistro).  
 2. They select the asset type **InheritanceSuppressor**.  
 3. They give it an assetKey that **exactly matches** the assetKey of the inherited asset they wish to block (i.e., WebServer).
 
@@ -375,15 +375,15 @@ Let's design a common real-world setup.
 
 The Goal:
 
-We need to manage a Staging and a Production environment. They are mostly identical, but the production web server needs a different port and a larger disk size. All web servers, regardless of environment, should share a base set of security settings.
+We need to manage a Staging and a Production distro. They are mostly identical, but the production web server needs a different port and a larger disk size. All web servers, regardless of distro, should share a base set of security settings.
 
 **The Assets:**
 
 * GlobalSecurityTemplate (Package): A property template.  
 * StandardWebServer (Package): A property template.  
-* BaseEnv (Environment): A **structural** template.  
-* StagingEnv (Environment): An instance that will use simple structural inheritance.  
-* ProductionEnv (Environment): An instance that will use structural inheritance with an override.
+* BaseDistro (Distro): A **structural** template.  
+* StagingDistro (Distro): An instance that will use simple structural inheritance.  
+* ProductionDistro (Distro): An instance that will use structural inheritance with an override.
 
 ### **3\. Step-by-Step Implementation**
 
@@ -399,16 +399,16 @@ These templates define the "how" for individual components.
    * **templateFqn**: GlobalSecurityTemplate *(Property Inheritance link)*  
    * overrides: { "port": 8080, "disk": "100GB" }
 
-#### **Step 3.2: Create the Structural Template (BaseEnv)**
+#### **Step 3.2: Create the Structural Template (BaseDistro)**
 
-This template defines the "what" – the layout of a standard environment.
+This template defines the "what" – the layout of a standard distro.
 
-1. **Create BaseEnv:**  
-   * Type: Environment, assetKey: BaseEnv  
-2. **Add a Child to BaseEnv:**  
+1. **Create BaseDistro:**  
+   * Type: Distro, assetKey: BaseDistro  
+2. **Add a Child to BaseDistro:**  
    * Create a Package with assetKey: WebServer.  
    * Set its templateFqn to StandardWebServer.  
-   * Its full FQN is BaseEnv::WebServer.
+   * Its full FQN is BaseDistro::WebServer.
 
 **After these steps, your full template structure in the Explorer Tree looks like this:**
 
@@ -418,31 +418,31 @@ This template defines the "what" – the layout of a standard environment.
 \+ StandardWebServer (Package)  
 |  \`-- (templateFqn: 'GlobalSecurityTemplate')  
 |  
-\+ BaseEnv (Environment)  
+\+ BaseDistro (Distro)  
    \`--+ WebServer (Package)  
       \`-- (templateFqn: 'StandardWebServer')
 
-#### **Step 3.3: Create StagingEnv (Simple Structural Inheritance)**
+#### **Step 3.3: Create StagingDistro (Simple Structural Inheritance)**
 
-1. **Create and Link StagingEnv:**  
-   * Type: Environment, assetKey: StagingEnv  
-   * **templateFqn**: BaseEnv *(Structural Inheritance link)*
+1. **Create and Link StagingDistro:**  
+   * Type: Distro, assetKey: StagingDistro  
+   * **templateFqn**: BaseDistro *(Structural Inheritance link)*
 
-Analysis for StagingEnv:
+Analysis for StagingDistro:
 
-The explicit asset tree only contains the StagingEnv asset itself.
+The explicit asset tree only contains the StagingDistro asset itself.
 
 (Explorer Tree View)  
-\+ StagingEnv (Environment)
+\+ StagingDistro (Distro)
 
 Inside its **"Merged View"**, the two-layer process occurs:
 
-1. **Structural Merge:** The engine finds no local children in StagingEnv, so it inherits the WebServer from the BaseEnv template. The final child list is \[WebServer\].  
+1. **Structural Merge:** The engine finds no local children in StagingDistro, so it inherits the WebServer from the BaseDistro template. The final child list is \[WebServer\].  
 2. **Property Merge:** When that WebServer is inspected, its properties are calculated by merging GlobalSecurityTemplate \-\> StandardWebServer.
 
-**The resulting "Merged View" for StagingEnv will be rendered as:**
+**The resulting "Merged View" for StagingDistro will be rendered as:**
 
-(StagingEnv Merged View)
+(StagingDistro Merged View)
 
 \+ Merged View (Virtual Folder)  
   \`--+ Packages (Virtual Sub-Folder)  
@@ -450,25 +450,25 @@ Inside its **"Merged View"**, the two-layer process occurs:
 
 * **Final Properties of WebServer:** { "security\_level": "high", "port": 8080, "disk": "100GB" }
 
-#### **Step 3.4: Create ProductionEnv (Structural Inheritance with an Override)**
+#### **Step 3.4: Create ProductionDistro (Structural Inheritance with an Override)**
 
 Here, we define a local WebServer to shadow the inherited one.
 
-1. **Create and Link ProductionEnv:**  
-   * Type: Environment, assetKey: ProductionEnv  
-   * **templateFqn**: BaseEnv  
+1. **Create and Link ProductionDistro:**  
+   * Type: Distro, assetKey: ProductionDistro  
+   * **templateFqn**: BaseDistro  
 2. **Create the Explicit Override:**  
-   * Create a new Package as a child of ProductionEnv.  
+   * Create a new Package as a child of ProductionDistro.  
    * **assetKey**: WebServer ***(This is the crucial link that shadows the inherited asset)***  
    * **templateFqn**: StandardWebServer *(The local override still uses the same property template)*  
    * overrides: { "port": 443, "disk": "500GB\_SSD" }
 
-Analysis for ProductionEnv:
+Analysis for ProductionDistro:
 
 The explicit asset tree now clearly shows your intent to override the WebServer.
 
 (Explorer Tree View)  
-\+ ProductionEnv (Environment)  
+\+ ProductionDistro (Distro)  
 |  
 \`--+ WebServer (Package, The Override)
 
@@ -476,17 +476,17 @@ The explicit asset tree now clearly shows your intent to override the WebServer.
 
 The override works because the Resolution Engine prioritizes local assets. It uses the **assetKey** to identify which inherited assets have been "shadowed" or replaced.
 
-Resolution for 'ProductionEnv':
+Resolution for 'ProductionDistro':
 
 1\. Find local children:  
-   \- Found one: \`ProductionEnv::WebServer\`  
+   \- Found one: \`ProductionDistro::WebServer\`  
    \- Its \`assetKey\` is "WebServer".
 
 2\. Add to final collection map:  
-   \- collection\['WebServer'\] \= \`ProductionEnv::WebServer\`
+   \- collection\['WebServer'\] \= \`ProductionDistro::WebServer\`
 
-3\. Look at template \`BaseEnv\`:  
-   \- Find inherited child: \`BaseEnv::WebServer\`  
+3\. Look at template \`BaseDistro\`:  
+   \- Find inherited child: \`BaseDistro::WebServer\`  
    \- Its \`assetKey\` is "WebServer".
 
 4\. Check collection map:  
@@ -497,12 +497,12 @@ This "local wins" logic, based on matching the **assetKey**, is what allows you 
 
 **Now, let's look inside its "Merged View"**:
 
-1. **Structural Merge:** The engine starts with ProductionEnv. It finds your **local WebServer override first**. Because its assetKey matches the assetKey of the child in BaseEnv, the inherited asset is discarded. The final list of children is just \[your local WebServer\].  
-2. **Property Merge:** When this local WebServer is inspected, its properties are calculated by merging GlobalSecurityTemplate \-\> StandardWebServer \-\> ProductionEnv::WebServer.
+1. **Structural Merge:** The engine starts with ProductionDistro. It finds your **local WebServer override first**. Because its assetKey matches the assetKey of the child in BaseDistro, the inherited asset is discarded. The final list of children is just \[your local WebServer\].  
+2. **Property Merge:** When this local WebServer is inspected, its properties are calculated by merging GlobalSecurityTemplate \-\> StandardWebServer \-\> ProductionDistro::WebServer.
 
-**The resulting "Merged View" for ProductionEnv will be rendered as:**
+**The resulting "Merged View" for ProductionDistro will be rendered as:**
 
-(ProductionEnv Merged View)
+(ProductionDistro Merged View)
 
 \+ Merged View (Virtual Folder)  
   \`--+ Packages (Virtual Sub--Folder)  
@@ -521,10 +521,10 @@ Here are several common, real-world scenarios where these inheritance models pro
 * **Scenario:** You need to deploy your application to multiple geographic regions (US-East, EU-West, Asia-Pacific). The core infrastructure (the list of servers, databases, etc.) is identical in every region, but specific properties like network endpoints or resource sizes must change.  
 * **Primary Model Used:** **Structural Inheritance**.  
 * **Implementation:**  
-  1. Create a single structural template, BaseRegionEnv, that contains all the standard Node and Package assets.  
-  2. Create three new environments: US-East-Env, EU-West-Env, and Asia-Pacific-Env. All three set their templateFqn to BaseRegionEnv.  
-  3. In each specific region environment, you create a small number of local override assets (e.g., an Option asset named RegionConfig) to specify the unique endpoints for that region.  
-* **Benefit:** You have a single source of truth for your infrastructure layout. Adding a new LoggingService to all regions requires adding it only once to BaseRegionEnv.
+  1. Create a single structural template, BaseRegionDistro, that contains all the standard Node and Package assets.  
+  2. Create three new distros: US-East-Distro, EU-West-Distro, and Asia-Pacific-Distro. All three set their templateFqn to BaseRegionDistro.  
+  3. In each specific region distro, you create a small number of local override assets (e.g., an Option asset named RegionConfig) to specify the unique endpoints for that region.  
+* **Benefit:** You have a single source of truth for your infrastructure layout. Adding a new LoggingService to all regions requires adding it only once to BaseRegionDistro.
 
 #### **Use Case 2: Tiered Service Levels (Free vs. Pro)**
 
@@ -534,26 +534,26 @@ Here are several common, real-world scenarios where these inheritance models pro
   1. Create a BaseWebServer property template with all the common settings.  
   2. Create a FreeTierConfig template that inherits from BaseWebServer and sets { "cpu": "1c", "memory": "2GB" }.  
   3. Create a ProTierConfig template that also inherits from BaseWebServer but sets { "cpu": "4c", "memory": "16GB", "license\_key": "PRO-XXXX" }.  
-  4. In your environments, you can now create WebServer packages that point their templateFqn to either FreeTierConfig or ProTierConfig.  
+  4. In your distros, you can now create WebServer packages that point their templateFqn to either FreeTierConfig or ProTierConfig.  
 * **Benefit:** You can manage the resource allocations for your service tiers from a central location. Changing the memory for all Pro users is a single edit.
 
 #### **Use Case 3: A/B Testing or Feature Flags**
 
-* **Scenario:** You want to test a new, experimental AnalyticsService in your production environment, but only for a small subset of users. You need an environment that is identical to production but *without* the standard, old AnalyticsService.  
+* **Scenario:** You want to test a new, experimental AnalyticsService in your production distro, but only for a small subset of users. You need an distro that is identical to production but *without* the standard, old AnalyticsService.  
 * **Primary Model Used:** **Structural Inheritance with a Suppressor**.  
 * **Implementation:**  
-  1. Your ProductionEnv inherits its structure from BaseEnv, which includes an AnalyticsService package.  
-  2. Create a new environment, AnalyticsTestEnv, and set its templateFqn to ProductionEnv (or BaseEnv).  
-  3. Inside AnalyticsTestEnv, create a single new asset: an **InheritanceSuppressor** with the assetKey AnalyticsService.  
-  4. You can then add your new, experimental NewAnalyticsService package to the AnalyticsTestEnv.  
-* **Benefit:** You have created a near-perfect clone of production while surgically removing one component, ensuring a clean and isolated test environment. This is far safer than manually managing a separate, divergent configuration.
+  1. Your ProductionDistro inherits its structure from BaseDistro, which includes an AnalyticsService package.  
+  2. Create a new distro, AnalyticsTestDistro, and set its templateFqn to ProductionDistro (or BaseDistro).  
+  3. Inside AnalyticsTestDistro, create a single new asset: an **InheritanceSuppressor** with the assetKey AnalyticsService.  
+  4. You can then add your new, experimental NewAnalyticsService package to the AnalyticsTestDistro.  
+* **Benefit:** You have created a near-perfect clone of production while surgically removing one component, ensuring a clean and isolated test distro. This is far safer than manually managing a separate, divergent configuration.
 
 #### **Use Case 4: Emergency Hotfix Patching**
 
 * **Scenario:** A critical vulnerability is found in your Nginx package (version 1.21.0). You have a patched version, 1.21.1, that needs to be deployed immediately to production, but you don't want to change the standard templates yet.  
 * **Primary Model Used:** **Property Inheritance with a local override**.  
 * **Implementation:**  
-  1. Your ProductionEnv has a WebServer that ultimately inherits its properties from StandardWebServer, which specifies { "version": "1.21.0" }.  
-  2. You edit the explicit ProductionEnv::WebServer override asset.  
+  1. Your ProductionDistro has a WebServer that ultimately inherits its properties from StandardWebServer, which specifies { "version": "1.21.0" }.  
+  2. You edit the explicit ProductionDistro::WebServer override asset.  
   3. You add a single property to its overrides: { "version": "1.21.1" }.  
-* **Benefit:** You have made a precise, surgical change to a single property in a single environment without touching any of the underlying templates. The change is clearly visible as a local override, making it easy to track and revert after the emergency is over.
+* **Benefit:** You have made a precise, surgical change to a single property in a single distro without touching any of the underlying templates. The change is clearly visible as a local override, making it easy to track and revert after the emergency is over.

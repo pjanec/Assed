@@ -59,7 +59,7 @@ describe('Content Workflows: Drag-and-Drop Scenarios', () => {
   describe('1. Package -> Node Assignment', () => {
 
     it('Scenario 1.1 (Smart Derive): Should create a derived package and key when dragging a shared package', () => {
-      // GOAL: Drag a shared package (GlobalFrontend) to a node (NodeA1) in an environment that doesn't have it yet.
+      // GOAL: Drag a shared package (GlobalFrontend) to a node (NodeA1) in an distro that doesn't have it yet.
       // EXPECTATION: The system should create a NEW package 'DistroA::GlobalFrontendPackage' that derives from the shared one,
       // AND create the 'DistroA::WebServer::GlobalFrontendPackage' key, all in one immediate, atomic action.
         
@@ -89,7 +89,7 @@ describe('Content Workflows: Drag-and-Drop Scenarios', () => {
       expect(createCommand.newAsset.assetType).toBe(ASSET_TYPES.PACKAGE_KEY);
     });
 
-    it('Scenario 1.2 (Ancestor Environment): Should treat a drop from an ancestor env as a "same-environment" action', () => {
+    it('Scenario 1.2 (Ancestor Distro): Should treat a drop from an ancestor env as a "same-distro" action', () => {
       // GOAL: Drag a package ('APIServer') from a template distro ('BaseDistro') to a node ('MainNode') in a child distro ('ProdDistro').
       // EXPECTATION: This should be treated as a simple, immediate action. It should ONLY create the new PackageKey,
       // because the package is already available via structural inheritance. No dialog should appear.
@@ -113,7 +113,7 @@ describe('Content Workflows: Drag-and-Drop Scenarios', () => {
       expect(createCommand.newAsset.assetType).toBe(ASSET_TYPES.PACKAGE_KEY);
     });
 
-    it('Scenario 1.3 (Cross-Environment with Overrides): Should trigger confirmation dialog for complex packages', async () => {
+    it('Scenario 1.3 (Cross-Distro with Overrides): Should trigger confirmation dialog for complex packages', async () => {
       // GOAL: Drag a package WITH local overrides ('Nginx' from 'DistroA') to a node in an unrelated distro ('ProdDistro').
       // EXPECTATION: The system must pause and ask for user confirmation by calling the generic prompt.
         
@@ -137,9 +137,9 @@ describe('Content Workflows: Drag-and-Drop Scenarios', () => {
   });
 
   // =================================================================
-  // ==  Workflow 2: Populating Environment Pool (Package -> Environment)
+  // ==  Workflow 2: Populating Distro Pool (Package -> Distro)
   // =================================================================
-  describe('2. Package -> Environment Pool Population', () => {
+  describe('2. Package -> Distro Pool Population', () => {
 
     it('Scenario 2.1 (Path-Aware Drop): Should create intermediate folders when dragging a nested package', () => {
       // GOAL: Drag a nested package 'DistroA::WebServer::Nginx' and drop it on the 'ProdDistro' distro.
@@ -170,9 +170,9 @@ describe('Content Workflows: Drag-and-Drop Scenarios', () => {
   });
 
   // =================================================================
-  // ==  Workflow 3: Cloning a Node (Node -> Environment)
+  // ==  Workflow 3: Cloning a Node (Node -> Distro)
   // =================================================================
-  describe('3. Node -> Environment Cloning', () => {
+  describe('3. Node -> Distro Cloning', () => {
       
     it('Scenario 3.1: Should trigger a single confirmation dialog with a comprehensive plan and execute it', async () => {
       // GOAL: Drag 'WebServer' from 'DistroA' (which requires 'Nginx') and drop it on 'BaseDistro'.

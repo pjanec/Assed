@@ -79,7 +79,7 @@ export const masterAssetRegistry: Record<string, AssetDefinition> = {
     },
     isSupported: {
       default: true,
-      environment: true,
+      distro: true,
       package: false, // NOT supported in package perspective
       lab: true
     },
@@ -104,7 +104,7 @@ export const masterAssetRegistry: Record<string, AssetDefinition> = {
     isVisibleInExplorer: { default: true },
     isSupported: {
       default: true,
-      environment: false, // NOT supported in environment perspective
+      distro: false, // NOT supported in distro perspective
       package: true,
       lab: true
     },
@@ -132,7 +132,7 @@ export const masterAssetRegistry: Record<string, AssetDefinition> = {
     },
     isSupported: {
       default: true,
-      environment: true,
+      distro: true,
       package: false, // NOT supported in package perspective
       lab: true
     },
@@ -158,7 +158,7 @@ export const masterAssetRegistry: Record<string, AssetDefinition> = {
     },
     isSupported: {
       default: true,
-      environment: false, // NOT supported in environment perspective
+      distro: false, // NOT supported in distro perspective
       package: false, // NOT supported in package perspective
       lab: true
     },

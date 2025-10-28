@@ -20,7 +20,7 @@ export function getEffectiveRegistry(): Record<string, AssetDefinition> {
 
 /**
  * Retrieves the asset registration for a given asset type.
- * @param assetType The type of the asset (e.g., 'Environment', 'Node').
+ * @param assetType The type of the asset (e.g., 'Distro', 'Node').
  * @returns The asset registration or null if not found.
  */
 export function getAssetRegistration(assetType: string | null | undefined): AssetDefinition | null {
@@ -31,7 +31,7 @@ export function getAssetRegistration(assetType: string | null | undefined): Asse
 
 /**
  * Retrieves the allowed child asset types for a given asset type.
- * @param assetType The type of the asset (e.g., 'Environment', 'Node').
+ * @param assetType The type of the asset (e.g., 'Distro', 'Node').
  * @returns An array of strings representing the valid child types.
  */
 export function getValidChildTypes(assetType: string | null | undefined): string[] {

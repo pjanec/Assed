@@ -39,7 +39,7 @@ describe('Stage 2: ConfigurationHub Asset Registry', () => {
       expect(registry['Widget'].label).toBe('Widget');
     });
 
-    it('should apply environment perspective label overrides', () => {
+    it('should apply distro perspective label overrides', () => {
       hub.setPerspective('distro');
       const registry = hub.effectiveAssetRegistry.value;
       expect(registry['Container'].label).toBe('Distro');
@@ -76,7 +76,7 @@ describe('Stage 2: ConfigurationHub Asset Registry', () => {
   });
 
   describe('Visibility Filtering', () => {
-    it('should filter assets by supportedAssetTypes in environment perspective', () => {
+    it('should filter assets by supportedAssetTypes in distro perspective', () => {
       hub.setPerspective('distro');
       const registry = hub.effectiveAssetRegistry.value;
       expect(registry['Container']).toBeDefined();

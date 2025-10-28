@@ -77,20 +77,20 @@ export class LocalStorageAdapter implements PersistenceAdapter {
     return this._getBuildHistory();
   }
 
-  async startBuild(request: { environmentId: string; commitMessage: string; triggeredBy?: string; }): Promise<{ buildId: string; }> {
+  async startBuild(request: { distroId: string; commitMessage: string; triggeredBy?: string; }): Promise<{ buildId: string; }> {
     await this.delay(200);
     const history = this._getBuildHistory();
     const db = this._getDb();
-    const environment = db[request.environmentId];
+    const distro = db[request.distroId];
 
-    if (!environment) {
-        throw new Error(`Environment with ID ${request.environmentId} not found.`);
+    if (!distro) {
+        throw new Error(`Distro with ID ${request.distroId} not found.`);
     }
 
     const newBuild: Build = {
       id: `build-${Date.now()}`,
-      environment: environment.assetKey,
-      environmentId: request.environmentId,
+      distro: distro.assetKey,
+      distroId: request.distroId,
       status: 'Queued' as const,
       commitMessage: request.commitMessage,
       triggeredBy: request.triggeredBy || 'local.user@asseted.com',

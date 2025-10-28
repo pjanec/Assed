@@ -27,7 +27,7 @@
             Welcome to Asset Editor
           </h1>
           <p class="text-h6 text-medium-emphasis">
-            Manage your environment configurations with ease
+            Manage your distro configurations with ease
           </p>
         </div>
 

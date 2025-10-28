@@ -2,28 +2,28 @@
 // This represents the data structure that would be returned by the real API
 
 export const mockData = {
-  // ... (recentEnvironments and builds arrays remain the same) ...
-  recentEnvironments: [
+  // ... (recentDistros and builds arrays remain the same) ...
+  recentDistros: [
     {
       id: 'uuid-200',
       name: 'DataCenter-minimal',
       status: 'Draft',
       lastModified: '2025-09-08T14:30:00Z',
-      description: 'A minimal configuration for the Data Center environment'
+      description: 'A minimal configuration for the Data Center distro'
     },
     {
       id: 'uuid-201',
       name: 'Dev-Env',
       status: 'Committed',
       lastModified: '2025-09-07T16:45:00Z',
-      description: 'Production environment for Data Center'
+      description: 'Production distro for Data Center'
     }
   ],
   builds: [
     {
       id: 'build-1694123456789',
-      environment: 'DataCenter-minimal',
-      environmentId: 'uuid-200',
+      distro: 'DataCenter-minimal',
+      distroId: 'uuid-200',
       status: 'Successful',
       commitMessage: 'Initial deployment setup',
       triggeredBy: 'jane.doe@asseted.com',
@@ -34,8 +34,8 @@ export const mockData = {
     },
     {
       id: 'build-1694037056789',
-      environment: 'Dev-Env',
-      environmentId: 'uuid-201',
+      distro: 'Dev-Env',
+      distroId: 'uuid-201',
       status: 'Failed',
       commitMessage: 'Add new web server configuration',
       triggeredBy: 'john.smith@asseted.com',
@@ -46,10 +46,10 @@ export const mockData = {
     },
     {
       id: 'build-1693950656789',
-      environment: 'Dev-Env',
-      environmentId: 'uuid-201',
+      distro: 'Dev-Env',
+      distroId: 'uuid-201',
       status: 'Successful',
-      commitMessage: 'Initial setup for dev environment',
+      commitMessage: 'Initial setup for dev distro',
       triggeredBy: 'john.smith@asseted.com',
       startTime: '2025-09-06T12:00:00Z',
       endTime: '2025-09-06T12:03:00Z',
@@ -284,8 +284,8 @@ export const mockData = {
       templateFqn: null,
       overrides: {
         name: 'DataCenter-minimal',
-        title: 'Data Center Minimal Environment',
-        description: 'A minimal configuration for the Data Center environment'
+        title: 'Data Center Minimal Distro',
+        description: 'A minimal configuration for the Data Center distro'
       }
     },
     'uuid-102': {
@@ -411,7 +411,7 @@ export const mockData = {
       templateFqn: null,
       overrides: {
         name: 'options',
-        description: 'Environment options and configurations',
+        description: 'Distro options and configurations',
         enabled: true
       }
     },
