@@ -66,8 +66,8 @@
       </div>
 
       <div v-else class="distro-canvas">
-        <!-- Distro Info Card -->
-        <v-card class="mb-4" elevation="2">
+        <!-- Distro Info Card - only show when not embedded -->
+        <v-card v-if="!isEmbedded" class="mb-4" elevation="2">
           <v-card-title class="d-flex align-center">
             <v-icon class="me-2" color="success">mdi-earth</v-icon>
             {{ asset.assetKey }}
@@ -83,7 +83,6 @@
             v-for="node in distroNodes"
             :key="node.id"
             :node="node"
-            @click="selectNode"
             @package-click="selectPackage"
           />
           
@@ -219,13 +218,13 @@ const addNewNode = async (): Promise<void> => {
 }
 
 .distro-canvas {
-  max-width: 1200px;
-  margin: 0 auto;
+  max-width: none;
+  margin: 0;
 }
 
 .nodes-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
   gap: 16px;
 }
 

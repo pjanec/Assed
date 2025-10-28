@@ -31,6 +31,7 @@ export const MOCK_ASSET_TYPES = {
   DISTRO: 'Distro',
   NODE: 'Node',
   PACKAGE: 'Package',
+  ENVIRONMENT: 'Environment',
 } as const;
 
 export const mockAssetRegistry: Record<string, AssetDefinition> = {
@@ -92,8 +93,8 @@ export const mockAssetRegistry: Record<string, AssetDefinition> = {
   [MOCK_ASSET_TYPES.DISTRO]: {
     label: { default: 'Distro' },
     validChildren: [MOCK_ASSET_TYPES.NODE],
-    icon: { default: 'mdi-earth' },
-    color: { default: 'success' },
+    icon: { default: 'mdi-application-cog' },
+    color: { default: 'cyan' },
     inspectorComponent: { 
       default: () => import('@/core/components/InspectorPane.vue')
     },
@@ -112,7 +113,7 @@ export const mockAssetRegistry: Record<string, AssetDefinition> = {
     label: { default: 'Node' },
     validChildren: [MOCK_ASSET_TYPES.PACKAGE],
     icon: { default: 'mdi-server' },
-    color: { default: 'info' },
+    color: { default: 'red-lighten-3' },
     inspectorComponent: { 
       default: () => import('@/core/components/InspectorPane.vue')
     },
@@ -141,6 +142,23 @@ export const mockAssetRegistry: Record<string, AssetDefinition> = {
     isStructuralFolder: false,
     postCloneFixup: fixTemplateFqn,
     sortOrder: 40,
+    isShownInStats: true,
+    isVisibleInExplorer: { default: true },
+  },
+  [MOCK_ASSET_TYPES.ENVIRONMENT]: {
+    label: { default: 'Environment' },
+    validChildren: [MOCK_ASSET_TYPES.CONTAINER],
+    icon: { default: 'mdi-earth' },
+    color: { default: 'success' },
+    inspectorComponent: {
+      default: () => import('@/core/components/InspectorPane.vue')
+    },
+    isCreatableAtRoot: true,
+    creationModes: ['simple'],
+    isRenameable: true,
+    isDeletable: true,
+    isStructuralFolder: false,
+    sortOrder: 5,
     isShownInStats: true,
     isVisibleInExplorer: { default: true },
   },

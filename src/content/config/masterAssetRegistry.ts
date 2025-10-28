@@ -33,7 +33,7 @@ export const masterAssetRegistry: Record<string, AssetDefinition> = {
     inspectorComponent: { 
       default: () => import('@/content/components/inspector/GenericAssetInspector.vue')
     },
-    validChildren: [ASSET_TYPES.DISTRO, ASSET_TYPES.NODE, ASSET_TYPES.OPTION, ASSET_TYPES.PACKAGE, ASSET_TYPES.NAMESPACE_FOLDER],
+    validChildren: [ASSET_TYPES.DISTRO, ASSET_TYPES.NODE, ASSET_TYPES.OPTION, ASSET_TYPES.PACKAGE, ASSET_TYPES.NAMESPACE_FOLDER, ASSET_TYPES.ENVIRONMENT],
     isCreatableAtRoot: false,
     creationModes: [],
     isRenameable: false,
@@ -41,19 +41,38 @@ export const masterAssetRegistry: Record<string, AssetDefinition> = {
     isStructuralFolder: true,
     sortOrder: 0,
   },
-  [ASSET_TYPES.DISTRO]: {
-    label: { default: 'Distro' },
+  [ASSET_TYPES.ENVIRONMENT]: {
+    label: { default: 'Environment' },
     icon: { default: 'mdi-earth' },
     color: { default: 'success' },
+    isVisibleInExplorer: { default: true },
+    isSupported: { default: true },
+    inspectorComponent: { 
+      default: () => import('@/content/components/inspector/EnvironmentInspector.vue')
+    },
+    validChildren: [ASSET_TYPES.MACHINE, ASSET_TYPES.NAMESPACE_FOLDER],
+    isCreatableAtRoot: true,
+    creationModes: ['simple'],
+    isRenameable: true,
+    isDeletable: true,
+    isStructuralFolder: false,
+    sortOrder: 5,
+    isShownInStats: true,
+  },
+  [ASSET_TYPES.DISTRO]: {
+    label: { default: 'Distro' },
+    icon: { default: 'mdi-application-brackets' },
+    color: { default: 'blue' },
     isVisibleInExplorer: { 
       default: true,
-      package: false, // Hide in package editing perspective
+      package: false,
+      environment: true,
     },
     isSupported: {
       default: true,
       distro: true,
-      package: false, // NOT supported in package perspective
-      lab: true
+      package: false,
+      environment: false,
     },
     inspectorComponent: { 
       default: () => import('@/content/components/inspector/DistroInspector.vue')
@@ -72,16 +91,17 @@ export const masterAssetRegistry: Record<string, AssetDefinition> = {
   [ASSET_TYPES.NODE]: {
     label: { default: 'Node' },
     icon: { default: 'mdi-server' },
-    color: { default: 'info' },
+    color: { default: 'red-lighten-2' },
     isVisibleInExplorer: {
       default: true,
-      package: false, // Hide in package editing perspective
+      package: false,
+      environment: true,
     },
     isSupported: {
       default: true,
       distro: true,
-      package: false, // NOT supported in package perspective
-      lab: true
+      package: false,
+      environment: false,
     },
     inspectorComponent: { 
       default: () => import('@/content/components/inspector/GenericAssetInspector.vue')
@@ -101,12 +121,15 @@ export const masterAssetRegistry: Record<string, AssetDefinition> = {
     label: { default: 'Package' },
     icon: { default: 'mdi-package-variant' },
     color: { default: 'warning' },
-    isVisibleInExplorer: { default: true },
+    isVisibleInExplorer: { 
+      default: true,
+      environment: false,
+    },
     isSupported: {
       default: true,
-      distro: false, // NOT supported in distro perspective
+      distro: false,
       package: true,
-      lab: true
+      environment: false,
     },
     inspectorComponent: { 
       default: () => import('@/content/components/inspector/GenericAssetInspector.vue')
@@ -124,17 +147,18 @@ export const masterAssetRegistry: Record<string, AssetDefinition> = {
   },
   [ASSET_TYPES.PACKAGE_KEY]: {
     label: { default: 'Package Requirement' },
-    icon: { default: 'mdi-link-variant' },
+    icon: { default: 'mdi-package-variant' },
     color: { default: 'deep-purple' },
     isVisibleInExplorer: {
       default: true,
-      package: false, // Hide in package editing perspective
+      package: false,
+      environment: false,
     },
     isSupported: {
       default: true,
       distro: true,
-      package: false, // NOT supported in package perspective
-      lab: true
+      package: false,
+      environment: false,
     },
     inspectorComponent: { 
       default: () => import('@/content/components/inspector/PackageKeyInspector.vue')
@@ -154,13 +178,14 @@ export const masterAssetRegistry: Record<string, AssetDefinition> = {
     color: { default: 'purple' },
     isVisibleInExplorer: {
       default: true,
-      package: false, // Hide in package editing perspective
+      package: false,
+      environment: false,
     },
     isSupported: {
       default: true,
-      distro: false, // NOT supported in distro perspective
-      package: false, // NOT supported in package perspective
-      lab: true
+      distro: false,
+      package: false,
+      environment: false,
     },
     inspectorComponent: { 
       default: () => import('@/content/components/inspector/GenericAssetInspector.vue')
@@ -184,13 +209,58 @@ export const masterAssetRegistry: Record<string, AssetDefinition> = {
     inspectorComponent: { 
       default: () => import('@/content/components/inspector/FolderInspector.vue')
     },
-    validChildren: [],
+    validChildren: [ASSET_TYPES.ENVIRONMENT],
     isCreatableAtRoot: true,
     creationModes: ['simple'],
     isRenameable: true,
     isDeletable: true,
     isStructuralFolder: true,
     sortOrder: 99,
+  },
+  [ASSET_TYPES.MACHINE]: {
+    label: { default: 'Machine' },
+    icon: { default: 'mdi-desktop-tower-monitor' },
+    color: { default: 'cyan-darken-1' },
+    isVisibleInExplorer: { default: true },
+    isSupported: { default: true },
+    inspectorComponent: { 
+      default: () => import('@/content/components/inspector/MachineInspector.vue')
+    },
+    validChildren: [ASSET_TYPES.NODE_KEY, ASSET_TYPES.NAMESPACE_FOLDER],
+    isCreatableAtRoot: false,
+    creationModes: ['simple'],
+    isRenameable: true,
+    isDeletable: true,
+    isStructuralFolder: false,
+    sortOrder: 15,
+    isShownInStats: true,
+  },
+  [ASSET_TYPES.NODE_KEY]: {
+    label: { default: 'Node Assignment' },
+    icon: { default: 'mdi-server' },
+    color: { default: 'deep-purple' },
+    isVisibleInExplorer: {
+      default: true,
+      package: false,
+      environment: true,
+    },
+    isSupported: {
+      default: true,
+      distro: false,
+      package: false,
+      environment: true,
+    },
+    inspectorComponent: { 
+      default: () => import('@/content/components/inspector/NodeKeyInspector.vue')
+    },
+    validChildren: [],
+    isCreatableAtRoot: false,
+    creationModes: [],
+    isRenameable: true,
+    isDeletable: true,
+    isStructuralFolder: false,
+    sortOrder: 25,
+    isShownInStats: false,
   },
 };
 

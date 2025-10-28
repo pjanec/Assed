@@ -1,6 +1,9 @@
 // mockData.js - Sample data for the Asset Editor
 // This represents the data structure that would be returned by the real API
 
+import type { UnmergedAsset, Asset, Build } from '@/core/types';
+import { ASSET_TYPES } from '@/content/config/constants';
+
 export const mockData = {
   // ... (recentDistros and builds arrays remain the same) ...
   recentDistros: [
@@ -201,7 +204,36 @@ export const mockData = {
   assetType: 'Option' as const,
       assetKey: 'LoadBalancer',
 
-    }
+    },
+    {
+      id: 'uuid-env-001',
+      fqn: 'Production-Environment',
+  assetType: 'Environment' as const,
+      assetKey: 'Production-Environment',
+
+    },
+    {
+      id: 'uuid-mach-001',
+      fqn: 'Production-Environment::WebServer-01',
+  assetType: 'Machine' as const,
+      assetKey: 'WebServer-01',
+
+    },
+    {
+      id: 'uuid-mach-002',
+      fqn: 'Production-Environment::Database-01',
+  assetType: 'Machine' as const,
+      assetKey: 'Database-01',
+
+    },
+    { id: 'env-tpl-base', fqn: 'BaseEnvironment', assetType: ASSET_TYPES.ENVIRONMENT, assetKey: 'BaseEnvironment' },
+    { id: 'mach-tpl-base', fqn: 'BaseEnvironment::BaseMachine', assetType: ASSET_TYPES.MACHINE, assetKey: 'BaseMachine' },
+    { id: 'env-prod', fqn: 'ProdEnvironment', assetType: ASSET_TYPES.ENVIRONMENT, assetKey: 'ProdEnvironment' },
+    { id: 'mach-prod-local', fqn: 'ProdEnvironment::ProdMachine', assetType: ASSET_TYPES.MACHINE, assetKey: 'ProdMachine' },
+    { id: 'distro-tpl-base', fqn: 'BaseDistro', assetType: ASSET_TYPES.DISTRO, assetKey: 'BaseDistro' },
+    { id: 'node-tpl-base', fqn: 'BaseDistro::BaseNode', assetType: ASSET_TYPES.NODE, assetKey: 'BaseNode' },
+    { id: 'distro-prod', fqn: 'ProdDistro', assetType: ASSET_TYPES.DISTRO, assetKey: 'ProdDistro' },
+    { id: 'node-prod-local', fqn: 'ProdDistro::ProdNode', assetType: ASSET_TYPES.NODE, assetKey: 'ProdNode' }
   ],
 
   // Unmerged asset data
@@ -427,6 +459,99 @@ export const mockData = {
         description: 'Balancing the load of app on node',
         enabled: true,
       }
+    },
+    'uuid-env-001': {
+      id: 'uuid-env-001',
+      fqn: 'Production-Environment',
+  assetType: 'Environment' as const,
+      assetKey: 'Production-Environment',
+
+      templateFqn: null,
+      overrides: {
+        distroFqn: 'DataCenter-minimal'
+      }
+    },
+    'uuid-mach-001': {
+      id: 'uuid-mach-001',
+      fqn: 'Production-Environment::WebServer-01',
+  assetType: 'Machine' as const,
+      assetKey: 'WebServer-01',
+
+      templateFqn: null,
+      overrides: {}
+    },
+    'uuid-mach-002': {
+      id: 'uuid-mach-002',
+      fqn: 'Production-Environment::Database-01',
+  assetType: 'Machine' as const,
+      assetKey: 'Database-01',
+
+      templateFqn: null,
+      overrides: {}
+    },
+    'env-tpl-base': {
+      id: 'env-tpl-base',
+      fqn: 'BaseEnvironment',
+      assetType: ASSET_TYPES.ENVIRONMENT,
+      assetKey: 'BaseEnvironment',
+      templateFqn: null,
+      overrides: { description: 'Shared base environment template' }
+    },
+    'mach-tpl-base': {
+      id: 'mach-tpl-base',
+      fqn: 'BaseEnvironment::BaseMachine',
+      assetType: ASSET_TYPES.MACHINE,
+      assetKey: 'BaseMachine',
+      templateFqn: null,
+      overrides: { os: 'Linux' }
+    },
+    'env-prod': {
+      id: 'env-prod',
+      fqn: 'ProdEnvironment',
+      assetType: ASSET_TYPES.ENVIRONMENT,
+      assetKey: 'ProdEnvironment',
+      templateFqn: 'BaseEnvironment',
+      overrides: { description: 'Production environment inheriting from base' }
+    },
+    'mach-prod-local': {
+      id: 'mach-prod-local',
+      fqn: 'ProdEnvironment::ProdMachine',
+      assetType: ASSET_TYPES.MACHINE,
+      assetKey: 'ProdMachine',
+      templateFqn: null,
+      overrides: { os: 'Windows', location: 'DC-West' }
+    },
+    'distro-tpl-base': {
+      id: 'distro-tpl-base',
+      fqn: 'BaseDistro',
+      assetType: ASSET_TYPES.DISTRO,
+      assetKey: 'BaseDistro',
+      templateFqn: null,
+      overrides: { description: 'Shared base distro template' }
+    },
+    'node-tpl-base': {
+      id: 'node-tpl-base',
+      fqn: 'BaseDistro::BaseNode',
+      assetType: ASSET_TYPES.NODE,
+      assetKey: 'BaseNode',
+      templateFqn: null,
+      overrides: { cpu: '2c', memory: '4G' }
+    },
+    'distro-prod': {
+      id: 'distro-prod',
+      fqn: 'ProdDistro',
+      assetType: ASSET_TYPES.DISTRO,
+      assetKey: 'ProdDistro',
+      templateFqn: 'BaseDistro',
+      overrides: { description: 'Production distro inheriting from base' }
+    },
+    'node-prod-local': {
+      id: 'node-prod-local',
+      fqn: 'ProdDistro::ProdNode',
+      assetType: ASSET_TYPES.NODE,
+      assetKey: 'ProdNode',
+      templateFqn: null,
+      overrides: { cpu: '4c', memory: '16G', role: 'WebService' }
     }
   },
 };

@@ -6,6 +6,7 @@ import { FOLDER_LIKE_INTERACTION_RULE } from './interactions/folderInteractions'
 import { packageInteractions } from './interactions/packageInteractions';
 import { packageAssignmentRules } from './interactions/packageAssignmentInteractions';
 import { nodeInteractions } from './interactions/nodeInteractions';
+import { infrastructureInteractions } from './interactions/infrastructureInteractions';
 
 /**
  * Master Interaction Registry
@@ -28,6 +29,7 @@ export const masterInteractionRegistry: InteractionRuleEntry[] = [
   ...packageInteractions,
   ...packageAssignmentRules,
   ...nodeInteractions,
+  ...infrastructureInteractions,
 ];
 
 // Re-export for use in plugin.ts

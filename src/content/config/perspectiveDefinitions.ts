@@ -20,11 +20,10 @@ export const perspectiveDefinitions: Record<string, PerspectiveDefinition> = {
     displayName: 'Package Editing',
     icon: 'mdi-package-variant',
   },
-  // Lab perspective: all asset types supported by default (can be customized)
-  lab: {
-    name: 'lab',
-    displayName: 'Lab Management',
-    icon: 'mdi-flask',
+  environment: {
+    name: 'environment',
+    displayName: 'Environment Layout',
+    icon: 'mdi-server-network',
   }
 };
 

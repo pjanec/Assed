@@ -83,11 +83,10 @@
           <thead>
             <tr>
               <th class="matrix-cell matrix-cell--header matrix-cell--corner">
-                <div class="d-flex align-center">
-                  <span>Packages</span>
-                  <v-icon class="ms-2">mdi-arrow-down</v-icon>
+                <div class="d-flex justify-space-between align-center w-100">
+                  <span :style="packageTitleStyle" class="font-weight-medium">Packages ↓ |</span>
+                  <span :style="nodeTitleStyle" class="font-weight-medium">Nodes →</span>
                 </div>
-                <div class="corner-label">Nodes →</div>
               </th>
               <th
                 v-for="node in matrixData.nodes"
@@ -95,7 +94,7 @@
                 class="matrix-cell matrix-cell--header matrix-cell--node"
               >
                 <div class="node-header">
-                  <v-icon class="mb-1">mdi-server</v-icon>
+                  <v-icon class="mb-1" :color="nodeColor">{{ coreConfig.getAssetIcon(ASSET_TYPES.NODE) }}</v-icon>
                   <div class="text-caption font-weight-medium">
                     {{ node.assetKey }}
                   </div>
@@ -107,7 +106,7 @@
             <tr v-for="pkg in matrixData.packages" :key="pkg.id">
               <td class="matrix-cell matrix-cell--header matrix-cell--package">
                 <div class="package-header">
-                  <v-icon class="me-2">mdi-package-variant</v-icon>
+                  <v-icon class="me-2" :color="packageColor">{{ coreConfig.getAssetIcon(ASSET_TYPES.PACKAGE) }}</v-icon>
                   <span class="text-body-2 font-weight-medium">
                     {{ pkg.assetKey }}
                   </span>
@@ -136,6 +135,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useTheme } from 'vuetify'
 import { useAssetsStore, useUiStore, useWorkspaceStore, CreateAssetCommand, DeleteAssetsCommand } from '@/core/stores'
 import MatrixCell from './MatrixCell.vue'
 import type { Asset, AssetTreeNode, UnmergedAsset } from '@/core/types'
@@ -158,8 +158,45 @@ const assetsStore = useAssetsStore()
 const uiStore = useUiStore()
 const workspaceStore = useWorkspaceStore()
 const coreConfig = useCoreConfigStore()
+const theme = useTheme()
 
 const packageFilter = ref<string>('')
+
+const packageColor = computed(() => coreConfig.getAssetTypeColor(ASSET_TYPES.PACKAGE));
+const nodeColor = computed(() => coreConfig.getAssetTypeColor(ASSET_TYPES.NODE));
+
+const getColorValue = (colorName: string) => {
+  const colors = theme.current.value.colors;
+  if (colors[colorName]) {
+    return colors[colorName];
+  }
+  const parts = colorName.split('-');
+  if (parts.length === 3 && (parts[1] === 'darken' || parts[1] === 'lighten')) {
+    const camelKey = `${parts[0]}${parts[1].charAt(0).toUpperCase() + parts[1].slice(1)}${parts[2]}`;
+    if (colors[camelKey]) {
+      return colors[camelKey];
+    }
+  }
+  return null;
+};
+
+const packageTitleStyle = computed(() => {
+  const colorName = packageColor.value;
+  const colorValue = getColorValue(colorName);
+  if (colorValue) {
+    return { color: colorValue };
+  }
+  return { color: `rgb(var(--v-theme-${colorName}))` };
+});
+
+const nodeTitleStyle = computed(() => {
+  const colorName = nodeColor.value;
+  const colorValue = getColorValue(colorName);
+  if (colorValue) {
+    return { color: colorValue };
+  }
+  return { color: `rgb(var(--v-theme-${colorName}))` };
+});
 
 const {
   isDraggingOver: isMatrixDraggingOver,
@@ -310,8 +347,7 @@ const exportMatrix = (): void => {
 }
 
 .matrix-table {
-  min-width: fit-content;
-  padding: 16px;
+  padding: 0;
 }
 
 .matrix-table table {
@@ -320,41 +356,30 @@ const exportMatrix = (): void => {
 }
 
 .matrix-cell {
-  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  border: 1px solid rgba(var(--v-border-color), 0.3);
   background-color: rgb(var(--v-theme-surface));
-  padding: 8px;
+  padding: 4px;
   text-align: center;
   vertical-align: middle;
 }
 
 .matrix-cell--header {
-  background-color: rgb(var(--v-theme-surface-variant));
-  font-weight: 600;
+  background-color: rgba(var(--v-theme-surface-variant), 0.6);
+  font-weight: 500;
 }
 
 .matrix-cell--corner {
-  position: relative;
   min-width: 150px;
-  background: linear-gradient(
-    135deg,
-    rgb(var(--v-theme-surface-variant)) 50%,
-    rgb(var(--v-theme-primary)) 50%
-  );
+  position: relative;
+  text-align: left;
 }
 
-.corner-label {
-  position: absolute;
-  bottom: 4px;
-  right: 4px;
-  font-size: 0.75rem;
-  color: white;
-  font-weight: 500;
+.matrix-cell--corner > div {
+  width: 100%;
 }
 
 .matrix-cell--node {
   min-width: 100px;
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
 }
 
 .matrix-cell--package {
@@ -363,22 +388,19 @@ const exportMatrix = (): void => {
 }
 
 .matrix-cell--data {
-  width: 100px;
-  height: 60px;
-  padding: 4px;
+  width: 60px;
+  height: 40px;
 }
 
 .node-header {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 8px 4px;
 }
 
 .package-header {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
 }
 
 .drag-over-active {

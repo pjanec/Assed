@@ -110,8 +110,14 @@ const emit = defineEmits<{
 }>();
 
 const handleKeydown = (event: KeyboardEvent) => {
-  if (props.modelValue && event.key === 'Escape') {
-    emit('update:model-value', false);
+  if (!props.modelValue) return;
+  
+  if (event.key === 'Escape') {
+    handleCancel();
+    event.preventDefault();
+  } else if (event.key === 'Enter' && isValid.value) {
+    handleCreate();
+    event.preventDefault();
   }
 };
 

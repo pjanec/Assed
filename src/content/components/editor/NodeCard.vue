@@ -6,7 +6,6 @@
       'node-card--drag-over': isDraggingOver
     }"
     elevation="2"
-    @click="$emit('click', node.id)"
     @dragover.prevent="handleDragOver"
     @dragleave="handleDragLeave"
     @drop="handleDrop"
@@ -22,13 +21,11 @@
 
     <v-card-text>
       <div v-if="nodeRequirements.length > 0">
-        <p class="text-subtitle-2 mb-2">Requirements ({{ nodeRequirements.length }})</p>
-
         <div class="packages-list">
           <v-chip
             v-for="requirement in nodeRequirements"
             :key="requirement.id"
-            :color="coreConfig.getAssetTypeColor(requirement.assetType)"
+            :color="coreConfig.getAssetTypeColor(ASSET_TYPES.PACKAGE)"
             size="small"
             class="ma-1"
             @click.stop="openRequirement(requirement.id)"
@@ -246,6 +243,17 @@ const showRequirementMenu = (event: MouseEvent, requirement: UnmergedAsset) => {
   cursor: pointer;
   transition: all 0.2s;
   border: 2px solid transparent;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.node-card .v-card-text {
+  flex: 1 1 auto;
+}
+
+.node-card .v-card-actions {
+  margin-top: auto;
 }
 
 .node-card:hover {

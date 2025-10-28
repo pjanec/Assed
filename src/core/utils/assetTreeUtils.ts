@@ -2,7 +2,7 @@
 import type { UnmergedAsset, AssetTreeNode, SelectedNode } from '@/core/types';
 import { ASSET_TREE_NODE_TYPES } from '@/core/config/constants';
 import { useAssetsStore } from '@/core/stores/assets';
-import { useCoreConfigStore } from '@/core/stores/config';
+import { useCoreConfigStore, globalConfigHub } from '@/core/stores/config';
 
 /**
  * Creates an AssetTreeNode from an asset ID by looking it up in the assets store.
@@ -89,27 +89,26 @@ export function isRealAsset(node: AssetTreeNode | null | undefined): boolean {
  * @returns True if the user should be able to start a drag operation from this node.
  */
 export function isDraggable(node: AssetTreeNode | null | undefined): boolean {
-  if (!isRealAsset(node)) {
+  if (!isRealAsset(node) || !node?.id) {
     return false;
   }
 
-  // Check the asset registry to see if the asset type is synthetic.
+  const assetsStore = useAssetsStore();
   const coreConfig = useCoreConfigStore();
-  const definition = node?.assetType ? coreConfig.getAssetDefinition(node.assetType) : null;
-    
-  // Draggable if it's NOT synthetic AND supported in current perspective
-  if (!definition) return false;
-  
-  // Check if asset type is synthetic
-  if (definition.isSynthetic) return false;
-  
-  // Check if asset type is supported in current perspective
-  if (!node?.assetType) return false;
-  
-  const effectiveRegistry = coreConfig.effectiveAssetRegistry;
-  const effectiveDef = effectiveRegistry[node.assetType];
-  if (!effectiveDef) return false;
-  
-  // Only draggable if supported in current perspective
-  return (effectiveDef as any)._isSupportedInCurrentPerspective !== false;
+
+  const assetExists = assetsStore.unmergedAssets.some(a => a.id === node.id);
+  if (!assetExists) {
+    const definition = node.assetType ? coreConfig.getAssetDefinition(node.assetType) : null;
+    if (!definition || (definition as any).isSynthetic) return false;
+    const effectiveDef = node.assetType ? coreConfig.effectiveAssetRegistry[node.assetType] : null;
+    if (!effectiveDef) return false;
+    return (effectiveDef as any)._isSupportedInCurrentPerspective !== false;
+  }
+
+  const draggedType = node.assetType as string | undefined;
+  if (!draggedType) return false;
+  const rules = globalConfigHub?.effectiveInteractionRules.value;
+  if (!rules) return false;
+  const hasRuleForFolder = rules.has(`${draggedType}->Folder`) || rules.has(`Asset->Folder`);
+  return hasRuleForFolder;
 }

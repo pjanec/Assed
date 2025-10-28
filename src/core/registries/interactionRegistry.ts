@@ -88,12 +88,7 @@ export const getAvailableActions = (draggedAssetId: string, dropTarget: DropTarg
   const draggedAsset = assetsStore.unmergedAssets.find(a => a.id === dragPayload.assetId);
   if (!draggedAsset) return [];
 
-  // Check if dragged asset type is supported in current perspective
   if (!globalConfigHub) return [];
-  const draggedDef = globalConfigHub.effectiveAssetRegistry.value[draggedAsset.assetType];
-  if (draggedDef && (draggedDef as any)._isSupportedInCurrentPerspective === false) {
-    return []; // Dragged asset type not supported in current perspective
-  }
 
   let effectiveDropTarget = dropTarget;
 
@@ -115,7 +110,7 @@ export const getAvailableActions = (draggedAssetId: string, dropTarget: DropTarg
   }
 
   const draggedType = draggedAsset.assetType;
-  
+
   // Check if target is an asset and if it's supported in current perspective
   const targetAsset = assetsStore.unmergedAssets.find(a => a.id === effectiveDropTarget.id);
   if (targetAsset) {
@@ -170,13 +165,7 @@ export const getDropValidation = (draggedAssetId: string, dropTarget: DropTarget
 
   const draggedAsset = assetsStore.unmergedAssets.find(a => a.id === dragPayload.assetId);
   if (!draggedAsset) return { isValid: false, reason: 'Source asset not found.' };
-
-  // Check if dragged asset type is supported in current perspective
   if (!globalConfigHub) return { isValid: false };
-  const draggedDef = globalConfigHub.effectiveAssetRegistry.value[draggedAsset.assetType];
-  if (draggedDef && (draggedDef as any)._isSupportedInCurrentPerspective === false) {
-    return { isValid: false, reason: 'Dragged asset not supported in current perspective' };
-  }
 
   let effectiveDropTarget = dropTarget;
   if (dropTarget.virtualContext) {
@@ -191,14 +180,7 @@ export const getDropValidation = (draggedAssetId: string, dropTarget: DropTarget
     }
   }
 
-  // Check if target is an asset and if it's supported in current perspective
-  const targetAsset = assetsStore.unmergedAssets.find(a => a.id === effectiveDropTarget.id);
-  if (targetAsset) {
-    const targetDef = globalConfigHub.effectiveAssetRegistry.value[targetAsset.assetType];
-    if (targetDef && (targetDef as any)._isSupportedInCurrentPerspective === false) {
-      return { isValid: false, reason: 'Target asset not supported in current perspective' };
-    }
-  }
+  // Skip perspective support checks; rule presence will determine validity
 
   const draggedType = draggedAsset.assetType;
   const targetType = getTargetType(effectiveDropTarget);

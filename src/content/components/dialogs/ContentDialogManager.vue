@@ -1,7 +1,20 @@
 <template>
+  <DistroReassignmentDialog
+    v-if="dialogState.dialogType === 'distro-reassignment' && dialogState.show"
+    v-model="dialogState.show"
+    :environment-name="dialogState.payload?.environmentName"
+    :old-distro-fqn="dialogState.payload?.currentDistro"
+    :new-distro-fqn="dialogState.payload?.newDistro"
+    @confirm="handleConfirm"
+    @update:model-value="(val: boolean) => {
+      if (!val) {
+        handleCancel();
+      }
+    }"
+  />
   <component
+    v-else-if="currentDialogComponent"
     :is="currentDialogComponent"
-    v-if="currentDialogComponent"
     v-model="dialogState.show"
     :payload="dialogState.payload"
     @confirm="handleConfirm"
@@ -15,6 +28,7 @@ import { useUiStore } from '@/core/stores';
 import NodeCloneConfirmationDialog from './NodeCloneConfirmationDialog.vue';
 import CrossDistroCopyDialog from './CrossDistroCopyDialog.vue';
 import ResolveAndCopyDialog from './ResolveAndCopyDialog.vue';
+import DistroReassignmentDialog from './DistroReassignmentDialog.vue';
 
 const uiStore = useUiStore();
 const dialogState = computed(() => uiStore.genericConfirmationState);

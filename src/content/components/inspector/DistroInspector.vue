@@ -13,23 +13,29 @@
         </v-expansion-panel>
         <v-expansion-panel value="canvas">
           <v-expansion-panel-title class="text-body-2 custom-panel-title">
-            <div class="d-flex align-center justify-between w-100">
+            <div class="d-flex align-center justify-space-between w-100">
               <div class="d-flex align-center">
-                <v-icon class="me-2" size="small">mdi-view-dashboard</v-icon>
+                <v-icon class="me-2" size="small">{{ coreConfig.getAssetIcon(ASSET_TYPES.NODE) }}</v-icon>
                 Canvas / Matrix View
               </div>
-              <div class="d-flex ga-1" @click.stop>
+              <div class="d-flex align-center ga-2" @click.stop>
                 <v-btn-toggle
                   v-model="editorView"
                   variant="outlined"
+                  density="compact"
+                  mandatory
                   color="primary"
+                  group
                   size="x-small"
+                  @click.stop
                 >
-                  <v-btn value="canvas" size="x-small">
-                    <v-icon size="16">mdi-view-dashboard</v-icon>
+                  <v-btn value="canvas">
+                    <v-icon :color="canvasIconColor" :style="canvasIconStyle">{{ coreConfig.getAssetIcon(ASSET_TYPES.NODE) }}</v-icon>
+                    <v-tooltip activator="parent" location="bottom">Canvas View</v-tooltip>
                   </v-btn>
-                  <v-btn value="matrix" size="x-small">
-                    <v-icon size="16">mdi-table</v-icon>
+                  <v-btn value="matrix">
+                    <v-icon :color="matrixIconColor" :style="matrixIconStyle">mdi-table</v-icon>
+                    <v-tooltip activator="parent" location="bottom">Matrix View</v-tooltip>
                   </v-btn>
                 </v-btn-toggle>
               </div>
@@ -52,22 +58,37 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import { useWorkspaceStore } from '@/core/stores';
+import { ref, computed } from 'vue';
+import { useWorkspaceStore, useCoreConfigStore } from '@/core/stores';
 import { UpdateAssetCommand } from '@/core/stores/workspace';
 import BaseInspector from './BaseInspector.vue';
 import GeneralPropertiesEditor from './GeneralPropertiesEditor.vue';
 import CanvasView from '@/content/components/editor/CanvasView.vue';
 import MatrixView from '@/content/components/editor/MatrixView.vue';
 import { cloneDeep } from 'lodash-es';
+import { ASSET_TYPES } from '@/content/config/constants';
 
 const props = defineProps({
   asset: { type: Object, required: true }
 });
 
 const workspaceStore = useWorkspaceStore();
+const coreConfig = useCoreConfigStore();
 const expandedPanels = ref(['general', 'canvas']);
 const editorView = ref('canvas');
+
+const nodeColor = computed(() => coreConfig.getAssetTypeColor(ASSET_TYPES.NODE));
+const canvasIconColor = computed(() => nodeColor.value);
+const canvasIconStyle = computed(() => {
+  const isActive = editorView.value === 'canvas';
+  return { opacity: isActive ? 1 : 0.75 };
+});
+
+const matrixIconColor = computed(() => 'primary');
+const matrixIconStyle = computed(() => {
+  const isActive = editorView.value === 'matrix';
+  return { opacity: isActive ? 1 : 0.75 };
+});
 
 const handleOverridesChange = (newOverrides) => {
   const oldData = props.asset.unmerged;

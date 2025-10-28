@@ -48,7 +48,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useUiStore, useCoreConfigStore } from '@/core/stores';
 import type { Asset } from '@/core/types';
 
@@ -86,4 +86,23 @@ const handleSelect = () => {
   dialogState.value.resolver?.(selectedAsset.value);
   uiStore.clearActionStates();
 };
+
+const handleKeydown = (event: KeyboardEvent) => {
+  if (!dialogState.value.show) return;
+  if (event.key === 'Escape') {
+    handleCancel();
+    event.preventDefault();
+  } else if (event.key === 'Enter' && selectedAsset.value) {
+    handleSelect();
+    event.preventDefault();
+  }
+};
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeydown);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown);
+});
 </script>

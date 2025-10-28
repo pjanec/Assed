@@ -1,5 +1,6 @@
 import type { App } from 'vue';
-import { useCoreConfigStore, setGlobalConfigHub } from '@/core/stores/config';
+import { useCoreConfigStore } from '@/core/stores';
+import { setGlobalConfigHub } from '@/core/stores/config';
 import { MOCK_ASSET_TYPES, mockAssetRegistry } from './mockAssetRegistry';
 import type { MockPersistenceAdapter } from './MockPersistenceAdapter';
 import { ConfigurationHub } from '@/core/stores/ConfigurationHub';
@@ -7,6 +8,7 @@ import { mockPerspectiveDefinitions } from './mockPerspectiveDefinitions';
 // Use the real master interaction registry in tests to get actual interaction rules
 import { masterInteractionRegistry } from '@/content/config/masterInteractionRegistry';
 import { FOLDER_LIKE_INTERACTION_RULE } from '@/content/config/masterInteractionRegistry';
+import { infrastructureInteractions } from '@/content/config/interactions/infrastructureInteractions';
 import type { InteractionRuleEntry } from '@/core/stores/ConfigurationHub';
 
 // Import validation rules to ensure they are registered during tests
@@ -22,7 +24,10 @@ export const createMockContentPlugin = (mockAdapter: MockPersistenceAdapter) => 
     
     // Build the complete interaction registry for tests
     // Use the real master registry to get actual interaction rules
-    const completeInteractionRegistry: InteractionRuleEntry[] = [...masterInteractionRegistry];
+    const completeInteractionRegistry: InteractionRuleEntry[] = [
+      ...masterInteractionRegistry,
+      ...infrastructureInteractions,
+    ];
     
     // Add folder-like rules for all container types (similar to plugin.ts)
     const containerAssetTypes = Object.entries(mockAssetRegistry)

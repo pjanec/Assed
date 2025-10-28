@@ -60,6 +60,10 @@
         </template>
       </v-autocomplete>
 
+      <!-- START: asset-specific general properties slot -->
+      <slot name="asset-specific-properties"></slot>
+      <!-- END: slot -->
+
     </v-form>
 
     <v-divider class="my-4"></v-divider>

@@ -8,6 +8,9 @@ export const ASSET_TYPES = {
   PACKAGE: 'Package',
   PACKAGE_KEY: 'PackageKey',
   OPTION: 'Option',
+  ENVIRONMENT: 'Environment',
+  MACHINE: 'Machine',
+  NODE_KEY: 'NodeKey',
 } as const;
 
 // Defines drag source contexts originating from the Content application layer.

@@ -1,8 +1,9 @@
 // src/utils/assetUtils.js
-import type { Asset } from '@/core/types';
+import type { Asset, UnmergedAsset } from '@/core/types';
 import { useAssetsStore } from '@/core/stores/assets';
 import { getEffectiveRegistry } from '@/content/config/assetRegistry';
-import { isAncestorOf } from '@/core/utils/inheritanceUtils';
+import { isAncestorOf, resolveInheritedCollection } from '@/core/utils/inheritanceUtils';
+import { ASSET_TYPES } from '@/content/config/constants';
 
 /**
  * Returns the appropriate Material Design Icon name for a given asset type.
@@ -124,9 +125,11 @@ export function isSameOrAncestorDistro(childDistroFqn: string | null, potentialA
   if (!childDistroFqn || !potentialAncestorDistroFqn) {
     return false;
   }
-    
-  // They are compatible if they are the same OR if one is an ancestor of the other.
-  return (childDistroFqn === potentialAncestorDistroFqn) || isAncestorOf(childDistroFqn, potentialAncestorDistroFqn, allAssets);
+
+  // Structural FQN ancestry (not template inheritance):
+  // compatible if equal or child is under ancestor path.
+  if (childDistroFqn === potentialAncestorDistroFqn) return true;
+  return childDistroFqn.startsWith(potentialAncestorDistroFqn + '::');
 }
 
 /**
@@ -154,6 +157,76 @@ export function getSharedTemplateIfPureDerivative(asset: Asset, allAssets: Asset
   }
 
   return null;
+}
+
+// ---- Environment Canvas helpers ----
+
+// Walk up FQN to find nearest ancestor of given type (e.g., Environment/Distro), skipping namespace folders
+export function findAncestorAssetOfType(fqn: string, targetType: string, assets: UnmergedAsset[]): UnmergedAsset | null {
+  const parts = fqn.split('::');
+  for (let i = parts.length; i >= 1; i--) {
+    const prefix = parts.slice(0, i).join('::');
+    const found = assets.find(a => a.fqn === prefix && a.assetType === targetType);
+    if (found) return found as UnmergedAsset;
+  }
+  return null;
+}
+
+export function getEnvironmentForAsset(asset: UnmergedAsset, assets: UnmergedAsset[]): UnmergedAsset | null {
+  return findAncestorAssetOfType(asset.fqn, ASSET_TYPES.ENVIRONMENT, assets);
+}
+
+export function getDistroForAsset(asset: UnmergedAsset, assets: UnmergedAsset[]): UnmergedAsset | null {
+  return findAncestorAssetOfType(asset.fqn, ASSET_TYPES.DISTRO, assets);
+}
+
+// Machine belongs to Environment that selected the same distro as the Node's owning distro
+export function isSameEnvironmentForNodeAssignment(machine: UnmergedAsset, node: UnmergedAsset, assets: UnmergedAsset[]): boolean {
+  const nodeDistro = getDistroForAsset(node, assets);
+  if (!nodeDistro) return false;
+
+  const effectiveRegistry = getEffectiveRegistry();
+
+  // Find all environments that use this node's distro (directly or via distro inheritance)
+  const environmentsUsingNodeDistro = assets.filter(env => {
+    if (env.assetType !== ASSET_TYPES.ENVIRONMENT) return false;
+    const selectedDistro = (env as any).overrides?.distroFqn as string | undefined;
+    if (!selectedDistro) return false;
+    return selectedDistro === nodeDistro.fqn ||
+           isSameOrAncestorDistro(nodeDistro.fqn, selectedDistro, assets as unknown as Asset[]);
+  });
+
+  // Check if the machine belongs to any of these environments (directly or via inheritance)
+  for (const env of environmentsUsingNodeDistro) {
+    const envMachines = resolveInheritedCollection(
+      env,
+      ASSET_TYPES.MACHINE,
+      assets,
+      effectiveRegistry
+    );
+    if (envMachines.some(m => m.id === machine.id)) {
+      return true;
+    }
+  }
+
+  // Fallback to original logic for backward compatibility
+  const env = getEnvironmentForAsset(machine, assets);
+  if (!env) return false;
+  const selectedDistro = (env as any).overrides?.distroFqn as string | undefined;
+  const ok = !!selectedDistro && (
+    selectedDistro === nodeDistro.fqn ||
+    isSameOrAncestorDistro(nodeDistro.fqn, selectedDistro, assets as unknown as Asset[])
+  );
+  if (!ok) {
+    console.debug('[DND][EnvCheck] Mismatch:', {
+      machine: machine.fqn,
+      env: env.fqn,
+      selectedDistro,
+      node: node.fqn,
+      nodeDistro: nodeDistro.fqn,
+    });
+  }
+  return ok;
 }
 
 

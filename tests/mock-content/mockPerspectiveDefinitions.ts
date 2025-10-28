@@ -24,6 +24,11 @@ export const mockPerspectiveDefinitions: Record<string, PerspectiveDefinition> =
     displayName: 'Lab View',
     icon: 'mdi-flask',
     supportedAssetTypes: ['Container'] // Only containers supported
+  },
+  environment: {
+    name: 'environment',
+    displayName: 'Environment Layout',
+    icon: 'mdi-server-network',
   }
 };
 

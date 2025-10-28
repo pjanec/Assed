@@ -45,6 +45,16 @@ const packageSchema = {
         required: ["content"]
       }
     },
+    incompatibleWith: {
+      type: "array",
+      description: "A list of package names or patterns (e.g., 'Apache::*', 'Nginx::1.x') that cannot coexist with this package on the same machine.",
+      items: {
+        type: "string",
+        pattern: "^[a-zA-Z0-9_.-]+(::\\*|::[a-zA-Z0-9_.-]+)?$",
+        description: "Package name, optionally with '::*' wildcard or '::version'."
+      },
+      default: []
+    }
   },
   additionalProperties: false // Disallow properties not in the schema
 };
