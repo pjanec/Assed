@@ -7,22 +7,8 @@
             <v-icon class="me-2" size="small">mdi-pencil-box-outline</v-icon>
             General Properties
           </v-expansion-panel-title>
-          <v-expansion-panel-text>
+          <v-expansion-panel-text class="pa-0">
             <GeneralPropertiesEditor :asset="asset" :is-read-only="asset.isReadOnly" />
-            <div class="mt-4">
-              <v-text-field
-                v-model="nameHandler.effectiveValue.value"
-                label="Technical Name"
-                variant="outlined"
-                density="compact"
-                :append-inner-icon="nameHandler.isOverridden.value ? 'mdi-undo-variant' : ''"
-                @click:append-inner="nameHandler.reset()"
-              >
-                <template #prepend-inner>
-                  <v-icon v-if="nameHandler.isOverridden.value" color="primary">mdi-pencil</v-icon>
-                </template>
-              </v-text-field>
-            </div>
           </v-expansion-panel-text>
         </v-expansion-panel>
 
@@ -101,9 +87,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, toRef } from 'vue';
+import { ref } from 'vue';
 import { useWorkspaceStore , UpdateAssetCommand } from '@/core/stores/workspace';
-import { useEditableProperty } from '@/core/composables/useEditableProperty';
 
 import BaseInspector from './BaseInspector.vue';
 import GeneralPropertiesEditor from './GeneralPropertiesEditor.vue';
@@ -153,9 +138,7 @@ const handleSubObjectChange = (key: string, value: any): void => {
   workspaceStore.executeCommand(command);
 };
 
-// Composable-based editable for technical name (overrides.name)
-const assetRef = toRef(props, 'asset');
-const nameHandler = useEditableProperty(assetRef, 'name', handleOverridesChange);
+// GeneralPropertiesEditor handles the general fields (incl. Technical Name) via useEditableProperty
 </script>
 
 <style scoped>
