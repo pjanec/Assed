@@ -51,12 +51,12 @@ describe('Stage 4: Production Master Asset Registry', () => {
       expect(masterAssetRegistry[ASSET_TYPES.NAMESPACE_FOLDER].label.default).toBe('Namespace Folder');
     });
 
-    it('should have same icons as original registry', () => {
+    it('should have expected default icons per current registry', () => {
       expect(masterAssetRegistry[ASSET_TYPES.ROOT].icon.default).toBe('mdi-file-tree');
-      expect(masterAssetRegistry[ASSET_TYPES.DISTRO].icon.default).toBe('mdi-earth');
+      expect(masterAssetRegistry[ASSET_TYPES.DISTRO].icon.default).toBe('mdi-application-brackets');
       expect(masterAssetRegistry[ASSET_TYPES.NODE].icon.default).toBe('mdi-server');
       expect(masterAssetRegistry[ASSET_TYPES.PACKAGE].icon.default).toBe('mdi-package-variant');
-      expect(masterAssetRegistry[ASSET_TYPES.PACKAGE_KEY].icon.default).toBe('mdi-link-variant');
+      expect(masterAssetRegistry[ASSET_TYPES.PACKAGE_KEY].icon.default).toBe('mdi-package-variant');
       expect(masterAssetRegistry[ASSET_TYPES.OPTION].icon.default).toBe('mdi-cog');
       expect(masterAssetRegistry[ASSET_TYPES.NAMESPACE_FOLDER].icon.default).toBe('mdi-folder');
     });

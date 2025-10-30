@@ -121,15 +121,17 @@ export function isSharedAsset(asset: Asset, allAssets: Asset[]): boolean {
  * @returns True if the distros are identical or if the potential ancestor is in the child's chain.
  */
 export function isSameOrAncestorDistro(childDistroFqn: string | null, potentialAncestorDistroFqn: string | null, allAssets: Asset[]): boolean {
-  // If either distro doesn't exist in this context, they aren't compatible.
   if (!childDistroFqn || !potentialAncestorDistroFqn) {
     return false;
   }
 
-  // Structural FQN ancestry (not template inheritance):
-  // compatible if equal or child is under ancestor path.
   if (childDistroFqn === potentialAncestorDistroFqn) return true;
-  return childDistroFqn.startsWith(potentialAncestorDistroFqn + '::');
+
+  const child = allAssets.find(a => a.assetType === ASSET_TYPES.DISTRO && a.fqn === childDistroFqn);
+  const ancestor = allAssets.find(a => a.assetType === ASSET_TYPES.DISTRO && a.fqn === potentialAncestorDistroFqn);
+  if (!child || !ancestor) return false;
+
+  return isAncestorOf(child.fqn, ancestor.fqn, allAssets);
 }
 
 /**

@@ -132,7 +132,7 @@ export const masterAssetRegistry: Record<string, AssetDefinition> = {
       environment: false,
     },
     inspectorComponent: { 
-      default: () => import('@/content/components/inspector/GenericAssetInspector.vue')
+      default: () => import('@/content/components/inspector/PackageInspector.vue')
     },
     validChildren: [],
     isCreatableAtRoot: true,

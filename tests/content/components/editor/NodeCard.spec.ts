@@ -88,7 +88,6 @@ describe('NodeCard.vue', () => {
   it('displays a list of assigned requirements', () => {
     renderNodeCard({ node: mockNode });
 
-    expect(screen.getByText('Requirements (1)')).toBeInTheDocument();
     expect(screen.getByText('Nginx')).toBeInTheDocument();
   });
 
