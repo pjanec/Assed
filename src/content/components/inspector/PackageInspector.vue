@@ -28,11 +28,7 @@
             File Distribution
           </v-expansion-panel-title>
           <v-expansion-panel-text class="pa-0">
-            <FileDistribEditor
-              :model-value="asset.unmerged.overrides.FileDistrib"
-              @update:model-value="handleSubObjectChange('FileDistrib', $event)"
-              :is-read-only="asset.isReadOnly"
-            />
+            <FileDistribEditor :asset="asset" :is-read-only="asset.isReadOnly" />
           </v-expansion-panel-text>
         </v-expansion-panel>
 
@@ -42,11 +38,7 @@
             Resources
           </v-expansion-panel-title>
           <v-expansion-panel-text class="pa-0">
-            <ResourcesEditor
-              :model-value="asset.unmerged.overrides.Resources"
-              @update:model-value="handleSubObjectChange('Resources', $event)"
-              :is-read-only="asset.isReadOnly"
-            />
+            <ResourcesEditor :asset="asset" :is-read-only="asset.isReadOnly" />
           </v-expansion-panel-text>
         </v-expansion-panel>
 
@@ -56,11 +48,7 @@
             Scripts
           </v-expansion-panel-title>
           <v-expansion-panel-text class="pa-0">
-            <ScriptsEditor
-              :model-value="asset.unmerged.overrides.Scripts"
-              @update:modelValue="handleSubObjectChange('Scripts', $event)"
-              :is-read-only="asset.isReadOnly"
-            />
+            <ScriptsEditor :asset="asset" :is-read-only="asset.isReadOnly" />
           </v-expansion-panel-text>
         </v-expansion-panel>
 

@@ -29,9 +29,10 @@
             </div>
           </v-expansion-panel-title>
           <v-expansion-panel-text>
-            <v-select
-              :model-value="script.Stage"
-              @update:modelValue="updateScript(index, 'Stage', $event)"
+            <MergedSelect
+              v-if="selectedOperation"
+              :asset="asset"
+              :path="`Scripts.Operations.${selectedOperation}[${index}].Stage`"
               :items="['First', 'Last']"
               label="Stage"
               density="compact"
@@ -39,21 +40,25 @@
               class="mb-2"
               :readonly="isReadOnly"
             />
-             <v-text-field
-              :model-value="script.File"
-              @update:modelValue="updateScript(index, 'File', $event)"
+            <MergedTextField
+              v-if="selectedOperation"
+              :asset="asset"
+              :path="`Scripts.Operations.${selectedOperation}[${index}].File`"
               label="File (Optional)"
               density="compact"
               variant="outlined"
               class="mb-2"
-              messages="Path relative to payload folder."
               :readonly="isReadOnly"
-            />
+            >
+              <template #append-inner>
+                <span class="text-caption text-medium-emphasis">Path relative to payload folder.</span>
+              </template>
+            </MergedTextField>
             <div class="editor-container" v-if="!script.File">
               <h5 class="text-caption mb-1">Script Lines (if no file is specified)</h5>
                <MonacoEditor
                 :value="(script.Lines || []).join('\n')"
-                @change="updateScript(index, 'Lines', $event.split('\n'))"
+                @change="updateLines(index, $event)"
                 language="powershell"
                 :readOnly="isReadOnly"
                 :options="{ lineNumbers: 'off', glyphMargin: false, folding: false }"
@@ -70,52 +75,92 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import { cloneDeep } from 'lodash-es';
+import type { AssetDetails } from '@/core/types';
+import { useWorkspaceStore, UpdateAssetCommand } from '@/core/stores/workspace';
 import MonacoEditor from './MonacoEditor.vue';
+import MergedTextField from './controls/MergedTextField.vue';
+import MergedSelect from './controls/MergedSelect.vue';
 
-const props = defineProps({
-  modelValue: { type: Object, default: () => ({}) },
-  isReadOnly: { type: Boolean, default: false },
-});
-const emit = defineEmits(['update:modelValue']);
+const props = defineProps<{
+  asset: AssetDetails,
+  isReadOnly?: boolean,
+}>();
 
-const scripts = computed(() => props.modelValue || {});
+const workspaceStore = useWorkspaceStore();
+
+const scripts = computed(() => props.asset.unmerged.overrides?.Scripts || {});
 const operations = computed(() => Object.keys(scripts.value.Operations || {}));
 const selectedOperation = ref(operations.value[0] || null);
 
 watch(operations, (newOps) => {
-  if (!newOps.includes(selectedOperation.value)) {
+  if (selectedOperation.value && !newOps.includes(selectedOperation.value)) {
     selectedOperation.value = newOps[0] || null;
   }
 });
 
 const scriptsForOperation = computed(() => {
+  if (!selectedOperation.value) return [];
   return scripts.value.Operations?.[selectedOperation.value] || [];
 });
 
-const updateScript = (index, field, value) => {
-  if (props.isReadOnly) return;
-  const newData = cloneDeep(scripts.value);
-  newData.Operations[selectedOperation.value][index][field] = value;
-  emit('update:modelValue', newData);
+const updateLines = (index: number, newContent: string) => {
+  if (props.isReadOnly || !selectedOperation.value) return;
+  const oldData = props.asset.unmerged;
+  const newData = cloneDeep(oldData);
+  if (!newData.overrides) newData.overrides = {} as any;
+  if (!newData.overrides.Scripts) (newData.overrides as any).Scripts = {} as any;
+  if (!newData.overrides.Scripts.Operations) (newData.overrides as any).Scripts.Operations = {} as any;
+  if (!newData.overrides.Scripts.Operations[selectedOperation.value]) {
+    (newData.overrides as any).Scripts.Operations[selectedOperation.value] = [];
+  }
+  if (!(newData.overrides as any).Scripts.Operations[selectedOperation.value][index]) {
+    (newData.overrides as any).Scripts.Operations[selectedOperation.value][index] = {};
+  }
+  (newData.overrides as any).Scripts.Operations[selectedOperation.value][index].Lines = newContent.split('\n');
+  const cmd = new UpdateAssetCommand(oldData.id, oldData, newData);
+  workspaceStore.executeCommand(cmd);
 };
 
 const addScript = () => {
-  if (props.isReadOnly) return;
-  const newData = cloneDeep(scripts.value);
-  if (!newData.Operations) newData.Operations = {};
-  if (!newData.Operations[selectedOperation.value]) newData.Operations[selectedOperation.value] = [];
-  newData.Operations[selectedOperation.value].push({ Stage: 'First', Interpretter: 'Powershell' });
-  emit('update:modelValue', newData);
+  if (props.isReadOnly || !selectedOperation.value) return;
+  const oldData = props.asset.unmerged;
+  const newData = cloneDeep(oldData);
+  if (!newData.overrides) newData.overrides = {} as any;
+  if (!newData.overrides.Scripts) (newData.overrides as any).Scripts = {} as any;
+  if (!newData.overrides.Scripts.Operations) (newData.overrides as any).Scripts.Operations = {} as any;
+  if (!newData.overrides.Scripts.Operations[selectedOperation.value]) {
+    (newData.overrides as any).Scripts.Operations[selectedOperation.value] = [];
+  }
+  (newData.overrides as any).Scripts.Operations[selectedOperation.value].push({ Stage: 'First', Interpretter: 'Powershell' });
+  const cmd = new UpdateAssetCommand(oldData.id, oldData, newData);
+  workspaceStore.executeCommand(cmd);
 };
 
-const removeScript = (index) => {
-  if (props.isReadOnly) return;
-  const newData = cloneDeep(scripts.value);
-  newData.Operations[selectedOperation.value].splice(index, 1);
-  emit('update:modelValue', newData);
+const removeScript = (index: number) => {
+  if (props.isReadOnly || !selectedOperation.value) return;
+  const oldData = props.asset.unmerged;
+  const newData = cloneDeep(oldData);
+  if (!newData.overrides?.Scripts?.Operations?.[selectedOperation.value]) return;
+  
+  const scripts = (newData.overrides as any).Scripts.Operations[selectedOperation.value];
+  scripts.splice(index, 1);
+  
+  // Clean up empty arrays and objects
+  if (scripts.length === 0) {
+    delete (newData.overrides as any).Scripts.Operations[selectedOperation.value];
+    if (Object.keys((newData.overrides as any).Scripts.Operations).length === 0) {
+      delete (newData.overrides as any).Scripts.Operations;
+      if (Object.keys((newData.overrides as any).Scripts).length === 0) {
+        delete (newData.overrides as any).Scripts;
+      }
+    }
+  }
+  
+  const cmd = new UpdateAssetCommand(oldData.id, oldData, newData);
+  workspaceStore.executeCommand(cmd);
 };
 </script>
 

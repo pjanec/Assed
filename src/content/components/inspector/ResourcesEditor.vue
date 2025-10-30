@@ -12,24 +12,24 @@
               icon="mdi-delete-outline"
               size="x-small"
               variant="text"
-              @click.stop="removeResource(id)"
+              @click.stop="removeResource(String(id))"
               :disabled="isReadOnly"
             />
           </div>
         </v-expansion-panel-title>
         <v-expansion-panel-text>
-          <v-text-field
-            :model-value="resource.To"
-            @update:modelValue="updateResource(id, 'To', $event)"
+          <MergedTextField
+            :asset="asset"
+            :path="`Resources.${String(id)}.To`"
             label="Path (To)"
             density="compact"
             variant="outlined"
             class="mb-4"
             :readonly="isReadOnly"
           />
-          <v-select
-            :model-value="resource.Fetcher"
-            @update:modelValue="updateResource(id, 'Fetcher', $event)"
+          <MergedSelect
+            :asset="asset"
+            :path="`Resources.${String(id)}.Fetcher`"
             :items="fetcherTypes"
             label="Fetcher"
             density="compact"
@@ -41,7 +41,7 @@
             <h5 class="text-caption mb-2">Fetcher Parameters</h5>
             <JSONEditor
               :model-value="resource.Params || {}"
-              @update:modelValue="updateResource(id, 'Params', $event)"
+              @update:modelValue="updateParams(String(id), $event)"
               :schema="getFetcherSchema(resource.Fetcher)"
               mode="tree"
               :options="{ readOnly: isReadOnly }"
@@ -81,52 +81,65 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed } from 'vue';
 import { cloneDeep } from 'lodash-es';
 import { schemas, getFetcherSchema } from '@/content/schemas/packageSchema';
 import JSONEditor from './JSONEditor.vue';
+import type { AssetDetails } from '@/core/types';
+import { useWorkspaceStore, UpdateAssetCommand } from '@/core/stores/workspace';
+import MergedTextField from './controls/MergedTextField.vue';
+import MergedSelect from './controls/MergedSelect.vue';
 
-const props = defineProps({
-  modelValue: { type: Object, default: () => ({}) },
-  isReadOnly: { type: Boolean, default: false },
-});
-const emit = defineEmits(['update:modelValue']);
+const props = defineProps<{ asset: AssetDetails, isReadOnly?: boolean }>();
+const workspaceStore = useWorkspaceStore();
 
-const resources = computed(() => props.modelValue || {});
+const resources = computed(() => props.asset.unmerged.overrides?.Resources || {});
 const showAddDialog = ref(false);
 const newResourceId = ref('');
 
 const fetcherTypes = computed(() => Object.keys(schemas.value?.fetchers || {}));
 
-const updateResource = (id, field, value) => {
+const updateParams = (id: string, newParams: Record<string, any>) => {
   if (props.isReadOnly) return;
-  const newResources = cloneDeep(resources.value);
-  if (!newResources[id]) newResources[id] = {};
-  newResources[id][field] = value;
-
-  // When changing fetcher, reset params
-  if (field === 'Fetcher') {
-    newResources[id].Params = {};
-  }
-
-  emit('update:modelValue', newResources);
+  const oldData = props.asset.unmerged;
+  const newData = cloneDeep(oldData);
+  if (!newData.overrides) newData.overrides = {} as any;
+  if (!newData.overrides.Resources) (newData.overrides as any).Resources = {} as any;
+  if (!(newData.overrides as any).Resources[id]) (newData.overrides as any).Resources[id] = {} as any;
+  (newData.overrides as any).Resources[id].Params = newParams || {};
+  const cmd = new UpdateAssetCommand(oldData.id, oldData, newData);
+  workspaceStore.executeCommand(cmd);
 };
 
 const addResource = () => {
   if (props.isReadOnly) return;
   if (!newResourceId.value || resources.value[newResourceId.value]) return;
-  const newResources = cloneDeep(resources.value);
-  newResources[newResourceId.value] = { To: '', Fetcher: '', Params: {} };
-  emit('update:modelValue', newResources);
+  const oldData = props.asset.unmerged;
+  const newData = cloneDeep(oldData);
+  if (!newData.overrides) newData.overrides = {} as any;
+  if (!newData.overrides.Resources) (newData.overrides as any).Resources = {} as any;
+  (newData.overrides as any).Resources[newResourceId.value] = { To: '', Fetcher: '', Params: {} };
+  const cmd = new UpdateAssetCommand(oldData.id, oldData, newData);
+  workspaceStore.executeCommand(cmd);
   cancelAddResource();
 };
 
-const removeResource = (id) => {
+const removeResource = (id: string) => {
   if (props.isReadOnly) return;
-  const newResources = cloneDeep(resources.value);
-  delete newResources[id];
-  emit('update:modelValue', newResources);
+  const oldData = props.asset.unmerged;
+  const newData = cloneDeep(oldData);
+  if ((newData.overrides as any)?.Resources) {
+    delete (newData.overrides as any).Resources[id];
+    
+    // Clean up empty Resources object if no resources remain
+    const resources = (newData.overrides as any).Resources;
+    if (resources && Object.keys(resources).length === 0) {
+      delete (newData.overrides as any).Resources;
+    }
+  }
+  const cmd = new UpdateAssetCommand(oldData.id, oldData, newData);
+  workspaceStore.executeCommand(cmd);
 };
 
 const cancelAddResource = () => {

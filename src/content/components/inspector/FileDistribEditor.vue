@@ -1,110 +1,128 @@
 <template>
   <div class="pa-4">
-    <v-text-field
-      :model-value="fileDistrib.To"
-      @update:modelValue="updateField('To', $event)"
+    <MergedTextField
+      :asset="asset"
+      path="FileDistrib.To"
       label="Destination Root (To)"
       variant="outlined"
       density="compact"
       class="mb-4"
       :readonly="isReadOnly"
-    ></v-text-field>
+    />
 
     <v-row>
       <v-col>
-        <v-select
-          :model-value="fileDistrib.Transport"
-          @update:modelValue="updateField('Transport', $event)"
+        <MergedSelect
+          :asset="asset"
+          path="FileDistrib.Transport"
           :items="['copy', 'link', 'sync']"
           label="Default Transport"
           variant="outlined"
           density="compact"
           :readonly="isReadOnly"
-        ></v-select>
+        />
       </v-col>
       <v-col>
-        <v-select
-          :model-value="fileDistrib.ConflictPolicy"
-          @update:modelValue="updateField('ConflictPolicy', $event)"
+        <MergedSelect
+          :asset="asset"
+          path="FileDistrib.ConflictPolicy"
           :items="['join', 'purge', 'replace', 'skip']"
           label="Default Conflict Policy"
           variant="outlined"
           density="compact"
           :readonly="isReadOnly"
-        ></v-select>
+        />
       </v-col>
     </v-row>
 
     <v-divider class="my-4"></v-divider>
 
     <h4 class="text-subtitle-1 mb-2">Distribution Parts</h4>
-    <div v-for="(part, index) in fileDistrib.Parts" :key="index" class="part-item mb-2">
-       <v-text-field
-        :model-value="part.From"
-        @update:modelValue="updatePart(index, 'From', $event)"
+    <div v-for="(part, index) in parts" :key="index" class="part-item mb-2">
+      <MergedTextField
+        :asset="asset"
+        :path="`FileDistrib.Parts[${index}].From`"
         label="From"
         variant="outlined"
         density="compact"
         hide-details
         :readonly="isReadOnly"
-      ></v-text-field>
-       <v-text-field
-        :model-value="part.To"
-        @update:modelValue="updatePart(index, 'To', $event)"
+      />
+      <MergedTextField
+        :asset="asset"
+        :path="`FileDistrib.Parts[${index}].To`"
         label="To"
         variant="outlined"
         density="compact"
         hide-details
         :readonly="isReadOnly"
-      ></v-text-field>
+      />
       <v-btn icon="mdi-delete-outline" variant="text" size="small" @click="removePart(index)" :disabled="isReadOnly"></v-btn>
     </div>
-     <v-btn block variant="tonal" size="small" @click="addPart" :disabled="isReadOnly">Add Part</v-btn>
+    <v-btn block variant="tonal" size="small" @click="addPart" :disabled="isReadOnly">Add Part</v-btn>
 
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue';
-import { cloneDeep } from 'lodash-es';
+import { cloneDeep, get, unset } from 'lodash-es';
+import type { AssetDetails } from '@/core/types';
+import { useWorkspaceStore, UpdateAssetCommand } from '@/core/stores/workspace';
+import MergedTextField from './controls/MergedTextField.vue';
+import MergedSelect from './controls/MergedSelect.vue';
 
-const props = defineProps({
-  modelValue: { type: Object, default: () => ({ Parts: [] }) },
-  isReadOnly: { type: Boolean, default: false },
-});
+const props = defineProps<{
+  asset: AssetDetails,
+  isReadOnly?: boolean,
+}>();
 
-const emit = defineEmits(['update:modelValue']);
+const workspaceStore = useWorkspaceStore();
 
-const fileDistrib = computed(() => props.modelValue || { Parts: [] });
-
-const updateField = (field, value) => {
-  if (props.isReadOnly) return;
-  const newData = cloneDeep(fileDistrib.value);
-  newData[field] = value;
-  emit('update:modelValue', newData);
-};
-
-const updatePart = (index, field, value) => {
-  if (props.isReadOnly) return;
-  const newData = cloneDeep(fileDistrib.value);
-  newData.Parts[index][field] = value;
-  emit('update:modelValue', newData);
-}
+const parts = computed(() => get(props.asset.unmerged.overrides || {}, 'FileDistrib.Parts', []) as any[]);
 
 const addPart = () => {
   if (props.isReadOnly) return;
-  const newData = cloneDeep(fileDistrib.value);
-  if (!newData.Parts) newData.Parts = [];
-  newData.Parts.push({ From: '', To: '' });
-  emit('update:modelValue', newData);
-}
+  const oldData = props.asset.unmerged;
+  const newData = cloneDeep(oldData);
+  const currentParts = get(newData, 'overrides.FileDistrib.Parts', []);
+  const next = Array.isArray(currentParts) ? currentParts.slice() : [];
+  next.push({ From: '', To: '' });
+  if (!newData.overrides) newData.overrides = {} as any;
+  if (!newData.overrides.FileDistrib) (newData.overrides as any).FileDistrib = {} as any;
+  (newData.overrides as any).FileDistrib.Parts = next;
+  const cmd = new UpdateAssetCommand(oldData.id, oldData, newData);
+  workspaceStore.executeCommand(cmd);
+};
 
-const removePart = (index) => {
+const removePart = (index: number) => {
   if (props.isReadOnly) return;
-  const newData = cloneDeep(fileDistrib.value);
-  newData.Parts.splice(index, 1);
-  emit('update:modelValue', newData);
-}
+  const oldData = props.asset.unmerged;
+  const newData = cloneDeep(oldData);
+  const currentParts = get(newData, 'overrides.FileDistrib.Parts', []);
+  const next = Array.isArray(currentParts) ? currentParts.slice() : [];
+  next.splice(index, 1);
+  if (!newData.overrides) newData.overrides = {} as any;
+  
+  if (next.length === 0) {
+    // Remove Parts override entirely to allow inheritance
+    if (newData.overrides.FileDistrib) {
+      unset(newData.overrides, 'FileDistrib.Parts');
+      
+      // Clean up empty FileDistrib object if it has no other properties
+      const fileDistrib = (newData.overrides as any).FileDistrib;
+      if (fileDistrib && Object.keys(fileDistrib).length === 0) {
+        delete (newData.overrides as any).FileDistrib;
+      }
+    }
+  } else {
+    if (!newData.overrides.FileDistrib) (newData.overrides as any).FileDistrib = {} as any;
+    (newData.overrides as any).FileDistrib.Parts = next;
+  }
+  
+  const cmd = new UpdateAssetCommand(oldData.id, oldData, newData);
+  workspaceStore.executeCommand(cmd);
+};
 </script>
 
 <style scoped>

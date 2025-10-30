@@ -16,39 +16,19 @@
         </template>
       </v-text-field>
 
-      <v-text-field
-        v-model="techName.effectiveValue.value"
+      <MergedTextField
+        :asset="asset"
+        path="name"
         label="Technical Name (for build process)"
         variant="outlined"
         density="compact"
         class="mb-4"
-        hint="File-system friendly name used during builds."
-        persistent-hint
+        :readonly="isReadOnly"
       >
-        <template #prepend-inner>
-          <v-tooltip v-if="techName.isOverridden.value" location="bottom">
-            <template #activator="{ props }">
-              <v-icon v-bind="props" color="primary">mdi-pencil</v-icon>
-            </template>
-            <span>This value is locally overridden</span>
-          </v-tooltip>
-        </template>
         <template #append-inner>
-          <v-tooltip v-if="techName.isOverridden.value" location="bottom">
-            <template #activator="{ props }">
-              <v-btn
-                v-bind="props"
-                icon="mdi-undo-variant"
-                variant="text"
-                density="compact"
-                size="x-small"
-                @click="techName.reset()"
-              />
-            </template>
-            <span>Reset: remove local override</span>
-          </v-tooltip>
+          <span class="text-caption text-medium-emphasis">File-system friendly name used during builds.</span>
         </template>
-      </v-text-field>
+      </MergedTextField>
 
       <v-text-field
         :model-value="asset.unmerged.fqn"
@@ -111,13 +91,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, nextTick, toRef } from 'vue';
+import { computed, ref, watch, nextTick } from 'vue';
 import { useAssetsStore, useWorkspaceStore, useUiStore } from '@/core/stores';
 import { UpdateAssetCommand } from '@/core/stores/workspace';
 import { cloneDeep } from 'lodash-es';
 import { generatePropertiesDiff } from '@/core/utils/diff';
 import { calculateMergedAsset } from '@/core/utils/mergeUtils';
-import { useEditableProperty } from '@/core/composables/useEditableProperty';
+import MergedTextField from './controls/MergedTextField.vue';
 import type { AssetDetails } from '@/core/types';
 
 const props = defineProps<{
@@ -183,16 +163,6 @@ const emitChange = (field: string, newValue: any, isOverride = false) => {
   workspaceStore.executeCommand(command);
 };
 
-const assetRef = toRef(props, 'asset');
-const handleTechNameOverridesUpdate = (newOverrides: Record<string, any>) => {
-  if (props.isReadOnly) return;
-  const oldData = props.asset.unmerged;
-  const newData = cloneDeep(oldData);
-  newData.overrides = newOverrides;
-  const command = new UpdateAssetCommand(props.asset.unmerged.id, oldData, newData);
-  workspaceStore.executeCommand(command);
-};
-const techName = useEditableProperty(assetRef as any, 'name', handleTechNameOverridesUpdate);
 
 // Template Change Handler with Confirmation
 const handleTemplateChange = (newTemplateFqn: string | null) => {
