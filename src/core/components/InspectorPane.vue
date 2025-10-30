@@ -58,6 +58,18 @@
             <template #activator="{ props }">
               <v-btn
                 v-bind="props"
+                :icon="inspectorViewMode === 'merged' ? 'mdi-eye-outline' : 'mdi-pencil-outline'"
+                size="x-small"
+                density="compact"
+                @click="toggleInspectorViewMode()"
+              />
+            </template>
+            <span>{{ inspectorViewMode === 'merged' ? 'Merged View (effective values)' : 'Local Overrides View (raw overrides)' }}</span>
+          </v-tooltip>
+          <v-tooltip location="bottom">
+            <template #activator="{ props }">
+              <v-btn
+                v-bind="props"
                 icon="mdi-arrow-left"
                 size="x-small"
                 density="compact"
@@ -144,7 +156,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onMounted, onBeforeUnmount, watch } from 'vue';
+import { computed, defineAsyncComponent, onMounted, onBeforeUnmount, watch, ref, provide, type Ref } from 'vue';
 import { useAssetsStore, useUiStore } from '@/core/stores/index';
 import { useCoreConfigStore } from '@/core/stores/config';
 import type { AssetDetails, InspectorPaneInfo } from '@/core/types';
@@ -161,6 +173,13 @@ const props = defineProps<Props>();
 const assetsStore = useAssetsStore();
 const uiStore = useUiStore();
 const coreConfig = useCoreConfigStore();
+
+// Per-inspector view mode (merged vs local)
+const inspectorViewMode = ref<'merged' | 'local'>('merged');
+provide<Ref<'merged' | 'local'>>('inspectorViewMode', inspectorViewMode);
+const toggleInspectorViewMode = () => {
+  inspectorViewMode.value = inspectorViewMode.value === 'merged' ? 'local' : 'merged';
+};
 
 const viewModel = computed((): AssetDetails | null => {
   // 1. Identify synthetic assets from the live tree
@@ -286,6 +305,11 @@ onBeforeUnmount(() => {
   if ((window as any).CURRENT_INSPECTOR_PANE_ID === props.paneId) {
     delete (window as any).CURRENT_INSPECTOR_PANE_ID;
   }
+});
+
+// Reset the local view mode when switching assets in this pane
+watch(() => props.assetId, () => {
+  inspectorViewMode.value = 'merged';
 });
 </script>
 

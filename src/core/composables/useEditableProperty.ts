@@ -1,4 +1,4 @@
-import { computed, type Ref } from 'vue';
+import { computed, type Ref, inject, ref } from 'vue';
 import { get, set, unset, has, cloneDeep } from 'lodash-es';
 import type { AssetDetails } from '@/core/types';
 
@@ -16,6 +16,7 @@ export function useEditableProperty(
   propertyPath: string,
   onUpdateOverrides: (newOverrides: Record<string, any>) => void
 ) {
+  const inspectorViewMode = inject<Ref<'merged' | 'local'>>('inspectorViewMode', ref<'merged' | 'local'>('merged'));
   /**
    * (Read-only) The final calculated value inherited from the template chain.
    * Returns `undefined` if the property doesn't exist in the merged properties.
@@ -80,10 +81,16 @@ export function useEditableProperty(
    */
   const effectiveValue = computed<any>({
     get: () => {
+      if (inspectorViewMode.value === 'local') {
+        return localOverride.value;
+      }
       return isOverridden.value ? localOverride.value : mergedValue.value;
     },
     set: (newValue) => {
-      if (newValue === effectiveValue.value) {
+      const currentValue = inspectorViewMode.value === 'local'
+        ? localOverride.value
+        : (isOverridden.value ? localOverride.value : mergedValue.value);
+      if (newValue === currentValue) {
         return;
       }
       update(newValue);
