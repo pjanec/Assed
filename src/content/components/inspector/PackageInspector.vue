@@ -1,5 +1,5 @@
 <template>
-  <BaseInspector :asset="asset" :schema="packageSchema" @update:overrides="handleOverridesChange">
+  <BaseInspector :asset="asset" @update:overrides="handleOverridesChange">
     <template #settings-panels>
       <v-expansion-panels v-model="expandedPanels" multiple variant="accordion">
         <v-expansion-panel value="general">
@@ -9,6 +9,20 @@
           </v-expansion-panel-title>
           <v-expansion-panel-text>
             <GeneralPropertiesEditor :asset="asset" :is-read-only="asset.isReadOnly" />
+            <div class="mt-4">
+              <v-text-field
+                v-model="nameHandler.effectiveValue.value"
+                label="Technical Name"
+                variant="outlined"
+                density="compact"
+                :append-inner-icon="nameHandler.isOverridden.value ? 'mdi-undo-variant' : ''"
+                @click:append-inner="nameHandler.reset()"
+              >
+                <template #prepend-inner>
+                  <v-icon v-if="nameHandler.isOverridden.value" color="primary">mdi-pencil</v-icon>
+                </template>
+              </v-text-field>
+            </div>
           </v-expansion-panel-text>
         </v-expansion-panel>
 
@@ -25,7 +39,7 @@
             />
           </v-expansion-panel-text>
         </v-expansion-panel>
-        
+
         <v-expansion-panel value="fileDistrib">
           <v-expansion-panel-title class="text-body-2 custom-panel-title">
             <v-icon class="me-2" size="small">mdi-folder-sync-outline</v-icon>
@@ -53,7 +67,7 @@
             />
           </v-expansion-panel-text>
         </v-expansion-panel>
-        
+
         <v-expansion-panel value="scripts">
           <v-expansion-panel-title class="text-body-2 custom-panel-title">
             <v-icon class="me-2" size="small">mdi-script-text-outline</v-icon>
@@ -84,12 +98,12 @@
       </v-expansion-panels>
     </template>
   </BaseInspector>
-  
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, toRef } from 'vue';
 import { useWorkspaceStore , UpdateAssetCommand } from '@/core/stores/workspace';
+import { useEditableProperty } from '@/core/composables/useEditableProperty';
 
 import BaseInspector from './BaseInspector.vue';
 import GeneralPropertiesEditor from './GeneralPropertiesEditor.vue';
@@ -98,9 +112,9 @@ import FileDistribEditor from './FileDistribEditor.vue';
 import ResourcesEditor from './ResourcesEditor.vue';
 import ScriptsEditor from './ScriptsEditor.vue';
 import SkeletonFilesEditor from './SkeletonFilesEditor.vue';
-import { schemas } from '@/content/schemas/packageSchema';
 import type { AssetDetails } from '@/core/types';
 
+// Helper function to deep clone objects
 function deepClone<T>(obj: T): T {
   return JSON.parse(JSON.stringify(obj));
 }
@@ -112,14 +126,14 @@ interface Props {
 const props = defineProps<Props>();
 
 const workspaceStore = useWorkspaceStore();
-const expandedPanels = ref<string[]>(['general', 'files']);
-
-const packageSchema = computed(() => schemas.value?.package || {});
+const expandedPanels = ref<string[]>(['general']);
 
 const handleOverridesChange = (newOverrides: Record<string, any>): void => {
+  // Prevent editing read-only assets (e.g., virtual assets)
   if (props.asset.isReadOnly) {
     return;
   }
+  
   const oldData = props.asset.unmerged;
   const newData = deepClone(oldData);
   newData.overrides = newOverrides;
@@ -134,19 +148,23 @@ const handleSubObjectChange = (key: string, value: any): void => {
   const oldData = props.asset.unmerged;
   const newData = deepClone(oldData);
   if (!newData.overrides) newData.overrides = {};
-  newData.overrides[key] = value;
+  (newData.overrides as any)[key] = value;
   const command = new UpdateAssetCommand(props.asset.unmerged.id, oldData, newData);
   workspaceStore.executeCommand(command);
 };
+
+// Composable-based editable for technical name (overrides.name)
+const assetRef = toRef(props, 'asset');
+const nameHandler = useEditableProperty(assetRef, 'name', handleOverridesChange);
 </script>
 
 <style scoped>
-::deep(.custom-panel-title) {
+:deep(.custom-panel-title) {
   background-color: rgba(var(--v-theme-primary), 0.08);
   font-weight: 600 !important;
   color: rgb(var(--v-theme-on-surface));
 }
-::deep(.v-expansion-panel-text__wrapper) {
+:deep(.v-expansion-panel-text__wrapper) {
   padding: 0 !important;
   background-color: rgb(var(--v-theme-surface));
 }
