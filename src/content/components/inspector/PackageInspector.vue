@@ -18,11 +18,7 @@
             Payload
           </v-expansion-panel-title>
           <v-expansion-panel-text class="pa-0">
-            <PayloadEditor
-              :model-value="asset.unmerged.overrides.Payload"
-              @update:model-value="handleSubObjectChange('Payload', $event)"
-              :is-read-only="asset.isReadOnly"
-            />
+            <PayloadEditor :asset="asset" :is-read-only="asset.isReadOnly" />
           </v-expansion-panel-text>
         </v-expansion-panel>
 
