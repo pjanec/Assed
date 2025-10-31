@@ -7,8 +7,12 @@
       >
         <v-expansion-panel-title>
           <div class="d-flex align-center justify-space-between w-100">
-            <span>{{ id }}</span>
+            <span>
+              {{ id }}
+              <span v-if="isResourceInherited[id]" class="text-caption text-medium-emphasis ms-1">(inherited)</span>
+            </span>
             <v-btn
+              v-if="!isResourceInherited[id] || inspectorViewMode === 'local'"
               icon="mdi-delete-outline"
               size="x-small"
               variant="text"
@@ -40,9 +44,9 @@
           <div v-if="resource.Fetcher">
             <h5 class="text-caption mb-2">Fetcher Parameters</h5>
             <JSONEditor
-              :model-value="resource.Params || {}"
+              :model-value="get(resources, `${id}.Params`, {}) || {}"
               @update:modelValue="updateParams(String(id), $event)"
-              :schema="getFetcherSchema(resource.Fetcher)"
+              :schema="getFetcherSchema(get(resources, `${id}.Fetcher`))"
               mode="tree"
               :options="{ readOnly: isReadOnly }"
             />
@@ -82,11 +86,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import { cloneDeep } from 'lodash-es';
+import { ref, computed, inject } from 'vue';
+import { cloneDeep, get } from 'lodash-es';
 import { schemas, getFetcherSchema } from '@/content/schemas/packageSchema';
 import JSONEditor from './JSONEditor.vue';
 import type { AssetDetails } from '@/core/types';
+import type { Ref } from 'vue';
 import { useWorkspaceStore, UpdateAssetCommand } from '@/core/stores/workspace';
 import MergedTextField from './controls/MergedTextField.vue';
 import MergedSelect from './controls/MergedSelect.vue';
@@ -94,7 +99,25 @@ import MergedSelect from './controls/MergedSelect.vue';
 const props = defineProps<{ asset: AssetDetails, isReadOnly?: boolean }>();
 const workspaceStore = useWorkspaceStore();
 
-const resources = computed(() => props.asset.unmerged.overrides?.Resources || {});
+const inspectorViewMode = inject<Ref<'merged' | 'local'>>('inspectorViewMode', ref('merged'));
+
+const resources = computed(() => {
+  if (inspectorViewMode.value === 'local') {
+    return props.asset.unmerged.overrides?.Resources || {};
+  } else {
+    return props.asset.merged?.properties?.Resources || {};
+  }
+});
+
+const isResourceInherited = computed(() => {
+  const mergedResources = props.asset.merged?.properties?.Resources || {};
+  const overriddenResources = props.asset.unmerged.overrides?.Resources || {};
+  const result: Record<string, boolean> = {};
+  Object.keys(mergedResources).forEach(id => {
+    result[id] = !(id in overriddenResources);
+  });
+  return result;
+});
 const showAddDialog = ref(false);
 const newResourceId = ref('');
 
@@ -113,8 +136,17 @@ const updateParams = (id: string, newParams: Record<string, any>) => {
 };
 
 const addResource = () => {
-  if (props.isReadOnly) return;
-  if (!newResourceId.value || resources.value[newResourceId.value]) return;
+  if (props.isReadOnly || !newResourceId.value) return;
+  
+  const mergedResources = props.asset.merged?.properties?.Resources || {};
+  const overriddenResources = props.asset.unmerged.overrides?.Resources || {};
+  const allResources = { ...mergedResources, ...overriddenResources };
+  
+  if (allResources[newResourceId.value]) {
+    cancelAddResource();
+    return;
+  }
+  
   const oldData = props.asset.unmerged;
   const newData = cloneDeep(oldData);
   if (!newData.overrides) newData.overrides = {} as any;
@@ -127,9 +159,16 @@ const addResource = () => {
 
 const removeResource = (id: string) => {
   if (props.isReadOnly) return;
+  
+  // Only allow deletion of overridden resources, not inherited ones
+  const isInherited = inspectorViewMode.value === 'merged' && isResourceInherited.value[id];
+  if (isInherited) return;
+  
   const oldData = props.asset.unmerged;
   const newData = cloneDeep(oldData);
-  if ((newData.overrides as any)?.Resources) {
+  
+  // Delete from overrides
+  if ((newData.overrides as any)?.Resources?.[id]) {
     delete (newData.overrides as any).Resources[id];
     
     // Clean up empty Resources object if no resources remain
@@ -138,6 +177,7 @@ const removeResource = (id: string) => {
       delete (newData.overrides as any).Resources;
     }
   }
+  
   const cmd = new UpdateAssetCommand(oldData.id, oldData, newData);
   workspaceStore.executeCommand(cmd);
 };

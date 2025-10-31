@@ -32,6 +32,7 @@
           </v-list-item-title>
           <template #append>
             <v-btn
+              v-if="!file.isInherited || inspectorViewMode === 'local'"
               icon="mdi-delete-outline"
               size="x-small"
               variant="text"
@@ -276,22 +277,20 @@ const handleRemoveFile = (): void => {
   const oldData = props.asset.unmerged;
   const newData = cloneDeep(oldData);
   
+  // Only allow deletion of overridden files, not inherited ones
   if (inspectorViewMode.value === 'merged' && fileToRemove.value.isInherited) {
-    // In merged view, removing an inherited file means explicitly excluding it
-    // We need to set it to null to override the inherited value
-    if (!newData.overrides) newData.overrides = {} as any;
-    if (!newData.overrides.Files) (newData.overrides as any).Files = {} as any;
-    (newData.overrides as any).Files[fileNameToRemove] = null;
-  } else {
-    // In local view or removing an overridden file, just delete from overrides
-    if ((newData.overrides as any)?.Files?.[fileNameToRemove]) {
-      delete (newData.overrides as any).Files[fileNameToRemove];
-      
-      // Clean up empty Files object if no files remain
-      const files = (newData.overrides as any).Files;
-      if (files && Object.keys(files).length === 0) {
-        delete (newData.overrides as any).Files;
-      }
+    cancelRemoveFile();
+    return;
+  }
+  
+  // Delete from overrides
+  if ((newData.overrides as any)?.Files?.[fileNameToRemove]) {
+    delete (newData.overrides as any).Files[fileNameToRemove];
+    
+    // Clean up empty Files object if no files remain
+    const files = (newData.overrides as any).Files;
+    if (files && Object.keys(files).length === 0) {
+      delete (newData.overrides as any).Files;
     }
   }
   
