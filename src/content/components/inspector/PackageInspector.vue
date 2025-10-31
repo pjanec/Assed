@@ -58,11 +58,7 @@
             Skeleton Files
           </v-expansion-panel-title>
           <v-expansion-panel-text class="ma-0 pa-0">
-            <SkeletonFilesEditor
-              :files="asset.unmerged.overrides.Files || {}"
-              @update:files="handleSubObjectChange('Files', $event)"
-              :is-read-only="asset.isReadOnly"
-            />
+            <SkeletonFilesEditor :asset="asset" :is-read-only="asset.isReadOnly" />
           </v-expansion-panel-text>
         </v-expansion-panel>
       </v-expansion-panels>

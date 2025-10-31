@@ -26,7 +26,10 @@
           <template #prepend>
             <v-icon size="small">mdi-file-code-outline</v-icon>
           </template>
-          <v-list-item-title class="text-caption">{{ file.fileName }}</v-list-item-title>
+          <v-list-item-title class="text-caption">
+            {{ file.fileName }}
+            <span v-if="file.isInherited" class="text-caption text-medium-emphasis ms-1">(inherited)</span>
+          </v-list-item-title>
           <template #append>
             <v-btn
               icon="mdi-delete-outline"
@@ -133,16 +136,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, inject } from 'vue';
+import { cloneDeep } from 'lodash-es';
+import type { AssetDetails } from '@/core/types';
+import type { Ref } from 'vue';
+import { useWorkspaceStore, UpdateAssetCommand } from '@/core/stores/workspace';
 import MonacoEditor from './MonacoEditor.vue';
 
 interface FileItem {
   fileName: string;
   content: string;
-}
-
-interface FileContent { 
-  content: string; 
+  isInherited?: boolean;
 }
 
 interface FileToRemove extends FileItem {
@@ -150,31 +154,32 @@ interface FileToRemove extends FileItem {
 }
 
 interface Props {
-  files?: Record<string, FileContent>;
+  asset: AssetDetails;
   isReadOnly?: boolean;
 }
 
-interface Emits {
-  (e: 'update:files', files: Record<string, FileContent>): void;
-}
+const props = defineProps<Props>();
+const workspaceStore = useWorkspaceStore();
 
-const props = withDefaults(defineProps<Props>(), {
-  files: () => ({}),
-  isReadOnly: false,
-});
-const emit = defineEmits<Emits>();
+const inspectorViewMode = inject<Ref<'merged' | 'local'>>('inspectorViewMode', ref('merged'));
 
-// Helper function to deep clone objects
-function deepClone<T>(obj: T): T {
-  return JSON.parse(JSON.stringify(obj));
-}
-
-// Convert incoming dictionary to an array for the template
 const localFiles = computed<FileItem[]>(() => {
-  return Object.entries(props.files).map(([fileName, value]) => ({
-    fileName,
-    content: value.content
-  }));
+  if (inspectorViewMode.value === 'local') {
+    const overridesFiles = props.asset.unmerged.overrides?.Files || {};
+    return Object.entries(overridesFiles).map(([fileName, value]: [string, any]) => ({
+      fileName,
+      content: value.content || '',
+      isInherited: false
+    }));
+  } else {
+    const mergedFiles = props.asset.merged?.properties?.Files || {};
+    const overridesFiles = props.asset.unmerged.overrides?.Files || {};
+    return Object.entries(mergedFiles).map(([fileName, value]: [string, any]) => ({
+      fileName,
+      content: value.content || '',
+      isInherited: !(fileName in (overridesFiles || {}))
+    }));
+  }
 });
 
 const selectedFileIndex = ref<number | null>(localFiles.value.length > 0 ? 0 : null);
@@ -185,16 +190,12 @@ const fileToRemove = ref<FileToRemove | null>(null);
 const showModalEditor = ref<boolean>(false);
 const fileListHeight = ref<number>(200);
 
-watch(() => props.files, (newVal: Record<string, FileContent>) => {
+watch(localFiles, (newFilesArray) => {
   // Reset selectedFileIndex if the files change
-  const newFilesArray = Object.entries(newVal).map(([fileName, value]) => ({
-    fileName,
-    content: value.content
-  }));
   if (selectedFileIndex.value !== null && selectedFileIndex.value >= newFilesArray.length) {
     selectedFileIndex.value = newFilesArray.length > 0 ? 0 : null;
   }
-}, { deep: true });
+});
 
 const selectedFile = computed((): FileItem | null => {
   return selectedFileIndex.value !== null ? localFiles.value[selectedFileIndex.value] : null;
@@ -218,26 +219,43 @@ const selectFile = (index: number): void => {
 };
 
 const onFileContentChange = (newContent: string): void => {
-  if (props.isReadOnly) return;
-  if (selectedFile.value && selectedFile.value.content !== newContent) {
-    const updatedFiles = { ...props.files };
-    updatedFiles[selectedFile.value.fileName] = { content: newContent };
-    emit('update:files', updatedFiles);
-  }
+  if (props.isReadOnly || !selectedFile.value) return;
+  const oldData = props.asset.unmerged;
+  const newData = cloneDeep(oldData);
+  if (!newData.overrides) newData.overrides = {} as any;
+  if (!newData.overrides.Files) (newData.overrides as any).Files = {} as any;
+  (newData.overrides as any).Files[selectedFile.value.fileName] = { content: newContent };
+  const cmd = new UpdateAssetCommand(oldData.id, oldData, newData);
+  workspaceStore.executeCommand(cmd);
 };
 
 const handleAddNewFile = (): void => {
-  if (!newFileName.value || Object.keys(props.files).includes(newFileName.value)) return;
-  const updatedFiles = { ...props.files };
-  updatedFiles[newFileName.value] = { content: '' };
-  emit('update:files', updatedFiles);
+  if (props.isReadOnly || !newFileName.value) return;
   
-  // Select the new file
-  const newFilesArray = Object.entries(updatedFiles).map(([fileName, value]) => ({
-    fileName,
-    content: value.content
-  }));
-  selectedFileIndex.value = newFilesArray.length - 1;
+  const mergedFiles = props.asset.merged?.properties?.Files || {};
+  const overridesFiles = props.asset.unmerged.overrides?.Files || {};
+  const allFiles = { ...mergedFiles, ...overridesFiles };
+  
+  if (Object.keys(allFiles).includes(newFileName.value)) {
+    cancelAddFile();
+    return;
+  }
+  
+  const oldData = props.asset.unmerged;
+  const newData = cloneDeep(oldData);
+  if (!newData.overrides) newData.overrides = {} as any;
+  if (!newData.overrides.Files) (newData.overrides as any).Files = {} as any;
+  (newData.overrides as any).Files[newFileName.value] = { content: '' };
+  const cmd = new UpdateAssetCommand(oldData.id, oldData, newData);
+  workspaceStore.executeCommand(cmd);
+  
+  // Select the new file (wait for next tick to ensure localFiles has updated)
+  setTimeout(() => {
+    const filesArray = localFiles.value;
+    const index = filesArray.findIndex(f => f.fileName === newFileName.value);
+    if (index !== -1) selectedFileIndex.value = index;
+  }, 0);
+  
   cancelAddFile();
 };
 
@@ -252,23 +270,44 @@ const promptRemoveFile = (index: number): void => {
 };
 
 const handleRemoveFile = (): void => {
-  if (fileToRemove.value === null) return;
-  const fileNameToRemove = fileToRemove.value.fileName;
-  const updatedFiles = { ...props.files };
-  delete updatedFiles[fileNameToRemove];
-  emit('update:files', updatedFiles);
-
-  // Update selected file index
-  const newFilesArray = Object.entries(updatedFiles).map(([fileName, value]) => ({
-    fileName,
-    content: value.content
-  }));
+  if (props.isReadOnly || fileToRemove.value === null) return;
   
-  if (selectedFileIndex.value === fileToRemove.value.index) {
-    selectedFileIndex.value = newFilesArray.length > 0 ? 0 : null;
-  } else if (selectedFileIndex.value !== null && selectedFileIndex.value > fileToRemove.value.index) {
-    selectedFileIndex.value--;
+  const fileNameToRemove = fileToRemove.value.fileName;
+  const oldData = props.asset.unmerged;
+  const newData = cloneDeep(oldData);
+  
+  if (inspectorViewMode.value === 'merged' && fileToRemove.value.isInherited) {
+    // In merged view, removing an inherited file means explicitly excluding it
+    // We need to set it to null to override the inherited value
+    if (!newData.overrides) newData.overrides = {} as any;
+    if (!newData.overrides.Files) (newData.overrides as any).Files = {} as any;
+    (newData.overrides as any).Files[fileNameToRemove] = null;
+  } else {
+    // In local view or removing an overridden file, just delete from overrides
+    if ((newData.overrides as any)?.Files?.[fileNameToRemove]) {
+      delete (newData.overrides as any).Files[fileNameToRemove];
+      
+      // Clean up empty Files object if no files remain
+      const files = (newData.overrides as any).Files;
+      if (files && Object.keys(files).length === 0) {
+        delete (newData.overrides as any).Files;
+      }
+    }
   }
+  
+  const cmd = new UpdateAssetCommand(oldData.id, oldData, newData);
+  workspaceStore.executeCommand(cmd);
+  
+  // Update selected file index
+  setTimeout(() => {
+    const filesArray = localFiles.value;
+    if (selectedFileIndex.value !== null && selectedFileIndex.value >= filesArray.length) {
+      selectedFileIndex.value = filesArray.length > 0 ? 0 : null;
+    } else if (selectedFileIndex.value !== null && fileToRemove.value !== null && selectedFileIndex.value > fileToRemove.value.index) {
+      selectedFileIndex.value--;
+    }
+  }, 0);
+  
   cancelRemoveFile();
 };
 
