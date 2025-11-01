@@ -1,110 +1,109 @@
 <template>
   <div class="pa-4">
-    <v-text-field
-      :model-value="fileDistrib.To"
-      @update:modelValue="updateField('To', $event)"
+    <MergedTextField
+      :asset="asset"
+      path="FileDistrib.To"
       label="Destination Root (To)"
       variant="outlined"
       density="compact"
       class="mb-4"
       :readonly="isReadOnly"
-    ></v-text-field>
+    />
 
     <v-row>
       <v-col>
-        <v-select
-          :model-value="fileDistrib.Transport"
-          @update:modelValue="updateField('Transport', $event)"
+        <MergedSelect
+          :asset="asset"
+          path="FileDistrib.Transport"
           :items="['copy', 'link', 'sync']"
           label="Default Transport"
           variant="outlined"
           density="compact"
           :readonly="isReadOnly"
-        ></v-select>
+        />
       </v-col>
       <v-col>
-        <v-select
-          :model-value="fileDistrib.ConflictPolicy"
-          @update:modelValue="updateField('ConflictPolicy', $event)"
+        <MergedSelect
+          :asset="asset"
+          path="FileDistrib.ConflictPolicy"
           :items="['join', 'purge', 'replace', 'skip']"
           label="Default Conflict Policy"
           variant="outlined"
           density="compact"
           :readonly="isReadOnly"
-        ></v-select>
+        />
       </v-col>
     </v-row>
 
     <v-divider class="my-4"></v-divider>
 
     <h4 class="text-subtitle-1 mb-2">Distribution Parts</h4>
-    <div v-for="(part, index) in fileDistrib.Parts" :key="index" class="part-item mb-2">
-       <v-text-field
-        :model-value="part.From"
-        @update:modelValue="updatePart(index, 'From', $event)"
+    <div v-for="(part, index) in parts" :key="index" class="part-item mb-2">
+      <MergedTextField
+        :asset="asset"
+        :path="`FileDistrib.Parts[${index}].From`"
         label="From"
         variant="outlined"
         density="compact"
         hide-details
-        :readonly="isReadOnly"
-      ></v-text-field>
-       <v-text-field
-        :model-value="part.To"
-        @update:modelValue="updatePart(index, 'To', $event)"
+        :readonly="isReadOnly || isInherited(part)"
+      >
+        <template #prepend-after-indicator>
+          <v-chip v-if="isInherited(part)" size="x-small" label class="ms-1">Inherited</v-chip>
+        </template>
+      </MergedTextField>
+      <MergedTextField
+        :asset="asset"
+        :path="`FileDistrib.Parts[${index}].To`"
         label="To"
         variant="outlined"
         density="compact"
         hide-details
-        :readonly="isReadOnly"
-      ></v-text-field>
-      <v-btn icon="mdi-delete-outline" variant="text" size="small" @click="removePart(index)" :disabled="isReadOnly"></v-btn>
+        :readonly="isReadOnly || isInherited(part)"
+      />
+      <v-btn icon="mdi-delete-outline" variant="text" size="small" @click="removePart(index)" :disabled="isReadOnly || isInherited(part)"></v-btn>
     </div>
-     <v-btn block variant="tonal" size="small" @click="addPart" :disabled="isReadOnly">Add Part</v-btn>
+    <v-btn block variant="tonal" size="small" @click="addPart" :disabled="isReadOnly">Add Part</v-btn>
 
   </div>
 </template>
 
-<script setup>
-import { computed } from 'vue';
-import { cloneDeep } from 'lodash-es';
+<script setup lang="ts">
+import { computed, inject, type Ref, toRef } from 'vue';
+import { cloneDeep, get, unset } from 'lodash-es';
+import type { AssetDetails } from '@/core/types';
+import { useWorkspaceStore, UpdateAssetCommand } from '@/core/stores/workspace';
+import MergedTextField from './controls/MergedTextField.vue';
+import MergedSelect from './controls/MergedSelect.vue';
+import { useEditableArray } from '@/core/composables/useEditableArray';
 
-const props = defineProps({
-  modelValue: { type: Object, default: () => ({ Parts: [] }) },
-  isReadOnly: { type: Boolean, default: false },
-});
+const props = defineProps<{
+  asset: AssetDetails,
+  isReadOnly?: boolean,
+}>();
 
-const emit = defineEmits(['update:modelValue']);
+const workspaceStore = useWorkspaceStore();
 
-const fileDistrib = computed(() => props.modelValue || { Parts: [] });
+const assetRef = toRef(props, 'asset');
 
-const updateField = (field, value) => {
+const onUpdateOverrides = (newOverrides: Record<string, any>) => {
   if (props.isReadOnly) return;
-  const newData = cloneDeep(fileDistrib.value);
-  newData[field] = value;
-  emit('update:modelValue', newData);
+  const oldData = props.asset.unmerged;
+  const newData = cloneDeep(oldData);
+  newData.overrides = newOverrides;
+  const cmd = new UpdateAssetCommand(oldData.id, oldData, newData);
+  workspaceStore.executeCommand(cmd);
 };
 
-const updatePart = (index, field, value) => {
-  if (props.isReadOnly) return;
-  const newData = cloneDeep(fileDistrib.value);
-  newData.Parts[index][field] = value;
-  emit('update:modelValue', newData);
-}
+const { items: parts, isInherited, addItem, removeItem } = useEditableArray<any>(assetRef as any, 'FileDistrib.Parts', onUpdateOverrides, { identityKey: 'From' });
 
 const addPart = () => {
-  if (props.isReadOnly) return;
-  const newData = cloneDeep(fileDistrib.value);
-  if (!newData.Parts) newData.Parts = [];
-  newData.Parts.push({ From: '', To: '' });
-  emit('update:modelValue', newData);
-}
+  addItem({ From: '', To: '' });
+};
 
-const removePart = (index) => {
-  if (props.isReadOnly) return;
-  const newData = cloneDeep(fileDistrib.value);
-  newData.Parts.splice(index, 1);
-  emit('update:modelValue', newData);
-}
+const removePart = (index: number) => {
+  removeItem(index);
+};
 </script>
 
 <style scoped>

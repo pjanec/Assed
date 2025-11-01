@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editable Merged Inspector Demo</title>
+    <link href="https://cdn.jsdelivr.net/npm/vuetify@3.7.1/dist/vuetify.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .asset-card { transition: all 0.2s ease-in-out; }
+        .asset-card.selected {
+            box-shadow: 0 0 0 2px var(--v-primary-base) !important;
+            transform: scale(1.02);
+        }
+    </style>
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+</head>
+<body>
+    <div id="app">
+        <v-app>
+            <v-main>
+                <v-container>
+                    <v-row>
+                        <v-col cols="12" md="5">
+                            <h2 class="text-h5 mb-4">Select an Asset to Inspect</h2>
+                            <v-card
+                                v-for="asset in availableAssets"
+                                :key="asset.id"
+                                class="asset-card mb-4"
+                                :class="{ 'selected': selectedAsset && selectedAsset.id === asset.id }"
+                                @click="selectAsset(asset.id)"
+                                variant="outlined"
+                            >
+                                <v-card-title>{{ asset.assetKey }}</v-card-title>
+                                <v-card-subtitle>{{ asset.fqn }}</v-card-subtitle>
+                                <v-card-text>
+                                    <pre class="bg-grey-lighten-4 pa-2 rounded text-xs">Template: {{ asset.templateFqn || 'None' }}
+Overrides: {{ JSON.stringify(asset.overrides) }}</pre>
+                                </v-card-text>
+                            </v-card>
+                        </v-col>
+
+                        <v-col cols="12" md="7">
+                            <v-card class="sticky top-4">
+                                <v-card-title class="bg-blue-grey-lighten-5">
+                                    Asset Inspector
+                                </v-card-title>
+                                <v-divider></v-divider>
+                                <div v-if="!selectedAssetDetails" class="pa-8 text-center text-grey-darken-1">
+                                    <v-icon size="48" class="mb-2">mdi-information-outline</v-icon>
+                                    <p>Select an asset to begin editing.</p>
+                                </div>
+                                <demo-inspector
+                                    v-else
+                                    :asset="selectedAssetDetails"
+                                    @update:overrides="handleOverridesUpdate"
+                                ></demo-inspector>
+                            </v-card>
+                        </v-col>
+                    </v-row>
+                </v-container>
+            </v-main>
+        </v-app>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@3.4.31/dist/vue.global.prod.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vuetify@3.7.1/dist/vuetify.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
+
+    <script type="module">
+        const { createApp, ref, computed, toRef } = Vue;
+        const { createVuetify } = Vuetify;
+
+        const mockDatabase = {
+            'template-base': {
+                id: 'template-base',
+                fqn: 'BaseTemplate',
+                assetType: 'Package',
+                assetKey: 'BaseTemplate',
+                templateFqn: null,
+                overrides: {
+                    name: 'BaseName',
+                    conf: {
+                        port: 80,
+                        ssl: false,
+                        logging: 'standard'
+                    },
+                    features: {
+                        auth: true,
+                        metrics: false
+                    }
+                }
+            },
+            'asset-with-overrides': {
+                id: 'asset-with-overrides',
+                fqn: 'MyWebService',
+                assetType: 'Package',
+                assetKey: 'MyWebService',
+                templateFqn: 'BaseTemplate',
+                overrides: {
+                    conf: { port: 8080 },
+                    features: { metrics: true }
+                }
+            },
+            'asset-no-overrides': {
+                id: 'asset-no-overrides',
+                fqn: 'MyCleanService',
+                assetType: 'Package',
+                assetKey: 'MyCleanService',
+                templateFqn: 'BaseTemplate',
+                overrides: {}
+            }
+        };
+
+        function useEditableProperty(
+          assetDetails,
+          propertyPath,
+          onUpdateOverrides
+        ) {
+          const { get, set, unset, has, cloneDeep } = window._;
+
+          const mergedValue = computed(() => {
+            if (!assetDetails.value.merged || 'error' in assetDetails.value.merged) {
+              return undefined;
+            }
+            return get(assetDetails.value.merged.properties, propertyPath);
+          });
+
+          const localOverride = computed(() => {
+            return get(assetDetails.value.unmerged.overrides, propertyPath);
+          });
+
+          const isOverridden = computed(() => {
+            return has(assetDetails.value.unmerged.overrides, propertyPath);
+          });
+
+          const update = (newValue) => {
+            if (assetDetails.value.isReadOnly) return;
+            const newOverrides = cloneDeep(assetDetails.value.unmerged.overrides || {});
+            set(newOverrides, propertyPath, newValue);
+            onUpdateOverrides(newOverrides);
+          };
+
+          const reset = () => {
+            if (assetDetails.value.isReadOnly || !isOverridden.value) return;
+            const newOverrides = cloneDeep(assetDetails.value.unmerged.overrides || {});
+            unset(newOverrides, propertyPath);
+            onUpdateOverrides(newOverrides);
+          };
+
+          const effectiveValue = computed({
+            get: () => {
+              return isOverridden.value ? localOverride.value : mergedValue.value;
+            },
+            set: (newValue) => {
+              if (newValue === effectiveValue.value) return;
+              update(newValue);
+            }
+          });
+
+          return {
+            isOverridden,
+            effectiveValue,
+            mergedValue,
+            update,
+            reset
+          };
+        }
+
+        const DemoInspector = {
+            template: `
+                <div class="pa-4">
+                    <p class="text-caption text-medium-emphasis">Fields with a <v-icon size="x-small" color="primary">mdi-pencil</v-icon> icon are local overrides. Click <v-icon size="x-small">mdi-undo-variant</v-icon> to reset to the inherited value.</p>
+                    <v-divider class="my-4"></v-divider>
+
+                    <v-text-field
+                        v-model="nameHandler.effectiveValue.value"
+                        label="Technical Name"
+                        variant="outlined"
+                        density="compact"
+                        :append-inner-icon="nameHandler.isOverridden.value ? 'mdi-undo-variant' : ''"
+                        @click:append-inner="nameHandler.reset()"
+                        class="mb-4"
+                    >
+                        <template #prepend-inner>
+                            <v-icon v-if="nameHandler.isOverridden.value" color="primary">mdi-pencil</v-icon>
+                        </template>
+                    </v-text-field>
+
+                    <v-text-field
+                        v-model.number="portHandler.effectiveValue.value"
+                        label="Port"
+                        type="number"
+                        variant="outlined"
+                        density="compact"
+                        :append-inner-icon="portHandler.isOverridden.value ? 'mdi-undo-variant' : ''"
+                        @click:append-inner="portHandler.reset()"
+                        class="mb-4"
+                    >
+                        <template #prepend-inner>
+                            <v-icon v-if="portHandler.isOverridden.value" color="primary">mdi-pencil</v-icon>
+                        </template>
+                    </v-text-field>
+
+                    <v-switch
+                        v-model="sslHandler.effectiveValue.value"
+                        :label="'Enable SSL'"
+                        color="primary"
+                        density="compact"
+                        inset
+                    >
+                        <template #prepend>
+                             <v-btn
+                                v-if="sslHandler.isOverridden.value"
+                                icon="mdi-undo-variant"
+                                variant="text"
+                                size="x-small"
+                                @click="sslHandler.reset()"
+                                class="mr-2"
+                            ></v-btn>
+                            <v-icon v-if="sslHandler.isOverridden.value" color="primary" class="ml-4">mdi-pencil</v-icon>
+                        </template>
+                    </v-switch>
+
+                    <v-switch
+                        v-model="metricsHandler.effectiveValue.value"
+                        :label="'Enable Metrics'"
+                        color="primary"
+                        density="compact"
+                        inset
+                    >
+                        <template #prepend>
+                             <v-btn
+                                v-if="metricsHandler.isOverridden.value"
+                                icon="mdi-undo-variant"
+                                variant="text"
+                                size="x-small"
+                                @click="metricsHandler.reset()"
+                                class="mr-2"
+                            ></v-btn>
+                            <v-icon v-if="metricsHandler.isOverridden.value" color="primary" class="ml-4">mdi-pencil</v-icon>
+                        </template>
+                    </v-switch>
+                </div>
+            `,
+            props: {
+                asset: { type: Object, required: true }
+            },
+            emits: ['update:overrides'],
+            setup(props, { emit }) {
+                const assetRef = toRef(props, 'asset');
+                const handleUpdate = (newOverrides) => {
+                    emit('update:overrides', newOverrides);
+                };
+                const nameHandler = useEditableProperty(assetRef, 'name', handleUpdate);
+                const portHandler = useEditableProperty(assetRef, 'conf.port', handleUpdate);
+                const sslHandler = useEditableProperty(assetRef, 'conf.ssl', handleUpdate);
+                const metricsHandler = useEditableProperty(assetRef, 'features.metrics', handleUpdate);
+                return { nameHandler, portHandler, sslHandler, metricsHandler };
+            }
+        };
+
+        const vuetify = createVuetify();
+        const app = createApp({
+            setup() {
+                const { get, cloneDeep, merge } = window._;
+                const db = ref(cloneDeep(mockDatabase));
+                const selectedAssetId = ref(null);
+                const availableAssets = computed(() => Object.values(db.value));
+                const selectedAssetDetails = computed(() => {
+                    if (!selectedAssetId.value) return null;
+                    const unmerged = db.value[selectedAssetId.value];
+                    if (!unmerged) return null;
+                    let mergedProperties = {};
+                    let current = unmerged;
+                    const chain = [];
+                    while (current && current.templateFqn) {
+                        const template = db.value[Object.keys(db.value).find(k => db.value[k].fqn === current.templateFqn)];
+                        if (!template) break;
+                        chain.unshift(template);
+                        current = template;
+                    }
+                    for (const tpl of chain) {
+                        merge(mergedProperties, tpl.overrides);
+                    }
+                    merge(mergedProperties, unmerged.overrides);
+                    return {
+                        unmerged: unmerged,
+                        merged: { properties: mergedProperties },
+                        isReadOnly: false
+                    };
+                });
+
+                const selectAsset = (id) => {
+                    selectedAssetId.value = id;
+                };
+
+                const handleOverridesUpdate = (newOverrides) => {
+                    if (!selectedAssetId.value) return;
+                    const assetToUpdate = db.value[selectedAssetId.value];
+                    if (assetToUpdate) {
+                        assetToUpdate.overrides = newOverrides;
+                    }
+                };
+
+                return {
+                    availableAssets,
+                    selectedAsset: computed(() => selectedAssetId.value ? db.value[selectedAssetId.value] : null),
+                    selectedAssetDetails,
+                    selectAsset,
+                    handleOverridesUpdate
+                };
+            }
+        });
+
+        app.component('DemoInspector', DemoInspector);
+        app.use(vuetify);
+        app.mount('#app');
+    </script>
+ </body>
+</html>
+
+

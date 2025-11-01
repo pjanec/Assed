@@ -9,22 +9,28 @@
           </v-expansion-panel-title>
           <v-expansion-panel-text>
             <GeneralPropertiesEditor :asset="asset" :is-read-only="asset.isReadOnly">
-              <!-- START: asset-specific properties slot content -->
               <template #asset-specific-properties>
                 <div class="mt-4">
-                  <v-text-field
-                    :model-value="asset.unmerged.overrides?.distroFqn"
+                  <MergedTextField
+                    :asset="asset"
+                    path="distroFqn"
                     label="Source Distro FQN"
                     variant="outlined"
                     density="compact"
-                    readonly
-                    hide-details
-                    append-inner-icon="mdi-dots-horizontal"
-                    @click:append-inner="openDistroPicker"
-                  />
+                    :readonly="isReadOnly"
+                    @click="openDistroPicker"
+                  >
+                    <template #custom-append-inner>
+                      <v-icon
+                        icon="mdi-dots-horizontal"
+                        @click.stop="openDistroPicker"
+                        style="cursor: pointer;"
+                        class="me-2"
+                      />
+                    </template>
+                  </MergedTextField>
                 </div>
               </template>
-              <!-- END: slot content -->
             </GeneralPropertiesEditor>
           </v-expansion-panel-text>
         </v-expansion-panel>
@@ -101,6 +107,7 @@ import { useWorkspaceStore, useAssetsStore, useUiStore, useCoreConfigStore } fro
 import { UpdateAssetCommand } from '@/core/stores/workspace';
 import BaseInspector from './BaseInspector.vue';
 import GeneralPropertiesEditor from './GeneralPropertiesEditor.vue';
+import MergedTextField from './controls/MergedTextField.vue';
 import EnvironmentLayoutEditor from '@/content/components/editor/EnvironmentLayoutEditor.vue';
 import EnvironmentMachinesView from '@/content/components/editor/EnvironmentMachinesView.vue';
 import type { AssetDetails } from '@/core/types';

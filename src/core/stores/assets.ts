@@ -23,12 +23,11 @@ export interface ProjectStat {
   color: string;
 }
 
-// --- vvv KEY CHANGES vvv ---
 import { useUiStore } from './ui'; // Import the new UI store
 import { useWorkspaceStore } from './workspace'; // This is now safe to import directly
-// --- ^^^ KEY CHANGES ^^^ ---
 import { generateUUID } from '@/core/utils/idUtils'; // Import the UUID generator
 import * as InspectorHistory from '@/core/history/inspectorHistory';
+import { calculateMergedAsset } from '@/core/utils/mergeUtils';
 
 // Helper to generate unique IDs for panes
 const generatePaneId = (): string => `pane_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
@@ -184,22 +183,32 @@ export const useAssetsStore = defineStore('assets', {
      * NEW GETTER: Retrieves the most up-to-date "unmerged" details for an asset,
      * accounting for any pending changes in the workspace.
      */
-    getUnmergedDetails: (state) => (id: string): AssetDetails | null => {
-      const workspaceStore = useWorkspaceStore();
-      const pendingAsset = workspaceStore.pendingChanges.upserted.get(id);
-      const committedDetails = state.assetDetails.get(id);
+    getUnmergedDetails(state) {
+      return (id: string): AssetDetails | null => {
+        const workspaceStore = useWorkspaceStore();
+        const pendingAsset = workspaceStore.pendingChanges.upserted.get(id);
+        const committedDetails = state.assetDetails.get(id);
 
-      if (pendingAsset) {
-        // If there's a pending change, it's the most current version.
-        // Return it, but preserve the existing `merged` data if available.
+        const assetToMerge = pendingAsset || committedDetails?.unmerged;
+
+        if (!assetToMerge) {
+          if (workspaceStore.pendingChanges.deleted.has(id)) return null;
+          return null;
+        }
+
+        // Recalculate merged against the latest assets (committed + pending)
+        const allAssetsArray = this.assetsWithOverrides as UnmergedAsset[];
+        const allAssetsMap = new Map<string, UnmergedAsset>(
+          allAssetsArray.map((a: UnmergedAsset) => [a.id, a])
+        );
+        const newMerged = calculateMergedAsset(id, allAssetsMap);
+
         return {
-          unmerged: pendingAsset,
-          merged: committedDetails?.merged || null,
+          unmerged: assetToMerge,
+          merged: newMerged,
+          isReadOnly: committedDetails?.isReadOnly || false,
         };
-      }
-        
-      // Otherwise, return the committed version from the cache.
-      return committedDetails || null;
+      };
     },
 
     // Main logic to build the namespace view hierarchy

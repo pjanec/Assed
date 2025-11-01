@@ -16,16 +16,19 @@
         </template>
       </v-text-field>
 
-      <v-text-field
-        v-model="editableTechnicalName"
+      <MergedTextField
+        :asset="asset"
+        path="name"
         label="Technical Name (for build process)"
         variant="outlined"
         density="compact"
         class="mb-4"
-        hint="File-system friendly name used during builds."
-        persistent-hint
         :readonly="isReadOnly"
-      ></v-text-field>
+      >
+        <template #append-inner>
+          <span class="text-caption text-medium-emphasis">File-system friendly name used during builds.</span>
+        </template>
+      </MergedTextField>
 
       <v-text-field
         :model-value="asset.unmerged.fqn"
@@ -87,25 +90,27 @@
   </div>
 </template>
 
-<script setup>
-import { computed, ref, watch, nextTick } from 'vue'; // Import ref, watch, and nextTick
+<script setup lang="ts">
+import { computed, ref, watch, nextTick } from 'vue';
 import { useAssetsStore, useWorkspaceStore, useUiStore } from '@/core/stores';
 import { UpdateAssetCommand } from '@/core/stores/workspace';
 import { cloneDeep } from 'lodash-es';
 import { generatePropertiesDiff } from '@/core/utils/diff';
 import { calculateMergedAsset } from '@/core/utils/mergeUtils';
+import MergedTextField from './controls/MergedTextField.vue';
+import type { AssetDetails } from '@/core/types';
 
-const props = defineProps({
-  asset: { type: Object, required: true },
-  isReadOnly: { type: Boolean, default: false },
-});
+const props = defineProps<{
+  asset: AssetDetails,
+  isReadOnly?: boolean,
+}>();
 
 const assetsStore = useAssetsStore();
 const workspaceStore = useWorkspaceStore();
 const uiStore = useUiStore();
 
 // --- START: NEW LAZY-LOADING STATE ---
-const lazyLoadedTemplates = ref([]);
+const lazyLoadedTemplates = ref<any[]>([]);
 const isLoadingTemplates = ref(false);
 const haveTemplatesBeenLoaded = ref(false);
 
@@ -138,7 +143,7 @@ watch(() => props.asset.unmerged.id, () => {
 // --- END: NEW LAZY-LOADING STATE ---
 
 
-const emitChange = (field, newValue, isOverride = false) => {
+const emitChange = (field: string, newValue: any, isOverride = false) => {
   // Prevent editing read-only assets (e.g., virtual assets)
   if (props.isReadOnly) {
     return;
@@ -148,23 +153,19 @@ const emitChange = (field, newValue, isOverride = false) => {
   const newData = cloneDeep(oldData);
   
   if (isOverride) {
-    if (!newData.overrides) newData.overrides = {};
-    newData.overrides[field] = newValue;
+    if (!newData.overrides) newData.overrides = {} as any;
+    (newData.overrides as any)[field] = newValue;
   } else {
-    newData[field] = newValue;
+    (newData as any)[field] = newValue;
   }
 
   const command = new UpdateAssetCommand(props.asset.unmerged.id, oldData, newData);
   workspaceStore.executeCommand(command);
 };
 
-const editableTechnicalName = computed({
-  get: () => props.asset.unmerged.overrides?.name || '',
-  set: (value) => emitChange('name', value, true),
-});
 
 // Template Change Handler with Confirmation
-const handleTemplateChange = (newTemplateFqn) => {
+const handleTemplateChange = (newTemplateFqn: string | null) => {
   if (props.isReadOnly) return;
 
   const oldTemplateFqn = props.asset.unmerged.templateFqn;

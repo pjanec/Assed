@@ -2,34 +2,38 @@
   <div class="pa-4">
     <v-expansion-panels variant="accordion">
       <v-expansion-panel
-        v-for="(resource, id) in resources"
-        :key="id"
+        v-for="item in resources"
+        :key="item.key"
       >
         <v-expansion-panel-title>
           <div class="d-flex align-center justify-space-between w-100">
-            <span>{{ id }}</span>
+            <span>
+              {{ item.key }}
+              <span v-if="item.isInherited" class="text-caption text-medium-emphasis ms-1">(inherited)</span>
+            </span>
             <v-btn
+              v-if="!item.isInherited"
               icon="mdi-delete-outline"
               size="x-small"
               variant="text"
-              @click.stop="removeResource(id)"
+              @click.stop="removeResource(item.key)"
               :disabled="isReadOnly"
             />
           </div>
         </v-expansion-panel-title>
         <v-expansion-panel-text>
-          <v-text-field
-            :model-value="resource.To"
-            @update:modelValue="updateResource(id, 'To', $event)"
+          <MergedTextField
+            :asset="asset"
+            :path="`Resources.${item.key}.To`"
             label="Path (To)"
             density="compact"
             variant="outlined"
             class="mb-4"
             :readonly="isReadOnly"
           />
-          <v-select
-            :model-value="resource.Fetcher"
-            @update:modelValue="updateResource(id, 'Fetcher', $event)"
+          <MergedSelect
+            :asset="asset"
+            :path="`Resources.${item.key}.Fetcher`"
             :items="fetcherTypes"
             label="Fetcher"
             density="compact"
@@ -37,14 +41,13 @@
             class="mb-4"
             :readonly="isReadOnly"
           />
-          <div v-if="resource.Fetcher">
+          <div v-if="item.value && item.value.Fetcher">
             <h5 class="text-caption mb-2">Fetcher Parameters</h5>
             <JSONEditor
-              :model-value="resource.Params || {}"
-              @update:modelValue="updateResource(id, 'Params', $event)"
-              :schema="getFetcherSchema(resource.Fetcher)"
-              mode="tree"
-              :options="{ readOnly: isReadOnly }"
+              :model-value="item.value?.Params || {}"
+              @update:modelValue="updateParams(item.key, $event)"
+              :schema="getFetcherSchema(item.value?.Fetcher)"
+              :mode="isReadOnly ? 'view' : 'tree'"
             />
           </div>
         </v-expansion-panel-text>
@@ -81,52 +84,59 @@
   </div>
 </template>
 
-<script setup>
-import { ref, computed } from 'vue';
-import { cloneDeep } from 'lodash-es';
+<script setup lang="ts">
+import { ref, computed, toRef } from 'vue';
+import { cloneDeep, get } from 'lodash-es';
 import { schemas, getFetcherSchema } from '@/content/schemas/packageSchema';
 import JSONEditor from './JSONEditor.vue';
+import type { AssetDetails } from '@/core/types';
+import { useWorkspaceStore, UpdateAssetCommand } from '@/core/stores/workspace';
+import MergedTextField from './controls/MergedTextField.vue';
+import MergedSelect from './controls/MergedSelect.vue';
+import { useEditableCollection } from '@/core/composables/useEditableCollection';
 
-const props = defineProps({
-  modelValue: { type: Object, default: () => ({}) },
-  isReadOnly: { type: Boolean, default: false },
-});
-const emit = defineEmits(['update:modelValue']);
+const props = defineProps<{ asset: AssetDetails, isReadOnly?: boolean }>();
+const workspaceStore = useWorkspaceStore();
 
-const resources = computed(() => props.modelValue || {});
+const assetRef = toRef(props, 'asset');
+
+const onUpdateOverrides = (newOverrides: Record<string, any>) => {
+  if (props.isReadOnly) return;
+  const oldData = props.asset.unmerged;
+  const newData = cloneDeep(oldData);
+  newData.overrides = newOverrides;
+  const cmd = new UpdateAssetCommand(oldData.id, oldData, newData);
+  workspaceStore.executeCommand(cmd);
+};
+
+const {
+  collectionAsArray: resources,
+  collectionAsObject: resourcesObj,
+  addItem,
+  removeItem,
+  updateItemProperty
+} = useEditableCollection(assetRef as any, 'Resources', onUpdateOverrides);
 const showAddDialog = ref(false);
 const newResourceId = ref('');
 
 const fetcherTypes = computed(() => Object.keys(schemas.value?.fetchers || {}));
 
-const updateResource = (id, field, value) => {
-  if (props.isReadOnly) return;
-  const newResources = cloneDeep(resources.value);
-  if (!newResources[id]) newResources[id] = {};
-  newResources[id][field] = value;
-
-  // When changing fetcher, reset params
-  if (field === 'Fetcher') {
-    newResources[id].Params = {};
-  }
-
-  emit('update:modelValue', newResources);
+const updateParams = (id: string, newParams: Record<string, any>) => {
+  updateItemProperty(id, 'Params', newParams || {});
 };
 
 const addResource = () => {
-  if (props.isReadOnly) return;
-  if (!newResourceId.value || resources.value[newResourceId.value]) return;
-  const newResources = cloneDeep(resources.value);
-  newResources[newResourceId.value] = { To: '', Fetcher: '', Params: {} };
-  emit('update:modelValue', newResources);
+  if (props.isReadOnly || !newResourceId.value) return;
+  if (resourcesObj.value[newResourceId.value]) {
+    cancelAddResource();
+    return;
+  }
+  addItem(newResourceId.value, { To: '', Fetcher: '', Params: {} });
   cancelAddResource();
 };
 
-const removeResource = (id) => {
-  if (props.isReadOnly) return;
-  const newResources = cloneDeep(resources.value);
-  delete newResources[id];
-  emit('update:modelValue', newResources);
+const removeResource = (id: string) => {
+  removeItem(id);
 };
 
 const cancelAddResource = () => {
