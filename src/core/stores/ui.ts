@@ -13,6 +13,7 @@ import type { MenuState, ContextMenuKind } from '@/core/types/ui';
 import { DIALOG_MODES, DROP_TARGET_TYPES, VIEW_HINTS } from '@/core/config/constants';
 import type { ViewHint } from '@/core/types';
 import type { DragPayload, DropTarget } from '@/core/types/drag-drop';
+import { useAssetsStore } from './assets';
 
 export type ExposedComponentAPI = Record<string, any>;
 
@@ -68,7 +69,7 @@ interface UiState {
   activePaneId: string | null;
   selectedNode: SelectedNode | null;
   activeContextMenuId: string | null;
-  nodeToExpand: string | null;
+  nodesToExpand: Set<string>;
   // --- CHANGE: Use the new DragPayload interface ---
   dragSourceInfo: DragPayload | null;
   // ---------------------------------------------
@@ -121,6 +122,7 @@ interface UiState {
   selectedNodeViewHint: ViewHint | null;
   // Persist active tab per inspector pane
   inspectorActiveTab: Map<string, string>;
+  assetToFocusInTree: string | null;
 }
 
 export const useUiStore = defineStore('ui', {
@@ -128,7 +130,7 @@ export const useUiStore = defineStore('ui', {
     activePaneId: null,
     selectedNode: null,
     activeContextMenuId: null,
-    nodeToExpand: null,
+    nodesToExpand: new Set(),
     dragSourceInfo: null,
     dragSourceContext: null,
     dragInstanceRegistry: new Map(),
@@ -159,6 +161,7 @@ export const useUiStore = defineStore('ui', {
     genericConfirmationState: { show: false, dialogType: null, payload: null, resolver: null },
     selectedNodeViewHint: null,
     inspectorActiveTab: new Map(),
+    assetToFocusInTree: null,
     
     // Initialize the new FSM context menu
     contextMenu: { state: 'closed' },
@@ -214,9 +217,6 @@ export const useUiStore = defineStore('ui', {
     },
     setActiveContextMenu(menuId: string | null) {
       this.activeContextMenuId = menuId;
-    },
-    setNodeToExpand(nodeId: string | null) {
-      this.nodeToExpand = nodeId;
     },
     // --- CHANGE: Update the action's signature ---
     startDrag(sourceInfo: DragPayload) {
@@ -461,6 +461,41 @@ export const useUiStore = defineStore('ui', {
       if (this.contextMenu.state !== 'closed') {
         this.contextMenu = { state: 'closed' };
       }
+    },
+
+    /**
+     * Orchestrates focusing an asset in the tree.
+     * This expands all parents and then sets the target asset to be focused.
+     * @param assetId The ID of the asset to focus.
+     */
+    focusAssetInTree(assetId: string) {
+      if (!assetId) return;
+
+      const assetsStore = useAssetsStore();
+      const asset = assetsStore.unmergedAssets.find(a => a.id === assetId);
+      if (!asset) return;
+
+      this.nodesToExpand.clear();
+      this.assetToFocusInTree = null;
+
+      const fqnParts = asset.fqn.split('::');
+
+      for (let i = 1; i < fqnParts.length; i++) {
+        const parentFqn = fqnParts.slice(0, i).join('::');
+        const parentAsset = assetsStore.unmergedAssets.find(a => a.fqn === parentFqn);
+        if (parentAsset) {
+          this.nodesToExpand.add(parentAsset.id);
+        }
+      }
+
+      this.assetToFocusInTree = assetId;
+    },
+
+    /**
+     * Clears the focus state. Called by AssetTreeNode after it has focused.
+     */
+    clearAssetToFocus() {
+      this.assetToFocusInTree = null;
     },
   },
 });

@@ -48,7 +48,6 @@
 
             <v-expansion-panels
               v-else
-              variant="tonal"
             >
               <v-expansion-panel
                 :bg-color="panelColor"

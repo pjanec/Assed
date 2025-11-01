@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div ref="nodeEl" :class="{ 'focus-flash': isFlashing }">
     <v-list-item
       :class="[itemClass, { 
         'drag-over-active': isDraggingOver,
@@ -81,7 +81,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, getCurrentInstance } from 'vue';
+import { computed, ref, watch, getCurrentInstance, nextTick } from 'vue';
 import { useUiStore, useAssetsStore, useWorkspaceStore } from '@/core/stores/index';
 import { useCoreConfigStore } from '@/core/stores/config';
 import { useDroppable } from '@/core/composables/useDroppable';
@@ -136,14 +136,40 @@ const { isDraggingOver, handleDragOver, handleDragLeave, handleDrop } = useDropp
 
 
 
-// Start collapsed for virtual folders to avoid clutter; otherwise, expand non-asset nodes by default
-const isExpanded = ref(props.node.virtualContext ? false : (props.node.type !== 'asset'));
-watch(() => uiStore.nodeToExpand, (nodeId) => {
-  if (nodeId && nodeId === props.node.id) {
+const nodeEl = ref<HTMLElement | null>(null);
+const isFlashing = ref(false);
+
+const isExpanded = ref(
+  (props.node.virtualContext ? false : (props.node.type !== 'asset')) ||
+  uiStore.nodesToExpand.has(props.node.id)
+);
+
+watch(() => uiStore.nodesToExpand, (expansionSet) => {
+  if (expansionSet.has(props.node.id)) {
     isExpanded.value = true;
-    uiStore.setNodeToExpand(null);
   }
-});
+}, { deep: true });
+
+watch(() => uiStore.assetToFocusInTree, (newAssetId) => {
+  if (newAssetId === props.node.id) {
+    nextTick(() => {
+      if (nodeEl.value) {
+        nodeEl.value.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+          inline: 'nearest',
+        });
+
+        isFlashing.value = true;
+        setTimeout(() => {
+          isFlashing.value = false;
+        }, 1500);
+      }
+    });
+
+    uiStore.clearAssetToFocus();
+  }
+}, { immediate: true });
 
 // Actions are now handled by the unified GlobalContextMenu system
 const isContainer = computed(() => props.node.children && props.node.children.length > 0);
@@ -292,6 +318,26 @@ const validationStatus = computed(() => {
   background-color: var(--v-background-base, white);
   border-radius: 50%;
   line-height: 1;
+}
+
+@keyframes flash-animation {
+  0% {
+    outline: 2px solid rgba(var(--v-theme-primary), 0.7);
+    background-color: rgba(var(--v-theme-primary), 0.1);
+  }
+  70% {
+    outline: 2px solid rgba(var(--v-theme-primary), 0.0);
+    background-color: rgba(var(--v-theme-primary), 0.0);
+  }
+  100% {
+    outline: 2px solid rgba(var(--v-theme-primary), 0.0);
+    background-color: transparent;
+  }
+}
+
+.focus-flash {
+  outline-offset: -2px;
+  animation: flash-animation 1.5s ease-out;
 }
 </style>
 

@@ -925,7 +925,7 @@ export const useWorkspaceStore = defineStore('workspace', {
         
       // 2. Expand the parent node in the asset tree
       if (uiStore.newAssetDialog.parentAsset) {
-        uiStore.setNodeToExpand(uiStore.newAssetDialog.parentAsset.id);
+        uiStore.nodesToExpand.add(uiStore.newAssetDialog.parentAsset.id);
       }
 
       // 3. Select the new asset in the UI (this will automatically load details and open inspector via EditorWorkbench watcher)

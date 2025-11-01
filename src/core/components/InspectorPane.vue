@@ -58,18 +58,6 @@
             <template #activator="{ props }">
               <v-btn
                 v-bind="props"
-                :icon="inspectorViewMode === 'merged' ? 'mdi-eye-outline' : 'mdi-pencil-outline'"
-                size="x-small"
-                density="compact"
-                @click="toggleInspectorViewMode()"
-              />
-            </template>
-            <span>{{ inspectorViewMode === 'merged' ? 'Merged View (effective values)' : 'Local Overrides View (raw overrides)' }}</span>
-          </v-tooltip>
-          <v-tooltip location="bottom">
-            <template #activator="{ props }">
-              <v-btn
-                v-bind="props"
                 icon="mdi-arrow-left"
                 size="x-small"
                 density="compact"
@@ -91,6 +79,30 @@
               />
             </template>
             <span>Forward</span>
+          </v-tooltip>
+          <v-tooltip location="bottom">
+            <template #activator="{ props }">
+              <v-btn
+                v-bind="props"
+                :icon="inspectorViewMode === 'merged' ? 'mdi-eye-outline' : 'mdi-pencil-outline'"
+                size="x-small"
+                density="compact"
+                @click="toggleInspectorViewMode()"
+              />
+            </template>
+            <span>{{ inspectorViewMode === 'merged' ? 'Merged View (effective values)' : 'Local Overrides View (raw overrides)' }}</span>
+          </v-tooltip>
+          <v-tooltip location="bottom">
+            <template #activator="{ props }">
+              <v-btn
+                v-bind="props"
+                icon="mdi-crosshairs-gps"
+                size="x-small"
+                density="compact"
+                @click="focusInTree"
+              />
+            </template>
+            <span>Focus in Tree</span>
           </v-tooltip>
           <v-tooltip location="bottom">
             <template #activator="{ props }">
@@ -290,6 +302,12 @@ const goBack = async () => {
 
 const goForward = async () => {
   await assetsStore.historyForward(props.paneId);
+};
+
+const focusInTree = () => {
+  if (props.assetId) {
+    uiStore.focusAssetInTree(props.assetId);
+  }
 };
 
 // Expose current pane id to BaseInspector for tab persistence
