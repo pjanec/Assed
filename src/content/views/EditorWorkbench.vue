@@ -197,23 +197,40 @@
         
         <v-card-text>
           <v-list>
-            <v-list-item
+            <v-tooltip
               v-for="issue in validationIssues"
               :key="issue.id"
-              @click="navigateToIssue(issue)"
-              class="validation-issue-item"
+              :text="assetFqnMap.get(issue.assetId) || 'FQN not found'"
+              location="bottom"
             >
-              <template #prepend>
-                <v-icon :color="issue.severity === 'error' ? 'error' : 'warning'">
-                  {{ issue.severity === 'error' ? 'mdi-close-circle' : 'mdi-alert-circle' }}
-                </v-icon>
+              <template #activator="{ props: tooltipProps }">
+                <v-list-item
+                  v-bind="tooltipProps"
+                  @click="navigateToIssue(issue)"
+                  class="validation-issue-item"
+                >
+                  <template #prepend>
+                    <v-icon
+                      :color="coreConfig.getAssetTypeColor(issue.assetType as any)"
+                      :icon="coreConfig.getAssetIcon(issue.assetType as any)"
+                      class="me-4"
+                    ></v-icon>
+                  </template>
+                  
+                  <v-list-item-title>{{ issue.message }}</v-list-item-title>
+                  <v-list-item-subtitle>
+                    {{ issue.assetName }} ({{ issue.assetType }})
+                  </v-list-item-subtitle>
+
+                  <template #append>
+                    <v-icon
+                      :color="issue.severity === 'error' ? 'error' : 'warning'"
+                      :icon="issue.severity === 'error' ? 'mdi-close-circle' : 'mdi-alert-circle'"
+                    ></v-icon>
+                  </template>
+                </v-list-item>
               </template>
-              
-              <v-list-item-title>{{ issue.message }}</v-list-item-title>
-              <v-list-item-subtitle>
-                {{ issue.assetName }} ({{ issue.assetType }})
-              </v-list-item-subtitle>
-            </v-list-item>
+            </v-tooltip>
           </v-list>
         </v-card-text>
         
@@ -249,7 +266,7 @@ import { computed, onMounted, watch, ref, type Ref, inject } from 'vue';
 import { storeToRefs } from 'pinia';
 import { generateAssetDiff } from '@/core/utils/diff';
 import { useRouter } from 'vue-router';
-import { useAssetsStore, useWorkspaceStore, useUiStore } from '@/core/stores/index';
+import { useAssetsStore, useWorkspaceStore, useUiStore, useCoreConfigStore } from '@/core/stores/index';
 import { ConfigurationHub } from '@/core/stores/ConfigurationHub';
 import { perspectiveDefinitions } from '@/content/config/perspectiveDefinitions';
 import AssetLibrary from '@/core/components/AssetLibrary.vue'
@@ -272,7 +289,8 @@ import { createTreeNodeFromSelectedNode } from '@/core/utils/assetTreeUtils';
 const router = useRouter()
 const assetsStore = useAssetsStore()
 const workspaceStore = useWorkspaceStore()
-const uiStore = useUiStore() // Initialize uiStore
+const uiStore = useUiStore()
+const coreConfig = useCoreConfigStore();
 
 // Get ConfigurationHub from app context
 const configHub = inject<ConfigurationHub>('configHub');
@@ -376,6 +394,10 @@ const selectedAssetInfo = computed((): string | null => {
   // Now, using 'currentNode' is guaranteed to be safe.
   const asset = assetsStore.unmergedAssets.find(a => a.id === currentNode.id);
   return asset ? `${asset.assetKey} (${asset.assetType})` : null;
+});
+
+const assetFqnMap = computed((): Map<string, string> => {
+  return new Map(assetsStore.unmergedAssets.map(a => [a.id, a.fqn]));
 });
 
 // structuredChanges is now retrieved from workspaceStore via storeToRefs

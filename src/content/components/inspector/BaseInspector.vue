@@ -35,6 +35,56 @@
       <!-- Slot for specific inspector settings -->
       <v-window-item value="settings" :key="`settings-${asset.unmerged.id}`" class="h-100">
         <div class="h-100 pa-2" style="overflow-y: auto;">
+          <div v-if="assetIssues.length > 0" class="validation-panel mb-2">
+            <v-alert
+              v-if="assetIssues.length === 1"
+              :color="panelColor"
+              :icon="panelIcon"
+              variant="tonal"
+              density="compact"
+            >
+              {{ assetIssues[0].message }}
+            </v-alert>
+
+            <v-expansion-panels
+              v-else
+              variant="tonal"
+            >
+              <v-expansion-panel
+                :bg-color="panelColor"
+                elevation="0"
+                class="validation-expansion-panel"
+              >
+                <v-expansion-panel-title
+                  expand-icon="mdi-chevron-down"
+                  collapse-icon="mdi-chevron-up"
+                  class="text-body-2"
+                >
+                  <v-icon :icon="panelIcon" class="me-2"></v-icon>
+                  {{ panelTitle }} ({{ assetIssues.length }})
+                </v-expansion-panel-title>
+                <v-expansion-panel-text class="pa-0">
+                  <v-list density="compact" bg-color="transparent">
+                    <v-list-item
+                      v-for="issue in assetIssues"
+                      :key="issue.id"
+                      :title="issue.message"
+                    >
+                      <template #prepend>
+                        <v-icon
+                          :color="issue.severity === 'error' ? 'error' : 'warning'"
+                          :icon="issue.severity === 'error' ? 'mdi-alert-circle' : 'mdi-alert'"
+                          size="small"
+                          class="me-3"
+                        ></v-icon>
+                      </template>
+                    </v-list-item>
+                  </v-list>
+                </v-expansion-panel-text>
+              </v-expansion-panel>
+            </v-expansion-panels>
+          </div>
+
           <slot name="settings-panels"></slot>
         </div>
       </v-window-item>
@@ -135,10 +185,12 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue';
 import { useUiStore } from '@/core/stores/ui';
+import { useWorkspaceStore } from '@/core/stores/workspace';
 import MonacoEditor from './MonacoEditor.vue';
 import JSONEditor from './JSONEditor.vue';
 import Ajv from 'ajv';
 import type { AssetDetails } from '@/core/types';
+import type { ValidationIssue } from '@/core/types/validation';
 
 interface ValidationError {
   path: string;
@@ -163,6 +215,7 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<Emits>();
 
 const uiStore = useUiStore();
+const workspaceStore = useWorkspaceStore();
 const activeTab = ref<string>('settings');
 const treeEditor = ref<any>(null);
 const showValidationDialog = ref<boolean>(false);
@@ -201,6 +254,38 @@ const validationStatus = computed((): string => {
   const count = validationErrors.value.length;
   if (count === 0) return 'Valid Schema';
   return `${count} Schema Issue${count > 1 ? 's' : ''}`;
+});
+
+const assetIssues = computed((): ValidationIssue[] => {
+  if (!props.asset || props.asset.isReadOnly) return [];
+  return workspaceStore.validationIssues.filter(
+    (issue) => issue.assetId === props.asset.unmerged.id
+  );
+});
+
+const highestSeverity = computed((): 'error' | 'warning' | null => {
+  if (!assetIssues.value.length) return null;
+  return assetIssues.value.some((issue) => issue.severity === 'error')
+    ? 'error'
+    : 'warning';
+});
+
+const panelColor = computed((): string => {
+  return highestSeverity.value === 'error' ? 'error' : 'warning';
+});
+
+const panelIcon = computed((): string => {
+  return highestSeverity.value === 'error'
+    ? 'mdi-alert-circle-outline'
+    : 'mdi-alert-outline';
+});
+
+const panelTitle = computed((): string => {
+  const count = assetIssues.value.length;
+  if (count === 0) return '';
+  const severityText =
+    highestSeverity.value === 'error' ? 'Error(s)' : 'Warning(s)';
+  return `This asset has ${count} ${severityText.toLowerCase()}`;
 });
 
 let sourceChangeDebounce: ReturnType<typeof setTimeout> | null = null;
@@ -266,6 +351,10 @@ watch(activeTab, (tab) => {
 .source-status-bar {
   border-top: 1px solid rgba(var(--v-border-color), 0.5);
   background-color: rgb(var(--custom-statusbar-background));
+}
+
+.validation-expansion-panel :deep(.v-list-item) {
+  padding-inline-start: 12px !important;
 }
 </style>
 

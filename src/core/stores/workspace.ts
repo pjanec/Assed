@@ -177,6 +177,22 @@ export const useWorkspaceStore = defineStore('workspace', {
       return { modified, added, deleted };
     },
 
+    validationStatusMap(state): Map<string, 'error' | 'warning'> {
+      const statusMap = new Map<string, 'error' | 'warning'>();
+
+      for (const issue of this.validationIssues) {
+        const currentStatus = statusMap.get(issue.assetId);
+
+        if (issue.severity === 'error') {
+          statusMap.set(issue.assetId, 'error');
+        } else if (issue.severity === 'warning' && !currentStatus) {
+          statusMap.set(issue.assetId, 'warning');
+        }
+      }
+
+      return statusMap;
+    },
+
     validationIssues(state): ValidationIssue[] {
       const assetsStore = useAssetsStore();
       const unmergedAssets = assetsStore.unmergedAssets;

@@ -46,6 +46,14 @@
             >
               {{ inheritanceIcon }}
             </v-icon>
+
+            <v-icon
+              v-if="validationStatus"
+              class="validation-overlay"
+              color="#FFE107"
+              :icon="validationStatus === 'error' ? 'mdi-alert-circle' : 'mdi-alert'"
+              data-testid="validation-overlay"
+            />
           </div>
         </div>
       </template>
@@ -74,7 +82,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch, getCurrentInstance } from 'vue';
-import { useUiStore, useAssetsStore } from '@/core/stores/index';
+import { useUiStore, useAssetsStore, useWorkspaceStore } from '@/core/stores/index';
 import { useCoreConfigStore } from '@/core/stores/config';
 import { useDroppable } from '@/core/composables/useDroppable';
 import { DROP_TARGET_TYPES, CORE_DRAG_CONTEXTS, CONTEXT_MENU_KINDS, ASSET_TREE_NODE_TYPES, VIEW_HINTS } from '@/core/config/constants';
@@ -85,6 +93,7 @@ import type { AssetTreeNode } from '@/core/types';
 const uiStore = useUiStore();
 const coreConfig = useCoreConfigStore();
 const assetsStore = useAssetsStore();
+const workspaceStore = useWorkspaceStore();
 
 // Give each instance a unique ID for the drag-drop instance registry
 const instance = getCurrentInstance();
@@ -222,6 +231,14 @@ const inheritanceIcon = computed<string | null>(() => {
 
   return null;
 });
+
+const validationStatus = computed(() => {
+  if (!props.node || !props.node.id) return null;
+
+  if (!isRealAsset(props.node)) return null;
+
+  return workspaceStore.validationStatusMap.get(props.node.id) || null;
+});
 </script>
 
 <style scoped>
@@ -265,6 +282,16 @@ const inheritanceIcon = computed<string | null>(() => {
   border-radius: 50%;
   line-height: 1;
   color: var(--v-primary-base, #1976D2);
+}
+
+.validation-overlay {
+  position: absolute;
+  bottom: -2px;
+  left: -4px;
+  font-size: 0.8em;
+  background-color: var(--v-background-base, white);
+  border-radius: 50%;
+  line-height: 1;
 }
 </style>
 
